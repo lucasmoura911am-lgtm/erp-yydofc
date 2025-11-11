@@ -13,10 +13,11 @@ import MapRecords from "../components/dashboard/MapRecords";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Building2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
-  const [initializing, setInitializing] = useState(true);
   const [stats, setStats] = useState({
     totalEmployees: 0,
     todayRecords: 0,
@@ -29,20 +30,21 @@ export default function Dashboard() {
   }, []);
 
   const loadUser = async () => {
-    const userData = await base44.auth.me();
-    setUser(userData);
-    
-    // Se o usuário não tem company_id, criar uma empresa automaticamente
-    if (!userData.company_id && userData.role === 'admin') {
-      await initializeCompany(userData);
-    } else {
-      setInitializing(false);
+    try {
+      const userData = await base44.auth.me();
+      setUser(userData);
+      
+      // Se não tem company_id, criar uma
+      if (!userData.company_id && userData.role === 'admin') {
+        await initializeCompany(userData);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar usuário:", error);
     }
   };
 
   const initializeCompany = async (userData) => {
     try {
-      // Criar empresa padrão
       const company = await base44.entities.Company.create({
         name: "Minha Empresa",
         cnpj: "00.000.000/0000-00",
@@ -53,29 +55,25 @@ export default function Dashboard() {
         status: "active"
       });
 
-      // Atualizar usuário com company_id
       await base44.auth.updateMe({ company_id: company.id });
       
-      // Recarregar usuário
       const updatedUser = await base44.auth.me();
       setUser(updatedUser);
     } catch (error) {
       console.error("Erro ao inicializar empresa:", error);
-    } finally {
-      setInitializing(false);
     }
   };
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees', user?.company_id],
     queryFn: () => user?.company_id ? base44.entities.Employee.filter({ company_id: user.company_id }) : [],
-    enabled: !!user?.company_id && !initializing,
+    enabled: !!user?.company_id,
   });
 
   const { data: timeRecords = [] } = useQuery({
     queryKey: ['timeRecords', user?.company_id],
     queryFn: () => user?.company_id ? base44.entities.TimeRecord.filter({ company_id: user.company_id }, '-timestamp') : [],
-    enabled: !!user?.company_id && !initializing,
+    enabled: !!user?.company_id,
   });
 
   useEffect(() => {
@@ -89,28 +87,23 @@ export default function Dashboard() {
     const monthStart = startOfMonth(new Date());
     const monthEnd = endOfMonth(new Date());
 
-    // Total de funcionários ativos
     const activeEmployees = employees.filter(emp => emp.status === 'active').length;
 
-    // Registros de hoje
     const todayRecords = timeRecords.filter(record => {
       const recordDate = new Date(record.timestamp);
       recordDate.setHours(0, 0, 0, 0);
       return recordDate.getTime() === today.getTime();
     }).length;
 
-    // Registros do mês
     const monthRecords = timeRecords.filter(record => {
       const recordDate = parseISO(record.timestamp);
       return recordDate >= monthStart && recordDate <= monthEnd;
     });
 
-    // Cálculo de presença do mês (% de dias úteis com registro)
-    const workDays = 22; // aprox 22 dias úteis
+    const workDays = 22;
     const uniqueDays = new Set(monthRecords.map(r => format(parseISO(r.timestamp), 'yyyy-MM-dd'))).size;
     const monthPresence = uniqueDays > 0 ? Math.round((uniqueDays / workDays) * 100) : 0;
 
-    // Atrasos
     const delays = timeRecords.filter(record => record.status === 'atrasado').length;
 
     setStats({
@@ -121,31 +114,13 @@ export default function Dashboard() {
     });
   };
 
-  if (initializing) {
+  if (!user) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Inicializando sistema...</p>
+          <p className="text-gray-600">Carregando...</p>
         </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <div className="flex items-center justify-center h-screen">Carregando...</div>;
-  }
-
-  // Se não é admin e não tem employee_id
-  if (user.role !== 'admin' && !user.employee_id) {
-    return (
-      <div className="p-6">
-        <Alert>
-          <Building2 className="h-4 w-4" />
-          <AlertDescription>
-            Você ainda não foi cadastrado como funcionário. Entre em contato com o administrador.
-          </AlertDescription>
-        </Alert>
       </div>
     );
   }
@@ -167,10 +142,18 @@ export default function Dashboard() {
 
       {/* Welcome message for new users */}
       {employees.length === 0 && user.role === 'admin' && (
-        <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-          <Building2 className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800 dark:text-blue-200">
-            Bem-vindo ao PontoFlex! Comece cadastrando os setores, cargos, escalas e funcionários da sua empresa.
+        <Alert className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-800">
+          <Building2 className="h-5 w-5 text-purple-600" />
+          <AlertDescription className="text-purple-900 dark:text-purple-200">
+            <p className="font-semibold mb-2">🎉 Bem-vindo ao PontoFlex!</p>
+            <p className="mb-3">Para começar a usar o sistema, siga estes passos:</p>
+            <ol className="list-decimal list-inside space-y-1 mb-3">
+              <li>Cadastre os <Link to={createPageUrl('Departments')} className="underline font-medium">Setores</Link> da empresa</li>
+              <li>Cadastre os <Link to={createPageUrl('Positions')} className="underline font-medium">Cargos</Link></li>
+              <li>Configure as <Link to={createPageUrl('Shifts')} className="underline font-medium">Escalas de Trabalho</Link></li>
+              <li>Cadastre os <Link to={createPageUrl('Employees')} className="underline font-medium">Funcionários</Link></li>
+            </ol>
+            <p className="text-sm">💡 Já criamos alguns exemplos para você começar!</p>
           </AlertDescription>
         </Alert>
       )}

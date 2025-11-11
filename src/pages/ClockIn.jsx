@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Camera, MapPin, Clock, CheckCircle, Loader2, X } from "lucide-react";
+import { Camera, MapPin, Clock, CheckCircle, Loader2, X, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import {
 export default function ClockIn() {
   const [user, setUser] = useState(null);
   const [employee, setEmployee] = useState(null);
+  const [needsSetup, setNeedsSetup] = useState(false);
   const [recordType, setRecordType] = useState("entrada");
   const [cameraActive, setCameraActive] = useState(false);
   const [location, setLocation] = useState(null);
@@ -48,25 +49,53 @@ export default function ClockIn() {
       const userData = await base44.auth.me();
       setUser(userData);
       
-      if (userData.employee_id) {
-        const employeeData = await base44.entities.Employee.filter({ id: userData.employee_id });
-        setEmployee(employeeData[0]);
+      // Verificar se o usuário tem employee_id
+      if (!userData.employee_id) {
+        // Tentar buscar employee pelo email do usuário
+        const employees = await base44.entities.Employee.filter({ 
+          user_email: userData.email 
+        });
         
-        // Buscar último registro
+        if (employees.length > 0) {
+          setEmployee(employees[0]);
+          // Atualizar user com employee_id
+          await base44.auth.updateMe({ employee_id: employees[0].id });
+        } else {
+          setNeedsSetup(true);
+          return;
+        }
+      } else {
+        const employeeData = await base44.entities.Employee.filter({ 
+          id: userData.employee_id 
+        });
+        if (employeeData.length > 0) {
+          setEmployee(employeeData[0]);
+        } else {
+          setNeedsSetup(true);
+          return;
+        }
+      }
+      
+      // Buscar último registro
+      const empId = userData.employee_id || employees[0]?.id;
+      if (empId) {
         const records = await base44.entities.TimeRecord.filter(
-          { employee_id: userData.employee_id },
+          { employee_id: empId },
           '-timestamp',
           1
         );
         if (records.length > 0) {
           setLastRecord(records[0]);
           // Sugerir próximo tipo baseado no último
-          if (records[0].type === 'entrada') setRecordType('saida');
-          else if (records[0].type === 'saida') setRecordType('entrada');
+          if (records[0].type === 'entrada') setRecordType('pausa');
+          else if (records[0].type === 'pausa') setRecordType('retorno');
+          else if (records[0].type === 'retorno') setRecordType('saida');
+          else setRecordType('entrada');
         }
       }
     } catch (error) {
       setError("Erro ao carregar dados do usuário");
+      console.error(error);
     }
   };
 
@@ -130,6 +159,11 @@ export default function ClockIn() {
   };
 
   const handleClockIn = async () => {
+    if (!employee) {
+      setError("Cadastro de funcionário não encontrado");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -146,12 +180,10 @@ export default function ClockIn() {
       let status = "pontual";
       let delayMinutes = 0;
       
-      // Aqui você pode adicionar lógica para verificar se está atrasado baseado na escala do funcionário
-      
       // Criar registro
       await base44.entities.TimeRecord.create({
         employee_id: employee.id,
-        company_id: user.company_id,
+        company_id: employee.company_id,
         timestamp: new Date().toISOString(),
         type: recordType,
         latitude: location?.latitude,
@@ -167,7 +199,7 @@ export default function ClockIn() {
       
       setTimeout(() => {
         setSuccess(false);
-        loadUserData(); // Recarregar para atualizar último registro
+        loadUserData();
       }, 3000);
 
     } catch (error) {
@@ -177,6 +209,52 @@ export default function ClockIn() {
       setLoading(false);
     }
   };
+
+  if (needsSetup) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-6">
+        <div className="max-w-2xl mx-auto">
+          <Card className="shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-600">
+                <AlertCircle className="w-6 h-6" />
+                Cadastro Pendente
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert className="bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
+                <AlertDescription className="text-orange-800 dark:text-orange-200">
+                  <p className="font-semibold mb-2">Você ainda não foi cadastrado como funcionário.</p>
+                  <p className="mb-2">Entre em contato com o administrador para:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>Criar seu cadastro de funcionário</li>
+                    <li>Vincular seu e-mail ({user?.email}) ao cadastro</li>
+                    <li>Definir seu cargo, setor e escala de trabalho</li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
+              <div className="text-center pt-4">
+                <p className="text-sm text-gray-500">
+                  Após o cadastro, você poderá fazer login e bater ponto normalmente.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!employee) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-6">

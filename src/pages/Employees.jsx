@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -45,7 +46,8 @@ export default function Employees() {
     department_id: "",
     shift_id: "",
     employee_number: "",
-    status: "active"
+    status: "active",
+    user_email: "" // Added user_email
   });
 
   const queryClient = useQueryClient();
@@ -84,7 +86,10 @@ export default function Employees() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Employee.create(data),
+    mutationFn: async (data) => {
+      const employee = await base44.entities.Employee.create(data);
+      return employee;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['employees']);
       setDialogOpen(false);
@@ -118,14 +123,19 @@ export default function Employees() {
       department_id: "",
       shift_id: "",
       employee_number: "",
-      status: "active"
+      status: "active",
+      user_email: "" // Reset user_email
     });
     setEditingEmployee(null);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const data = { ...formData, company_id: user.company_id };
+    const data = { 
+      ...formData, 
+      company_id: user.company_id,
+      user_email: formData.user_email || "" // Adicionar user_email ao submeter
+    };
     
     if (editingEmployee) {
       updateMutation.mutate({ id: editingEmployee.id, data });
@@ -145,7 +155,8 @@ export default function Employees() {
       department_id: employee.department_id || "",
       shift_id: employee.shift_id || "",
       employee_number: employee.employee_number || "",
-      status: employee.status || "active"
+      status: employee.status || "active",
+      user_email: employee.user_email || "" // Adicionar user_email
     });
     setDialogOpen(true);
   };
@@ -314,6 +325,18 @@ export default function Employees() {
                   onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
                   required
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Email do Usuário</Label>
+                <Input
+                  type="email"
+                  value={formData.user_email}
+                  onChange={(e) => setFormData({ ...formData, user_email: e.target.value })}
+                  placeholder="email@exemplo.com"
+                />
+                <p className="text-xs text-gray-500">
+                  Email usado para fazer login no sistema
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Telefone</Label>

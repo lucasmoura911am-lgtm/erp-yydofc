@@ -8,6 +8,7 @@ import Shifts from './pages/Shifts';
 import MyTimeRecords from './pages/MyTimeRecords';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Home from './pages/Home';
 import Layout from './Layout.jsx';
 
 
@@ -22,6 +23,7 @@ export const PAGES = {
     "MyTimeRecords": MyTimeRecords,
     "Reports": Reports,
     "Settings": Settings,
+    "Home": Home,
 }
 
 export const pagesConfig = {
