@@ -21,6 +21,7 @@ export default function ClockIn() {
   const [needsSetup, setNeedsSetup] = useState(false);
   const [recordType, setRecordType] = useState("entrada");
   const [cameraActive, setCameraActive] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const [location, setLocation] = useState(null);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -120,6 +121,7 @@ export default function ClockIn() {
 
   const startCamera = async () => {
     try {
+      setVideoReady(false);
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'user',
@@ -128,13 +130,27 @@ export default function ClockIn() {
         },
         audio: false 
       });
+      
       streamRef.current = stream;
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        
+        // Aguardar o vídeo estar realmente pronto
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play().then(() => {
+            // Aguardar um pouco mais para garantir que os frames estão chegando
+            setTimeout(() => {
+              setVideoReady(true);
+              setCameraActive(true);
+              setError(null);
+            }, 500);
+          }).catch(err => {
+            console.error("Erro ao iniciar vídeo:", err);
+            setError("Erro ao iniciar vídeo da câmera");
+          });
+        };
       }
-      setCameraActive(true);
-      setError(null);
     } catch (err) {
       setError("Erro ao acessar a câmera. Por favor, permita o acesso.");
       console.error("Camera error:", err);
@@ -142,12 +158,14 @@ export default function ClockIn() {
   };
 
   const stopCamera = () => {
+    setVideoReady(false);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+      videoRef.current.onloadedmetadata = null;
     }
     setCameraActive(false);
   };
@@ -161,31 +179,57 @@ export default function ClockIn() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
-    if (video.videoWidth === 0 || video.videoHeight === 0) {
-      setError("Vídeo ainda não carregou. Aguarde um momento.");
+    // Verificar se o vídeo está realmente tocando e tem dimensões
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      setError("Vídeo ainda carregando. Aguarde um momento e tente novamente.");
       return null;
     }
     
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      setError("Vídeo ainda não carregou completamente. Aguarde um momento.");
+      return null;
+    }
+    
+    // Definir dimensões do canvas
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
+    
+    // Aguardar o próximo frame de animação para garantir que o frame atual está disponível
     return new Promise((resolve) => {
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          setCapturedPhoto(url);
-          resolve(blob);
-        } else {
+      requestAnimationFrame(() => {
+        try {
+          // Desenhar o frame atual do vídeo no canvas
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          // Converter para blob
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              setCapturedPhoto(url);
+              setError(null);
+              resolve(blob);
+            } else {
+              setError("Erro ao criar imagem. Tente novamente.");
+              resolve(null);
+            }
+          }, 'image/jpeg', 0.95);
+        } catch (err) {
+          console.error("Erro ao capturar:", err);
+          setError("Erro ao processar imagem. Tente novamente.");
           resolve(null);
         }
-      }, 'image/jpeg', 0.95);
+      });
     });
   };
 
   const handleTakePhoto = async () => {
+    if (!videoReady) {
+      setError("Aguarde a câmera estar completamente pronta...");
+      return;
+    }
+    
     const photoBlob = await capturePhoto();
     if (!photoBlob) {
       setError("Erro ao capturar foto. Tente novamente.");
@@ -195,6 +239,10 @@ export default function ClockIn() {
   const handleRetakePhoto = () => {
     setCapturedPhoto(null);
     setError(null);
+    // Reativar câmera
+    if (!cameraActive) {
+      startCamera();
+    }
   };
 
   const handleClockIn = async () => {
@@ -216,6 +264,10 @@ export default function ClockIn() {
       const photoBlob = await new Promise((resolve) => {
         canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
       });
+      
+      if (!photoBlob) {
+        throw new Error("Erro ao processar foto");
+      }
       
       const photoFile = new File([photoBlob], `clockin-${Date.now()}.jpg`, { type: 'image/jpeg' });
       
@@ -392,6 +444,14 @@ export default function ClockIn() {
                       muted
                       className="w-full h-full object-cover"
                     />
+                    {!videoReady && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                        <div className="text-center text-white">
+                          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+                          <p className="text-sm">Iniciando câmera...</p>
+                        </div>
+                      </div>
+                    )}
                     <Button
                       onClick={stopCamera}
                       variant="destructive"
@@ -406,9 +466,10 @@ export default function ClockIn() {
                     onClick={handleTakePhoto}
                     className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                     size="lg"
+                    disabled={!videoReady}
                   >
                     <Camera className="w-5 h-5 mr-2" />
-                    Capturar Foto
+                    {videoReady ? 'Capturar Foto' : 'Aguarde...'}
                   </Button>
                 </div>
               )}
