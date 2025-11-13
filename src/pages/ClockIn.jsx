@@ -21,9 +21,8 @@ export default function ClockIn() {
   const [needsSetup, setNeedsSetup] = useState(false);
   const [recordType, setRecordType] = useState("entrada");
   const [cameraActive, setCameraActive] = useState(false);
-  const [videoReady, setVideoReady] = useState(false);
   const [location, setLocation] = useState(null);
-  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [photoDataUrl, setPhotoDataUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
@@ -32,7 +31,6 @@ export default function ClockIn() {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-  const canvasRef = useRef(null);
 
   useEffect(() => {
     loadUserData();
@@ -121,12 +119,11 @@ export default function ClockIn() {
 
   const startCamera = async () => {
     try {
-      setVideoReady(false);
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 640 },
+          height: { ideal: 480 }
         },
         audio: false 
       });
@@ -135,22 +132,10 @@ export default function ClockIn() {
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        
-        // Aguardar o vídeo estar realmente pronto
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play().then(() => {
-            // Aguardar um pouco mais para garantir que os frames estão chegando
-            setTimeout(() => {
-              setVideoReady(true);
-              setCameraActive(true);
-              setError(null);
-            }, 500);
-          }).catch(err => {
-            console.error("Erro ao iniciar vídeo:", err);
-            setError("Erro ao iniciar vídeo da câmera");
-          });
-        };
       }
+      
+      setCameraActive(true);
+      setError(null);
     } catch (err) {
       setError("Erro ao acessar a câmera. Por favor, permita o acesso.");
       console.error("Camera error:", err);
@@ -158,91 +143,54 @@ export default function ClockIn() {
   };
 
   const stopCamera = () => {
-    setVideoReady(false);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
-      videoRef.current.onloadedmetadata = null;
     }
     setCameraActive(false);
   };
 
-  const capturePhoto = async () => {
-    if (!videoRef.current || !canvasRef.current) {
-      setError("Câmera não está pronta. Tente novamente.");
-      return null;
-    }
-
+  const capturePhoto = () => {
     const video = videoRef.current;
-    const canvas = canvasRef.current;
-    
-    // Verificar se o vídeo está realmente tocando e tem dimensões
-    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-      setError("Vídeo ainda carregando. Aguarde um momento e tente novamente.");
-      return null;
-    }
-    
-    if (video.videoWidth === 0 || video.videoHeight === 0) {
-      setError("Vídeo ainda não carregou completamente. Aguarde um momento.");
-      return null;
-    }
-    
-    // Definir dimensões do canvas
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    const ctx = canvas.getContext('2d');
-    
-    // Aguardar o próximo frame de animação para garantir que o frame atual está disponível
-    return new Promise((resolve) => {
-      requestAnimationFrame(() => {
-        try {
-          // Desenhar o frame atual do vídeo no canvas
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          
-          // Converter para blob
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const url = URL.createObjectURL(blob);
-              setCapturedPhoto(url);
-              setError(null);
-              resolve(blob);
-            } else {
-              setError("Erro ao criar imagem. Tente novamente.");
-              resolve(null);
-            }
-          }, 'image/jpeg', 0.95);
-        } catch (err) {
-          console.error("Erro ao capturar:", err);
-          setError("Erro ao processar imagem. Tente novamente.");
-          resolve(null);
-        }
-      });
-    });
-  };
-
-  const handleTakePhoto = async () => {
-    if (!videoReady) {
-      setError("Aguarde a câmera estar completamente pronta...");
+    if (!video) {
+      setError("Câmera não está ativa");
       return;
     }
+
+    // Criar canvas temporário
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
     
-    const photoBlob = await capturePhoto();
-    if (!photoBlob) {
-      setError("Erro ao capturar foto. Tente novamente.");
-    }
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Converter para data URL
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    setPhotoDataUrl(dataUrl);
+    stopCamera();
+    setError(null);
   };
 
   const handleRetakePhoto = () => {
-    setCapturedPhoto(null);
+    setPhotoDataUrl(null);
     setError(null);
-    // Reativar câmera
-    if (!cameraActive) {
-      startCamera();
+    startCamera();
+  };
+
+  const dataURLtoBlob = (dataUrl) => {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
     }
+    return new Blob([u8arr], { type: mime });
   };
 
   const handleClockIn = async () => {
@@ -251,7 +199,7 @@ export default function ClockIn() {
       return;
     }
 
-    if (!capturedPhoto) {
+    if (!photoDataUrl) {
       setError("Por favor, tire uma foto antes de registrar o ponto");
       return;
     }
@@ -260,22 +208,14 @@ export default function ClockIn() {
     setError(null);
 
     try {
-      const canvas = canvasRef.current;
-      const photoBlob = await new Promise((resolve) => {
-        canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
-      });
-      
-      if (!photoBlob) {
-        throw new Error("Erro ao processar foto");
-      }
-      
+      // Converter data URL para blob e depois para file
+      const photoBlob = dataURLtoBlob(photoDataUrl);
       const photoFile = new File([photoBlob], `clockin-${Date.now()}.jpg`, { type: 'image/jpeg' });
       
+      // Upload da foto
       const { file_url } = await base44.integrations.Core.UploadFile({ file: photoFile });
 
-      let status = "pontual";
-      let delayMinutes = 0;
-      
+      // Criar registro
       await base44.entities.TimeRecord.create({
         employee_id: employee.id,
         company_id: employee.company_id,
@@ -284,14 +224,13 @@ export default function ClockIn() {
         latitude: location?.latitude,
         longitude: location?.longitude,
         photo_url: file_url,
-        status: status,
-        delay_minutes: delayMinutes,
+        status: "pontual",
+        delay_minutes: 0,
         verified: true
       });
 
       setSuccess(true);
-      setCapturedPhoto(null);
-      stopCamera();
+      setPhotoDataUrl(null);
       
       setTimeout(() => {
         setSuccess(false);
@@ -300,7 +239,7 @@ export default function ClockIn() {
 
     } catch (error) {
       setError("Erro ao registrar ponto. Tente novamente.");
-      console.error(error);
+      console.error("Clock in error:", error);
     } finally {
       setLoading(false);
     }
@@ -341,7 +280,7 @@ export default function ClockIn() {
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
+          <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
         </div>
       </div>
     );
@@ -374,7 +313,7 @@ export default function ClockIn() {
           <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
             <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
             <AlertDescription className="text-green-800 dark:text-green-200">
-              Ponto registrado com sucesso! ✓
+              ✅ Ponto registrado com sucesso!
             </AlertDescription>
           </Alert>
         )}
@@ -398,31 +337,32 @@ export default function ClockIn() {
           <CardContent className="space-y-6">
             {/* Tipo de registro */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Tipo de Registro</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Registro</label>
               <Select value={recordType} onValueChange={setRecordType} disabled={loading || cameraActive}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="entrada">Entrada</SelectItem>
-                  <SelectItem value="saida">Saída</SelectItem>
-                  <SelectItem value="pausa">Pausa / Almoço</SelectItem>
-                  <SelectItem value="retorno">Retorno</SelectItem>
+                  <SelectItem value="entrada">🟢 Entrada</SelectItem>
+                  <SelectItem value="saida">🔴 Saída</SelectItem>
+                  <SelectItem value="pausa">⏸️ Pausa / Almoço</SelectItem>
+                  <SelectItem value="retorno">▶️ Retorno</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Localização */}
             {location && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
                 <MapPin className="w-4 h-4 text-green-600" />
-                <span>Localização capturada</span>
+                <span>📍 Localização capturada</span>
               </div>
             )}
 
-            {/* Câmera */}
+            {/* Câmera e Foto */}
             <div className="space-y-4">
-              {!cameraActive && !capturedPhoto && (
+              {/* Botão para ativar câmera */}
+              {!cameraActive && !photoDataUrl && (
                 <Button
                   onClick={startCamera}
                   className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
@@ -430,13 +370,14 @@ export default function ClockIn() {
                   disabled={loading}
                 >
                   <Camera className="w-5 h-5 mr-2" />
-                  Ativar Câmera
+                  📸 Ativar Câmera
                 </Button>
               )}
 
-              {cameraActive && !capturedPhoto && (
+              {/* Preview da câmera */}
+              {cameraActive && !photoDataUrl && (
                 <div className="space-y-4">
-                  <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
+                  <div className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
                     <video
                       ref={videoRef}
                       autoPlay
@@ -444,44 +385,51 @@ export default function ClockIn() {
                       muted
                       className="w-full h-full object-cover"
                     />
-                    {!videoReady && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                        <div className="text-center text-white">
-                          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                          <p className="text-sm">Iniciando câmera...</p>
-                        </div>
-                      </div>
-                    )}
                     <Button
                       onClick={stopCamera}
                       variant="destructive"
                       size="icon"
-                      className="absolute top-4 right-4"
+                      className="absolute top-4 right-4 shadow-lg"
                     >
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
                   
-                  <Button
-                    onClick={handleTakePhoto}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                    size="lg"
-                    disabled={!videoReady}
-                  >
-                    <Camera className="w-5 h-5 mr-2" />
-                    {videoReady ? 'Capturar Foto' : 'Aguarde...'}
-                  </Button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      onClick={stopCamera}
+                      variant="outline"
+                      size="lg"
+                    >
+                      <X className="w-5 h-5 mr-2" />
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={capturePhoto}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                      size="lg"
+                    >
+                      <Camera className="w-5 h-5 mr-2" />
+                      📸 Capturar Foto
+                    </Button>
+                  </div>
                 </div>
               )}
 
-              {capturedPhoto && (
+              {/* Preview da foto capturada */}
+              {photoDataUrl && (
                 <div className="space-y-4">
-                  <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
+                  <div className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
                     <img
-                      src={capturedPhoto}
+                      src={photoDataUrl}
                       alt="Foto capturada"
                       className="w-full h-full object-cover"
                     />
+                    <div className="absolute top-4 left-4">
+                      <Badge className="bg-green-500 text-white">
+                        ✓ Foto Capturada
+                      </Badge>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3">
@@ -496,7 +444,7 @@ export default function ClockIn() {
                     </Button>
                     <Button
                       onClick={handleClockIn}
-                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg"
                       size="lg"
                       disabled={loading}
                     >
@@ -508,28 +456,31 @@ export default function ClockIn() {
                       ) : (
                         <>
                           <CheckCircle className="w-5 h-5 mr-2" />
-                          Registrar Ponto
+                          ✅ Registrar Ponto
                         </>
                       )}
                     </Button>
                   </div>
+
+                  <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                    <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
+                      👆 Revise sua foto e clique em "Registrar Ponto" para confirmar o registro.
+                    </AlertDescription>
+                  </Alert>
                 </div>
               )}
             </div>
 
-            {/* Canvas oculto para captura */}
-            <canvas ref={canvasRef} className="hidden" />
-
             {/* Último registro */}
-            {lastRecord && (
-              <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Último Registro
+            {lastRecord && !success && (
+              <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  📋 Último Registro
                 </p>
                 <div className="flex items-center justify-between">
                   <div>
-                    <Badge variant="outline" className="mb-1">
-                      {lastRecord.type}
+                    <Badge variant="outline" className="mb-2">
+                      {lastRecord.type === 'entrada' ? '🟢' : lastRecord.type === 'saida' ? '🔴' : lastRecord.type === 'pausa' ? '⏸️' : '▶️'} {lastRecord.type}
                     </Badge>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {format(new Date(lastRecord.timestamp), "dd/MM/yyyy 'às' HH:mm")}
@@ -540,7 +491,7 @@ export default function ClockIn() {
                     lastRecord.status === 'atrasado' ? 'bg-orange-500' :
                     'bg-blue-500'
                   }>
-                    {lastRecord.status}
+                    {lastRecord.status === 'pontual' ? '✓ Pontual' : lastRecord.status}
                   </Badge>
                 </div>
               </div>
