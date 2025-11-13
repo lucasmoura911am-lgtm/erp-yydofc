@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Camera, MapPin, Clock, CheckCircle, Loader2, X, AlertCircle } from "lucide-react";
+import { Camera, MapPin, Clock, CheckCircle, Loader2, X, AlertCircle, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,7 @@ export default function ClockIn() {
   const [recordType, setRecordType] = useState("entrada");
   const [cameraActive, setCameraActive] = useState(false);
   const [location, setLocation] = useState(null);
-  const [photoUrl, setPhotoUrl] = useState(null);
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
@@ -41,7 +41,10 @@ export default function ClockIn() {
       setCurrentTime(new Date());
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      stopCamera();
+    };
   }, []);
 
   const loadUserData = async () => {
@@ -49,17 +52,15 @@ export default function ClockIn() {
       const userData = await base44.auth.me();
       setUser(userData);
       
-      // Verificar se o usuário tem employee_id
       if (!userData.employee_id) {
-        // Tentar buscar employee pelo email do usuário
         const employees = await base44.entities.Employee.filter({ 
           user_email: userData.email 
         });
         
         if (employees.length > 0) {
           setEmployee(employees[0]);
-          // Atualizar user com employee_id
           await base44.auth.updateMe({ employee_id: employees[0].id });
+          await loadLastRecord(employees[0].id);
         } else {
           setNeedsSetup(true);
           return;
@@ -70,32 +71,34 @@ export default function ClockIn() {
         });
         if (employeeData.length > 0) {
           setEmployee(employeeData[0]);
+          await loadLastRecord(employeeData[0].id);
         } else {
           setNeedsSetup(true);
           return;
         }
       }
-      
-      // Buscar último registro
-      const empId = userData.employee_id || employees[0]?.id;
-      if (empId) {
-        const records = await base44.entities.TimeRecord.filter(
-          { employee_id: empId },
-          '-timestamp',
-          1
-        );
-        if (records.length > 0) {
-          setLastRecord(records[0]);
-          // Sugerir próximo tipo baseado no último
-          if (records[0].type === 'entrada') setRecordType('pausa');
-          else if (records[0].type === 'pausa') setRecordType('retorno');
-          else if (records[0].type === 'retorno') setRecordType('saida');
-          else setRecordType('entrada');
-        }
-      }
     } catch (error) {
       setError("Erro ao carregar dados do usuário");
       console.error(error);
+    }
+  };
+
+  const loadLastRecord = async (empId) => {
+    try {
+      const records = await base44.entities.TimeRecord.filter(
+        { employee_id: empId },
+        '-timestamp',
+        1
+      );
+      if (records.length > 0) {
+        setLastRecord(records[0]);
+        if (records[0].type === 'entrada') setRecordType('pausa');
+        else if (records[0].type === 'pausa') setRecordType('retorno');
+        else if (records[0].type === 'retorno') setRecordType('saida');
+        else setRecordType('entrada');
+      }
+    } catch (error) {
+      console.error("Erro ao carregar último registro:", error);
     }
   };
 
@@ -118,16 +121,23 @@ export default function ClockIn() {
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' },
+        video: { 
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
         audio: false 
       });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
       setCameraActive(true);
+      setError(null);
     } catch (err) {
       setError("Erro ao acessar a câmera. Por favor, permita o acesso.");
+      console.error("Camera error:", err);
     }
   };
 
@@ -136,26 +146,55 @@ export default function ClockIn() {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setCameraActive(false);
   };
 
   const capturePhoto = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current) {
+      setError("Câmera não está pronta. Tente novamente.");
+      return null;
+    }
 
-    const canvas = canvasRef.current;
     const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      setError("Vídeo ainda não carregou. Aguarde um momento.");
+      return null;
+    }
     
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     return new Promise((resolve) => {
       canvas.toBlob((blob) => {
-        resolve(blob);
-      }, 'image/jpeg', 0.8);
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          setCapturedPhoto(url);
+          resolve(blob);
+        } else {
+          resolve(null);
+        }
+      }, 'image/jpeg', 0.95);
     });
+  };
+
+  const handleTakePhoto = async () => {
+    const photoBlob = await capturePhoto();
+    if (!photoBlob) {
+      setError("Erro ao capturar foto. Tente novamente.");
+    }
+  };
+
+  const handleRetakePhoto = () => {
+    setCapturedPhoto(null);
+    setError(null);
   };
 
   const handleClockIn = async () => {
@@ -164,23 +203,27 @@ export default function ClockIn() {
       return;
     }
 
+    if (!capturedPhoto) {
+      setError("Por favor, tire uma foto antes de registrar o ponto");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      // Capturar foto
-      const photoBlob = await capturePhoto();
+      const canvas = canvasRef.current;
+      const photoBlob = await new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
+      });
+      
       const photoFile = new File([photoBlob], `clockin-${Date.now()}.jpg`, { type: 'image/jpeg' });
       
-      // Upload da foto
       const { file_url } = await base44.integrations.Core.UploadFile({ file: photoFile });
-      setPhotoUrl(file_url);
 
-      // Calcular status (pontual ou atrasado)
       let status = "pontual";
       let delayMinutes = 0;
       
-      // Criar registro
       await base44.entities.TimeRecord.create({
         employee_id: employee.id,
         company_id: employee.company_id,
@@ -195,6 +238,7 @@ export default function ClockIn() {
       });
 
       setSuccess(true);
+      setCapturedPhoto(null);
       stopCamera();
       
       setTimeout(() => {
@@ -233,11 +277,6 @@ export default function ClockIn() {
                   </ul>
                 </AlertDescription>
               </Alert>
-              <div className="text-center pt-4">
-                <p className="text-sm text-gray-500">
-                  Após o cadastro, você poderá fazer login e bater ponto normalmente.
-                </p>
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -291,6 +330,7 @@ export default function ClockIn() {
         {/* Erro */}
         {error && (
           <Alert variant="destructive">
+            <AlertCircle className="h-5 w-5" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -307,7 +347,7 @@ export default function ClockIn() {
             {/* Tipo de registro */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Tipo de Registro</label>
-              <Select value={recordType} onValueChange={setRecordType} disabled={loading}>
+              <Select value={recordType} onValueChange={setRecordType} disabled={loading || cameraActive}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -330,7 +370,7 @@ export default function ClockIn() {
 
             {/* Câmera */}
             <div className="space-y-4">
-              {!cameraActive ? (
+              {!cameraActive && !capturedPhoto && (
                 <Button
                   onClick={startCamera}
                   className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
@@ -340,7 +380,9 @@ export default function ClockIn() {
                   <Camera className="w-5 h-5 mr-2" />
                   Ativar Câmera
                 </Button>
-              ) : (
+              )}
+
+              {cameraActive && !capturedPhoto && (
                 <div className="space-y-4">
                   <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
                     <video
@@ -361,23 +403,55 @@ export default function ClockIn() {
                   </div>
                   
                   <Button
-                    onClick={handleClockIn}
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                    onClick={handleTakePhoto}
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                     size="lg"
-                    disabled={loading}
                   >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Registrando...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="w-5 h-5 mr-2" />
-                        Registrar Ponto
-                      </>
-                    )}
+                    <Camera className="w-5 h-5 mr-2" />
+                    Capturar Foto
                   </Button>
+                </div>
+              )}
+
+              {capturedPhoto && (
+                <div className="space-y-4">
+                  <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
+                    <img
+                      src={capturedPhoto}
+                      alt="Foto capturada"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      onClick={handleRetakePhoto}
+                      variant="outline"
+                      size="lg"
+                      disabled={loading}
+                    >
+                      <RefreshCw className="w-5 h-5 mr-2" />
+                      Tirar Novamente
+                    </Button>
+                    <Button
+                      onClick={handleClockIn}
+                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                      size="lg"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Registrando...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-5 h-5 mr-2" />
+                          Registrar Ponto
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

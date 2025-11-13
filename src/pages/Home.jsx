@@ -4,9 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Clock, Users, BarChart3, Shield, Timer, CheckCircle, LogIn, Zap, Lock, MapPin } from "lucide-react";
+import { Clock, Users, BarChart3, Shield, Timer, CheckCircle, LogIn, Zap, Lock, MapPin, AlertCircle, Info, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -17,12 +19,28 @@ export default function Home() {
     checkAuth();
   }, []);
 
+  const { data: announcements = [] } = useQuery({
+    queryKey: ['announcements'],
+    queryFn: async () => {
+      const allAnnouncements = await base44.entities.Announcement.list('-created_date');
+      const now = new Date();
+      return allAnnouncements.filter(ann => {
+        if (!ann.active) return false;
+        if (ann.expires_at) {
+          const expiryDate = new Date(ann.expires_at);
+          if (expiryDate < now) return false;
+        }
+        return true;
+      });
+    },
+    initialData: [],
+  });
+
   const checkAuth = async () => {
     try {
       const isAuth = await base44.auth.isAuthenticated();
       if (isAuth) {
         const user = await base44.auth.me();
-        // Redirecionar baseado no role
         if (user.role === 'admin') {
           navigate(createPageUrl('Dashboard'));
         } else {
@@ -39,6 +57,31 @@ export default function Home() {
   const handleLogin = () => {
     base44.auth.redirectToLogin(window.location.origin + createPageUrl('Home'));
   };
+
+  const getAnnouncementIcon = (type) => {
+    switch (type) {
+      case 'info': return <Info className="w-5 h-5" />;
+      case 'warning': return <AlertTriangle className="w-5 h-5" />;
+      case 'success': return <CheckCircle2 className="w-5 h-5" />;
+      case 'error': return <AlertCircle className="w-5 h-5" />;
+      default: return <Info className="w-5 h-5" />;
+    }
+  };
+
+  const getAnnouncementVariant = (type) => {
+    switch (type) {
+      case 'warning': return 'default';
+      case 'error': return 'destructive';
+      default: return 'default';
+    }
+  };
+
+  const filteredAnnouncements = announcements.filter(ann => {
+    if (ann.target_audience === 'all') return true;
+    if (loginType === 'admin' && ann.target_audience === 'admin') return true;
+    if (loginType === 'employee' && ann.target_audience === 'employee') return true;
+    return false;
+  });
 
   if (loading) {
     return (
@@ -74,7 +117,7 @@ export default function Home() {
       </header>
 
       <div className="container mx-auto px-6 py-8">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
           {/* Left Side - Branding & Features */}
           <div className="space-y-8 text-white">
             <div className="space-y-4">
@@ -93,6 +136,26 @@ export default function Home() {
                 Reconhecimento facial, geolocalização e relatórios em tempo real.
               </p>
             </div>
+
+            {/* Announcements */}
+            {filteredAnnouncements.length > 0 && (
+              <div className="space-y-3">
+                {filteredAnnouncements.map((announcement) => (
+                  <Alert 
+                    key={announcement.id}
+                    className="bg-white/10 backdrop-blur-sm border-white/20 text-white"
+                  >
+                    {getAnnouncementIcon(announcement.type)}
+                    <AlertTitle className="text-white font-semibold">
+                      {announcement.title}
+                    </AlertTitle>
+                    <AlertDescription className="text-white/90">
+                      {announcement.message}
+                    </AlertDescription>
+                  </Alert>
+                ))}
+              </div>
+            )}
 
             {/* Features Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -70,6 +71,11 @@ const adminNavigation = [
     title: "Relatórios",
     url: createPageUrl("Reports"),
     icon: FileText,
+  },
+  {
+    title: "Avisos",
+    url: createPageUrl("Announcements"),
+    icon: LayoutDashboard,
   },
 ];
 
