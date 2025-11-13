@@ -21,6 +21,7 @@ export default function ClockIn() {
   const [needsSetup, setNeedsSetup] = useState(false);
   const [recordType, setRecordType] = useState("entrada");
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [location, setLocation] = useState(null);
   const [photoDataUrl, setPhotoDataUrl] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -119,11 +120,13 @@ export default function ClockIn() {
 
   const startCamera = async () => {
     try {
+      setCameraReady(false);
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'user',
-          width: { ideal: 640 },
-          height: { ideal: 480 }
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         },
         audio: false 
       });
@@ -132,10 +135,30 @@ export default function ClockIn() {
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        
+        // Aguardar o vídeo estar pronto
+        videoRef.current.onloadedmetadata = async () => {
+          try {
+            await videoRef.current.play();
+            
+            // Aguardar 1 segundo para garantir que frames estão chegando
+            setTimeout(() => {
+              setCameraReady(true);
+              setCameraActive(true);
+              setError(null);
+              console.log("Câmera pronta - dimensões:", videoRef.current.videoWidth, "x", videoRef.current.videoHeight);
+            }, 1000);
+          } catch (playErr) {
+            console.error("Erro ao iniciar reprodução:", playErr);
+            setError("Erro ao iniciar vídeo da câmera");
+          }
+        };
+        
+        videoRef.current.onerror = (err) => {
+          console.error("Erro no elemento de vídeo:", err);
+          setError("Erro ao carregar vídeo da câmera");
+        };
       }
-      
-      setCameraActive(true);
-      setError(null);
     } catch (err) {
       setError("Erro ao acessar a câmera. Por favor, permita o acesso.");
       console.error("Camera error:", err);
@@ -143,36 +166,99 @@ export default function ClockIn() {
   };
 
   const stopCamera = () => {
+    setCameraReady(false);
+    setCameraActive(false);
+    
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log("Track parado:", track.kind);
+      });
       streamRef.current = null;
     }
+    
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+      videoRef.current.onloadedmetadata = null;
+      videoRef.current.onerror = null;
     }
-    setCameraActive(false);
   };
 
   const capturePhoto = () => {
     const video = videoRef.current;
+    
     if (!video) {
-      setError("Câmera não está ativa");
+      setError("Vídeo não disponível");
       return;
     }
 
-    // Criar canvas temporário
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    // Converter para data URL
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-    setPhotoDataUrl(dataUrl);
-    stopCamera();
-    setError(null);
+    if (!cameraReady) {
+      setError("Aguarde a câmera estar pronta");
+      return;
+    }
+
+    // Verificar se o vídeo tem dimensões válidas
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      setError("Vídeo ainda não carregou. Aguarde mais um momento.");
+      console.log("Dimensões do vídeo:", video.videoWidth, video.videoHeight);
+      return;
+    }
+
+    // Verificar readyState
+    if (video.readyState < 2) {
+      setError("Vídeo ainda carregando. Tente novamente em um momento.");
+      console.log("ReadyState:", video.readyState);
+      return;
+    }
+
+    try {
+      // Criar canvas com as dimensões exatas do vídeo
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      console.log("Canvas criado:", canvas.width, "x", canvas.height);
+      
+      const ctx = canvas.getContext('2d', { willReadFrequently: false });
+      
+      if (!ctx) {
+        setError("Erro ao criar contexto do canvas");
+        return;
+      }
+
+      // Desenhar o frame atual do vídeo
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Verificar se a imagem não está preta (pelo menos alguns pixels devem ter cor)
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      let totalBrightness = 0;
+      
+      // Checar brightness de alguns pixels
+      for (let i = 0; i < 1000; i += 4) {
+        totalBrightness += data[i] + data[i + 1] + data[i + 2];
+      }
+      
+      console.log("Brightness total:", totalBrightness);
+      
+      if (totalBrightness < 100) {
+        setError("Imagem muito escura. Verifique a iluminação e permissões da câmera.");
+        return;
+      }
+      
+      // Converter para data URL
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      
+      console.log("Data URL gerado, tamanho:", dataUrl.length);
+      
+      setPhotoDataUrl(dataUrl);
+      stopCamera();
+      setError(null);
+      
+    } catch (err) {
+      console.error("Erro ao capturar foto:", err);
+      setError("Erro ao processar imagem: " + err.message);
+    }
   };
 
   const handleRetakePhoto = () => {
@@ -208,26 +294,34 @@ export default function ClockIn() {
     setError(null);
 
     try {
+      console.log("Iniciando upload da foto...");
+      
       // Converter data URL para blob e depois para file
       const photoBlob = dataURLtoBlob(photoDataUrl);
+      console.log("Blob criado, tamanho:", photoBlob.size);
+      
       const photoFile = new File([photoBlob], `clockin-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      console.log("File criado:", photoFile.name, photoFile.size);
       
       // Upload da foto
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: photoFile });
+      const uploadResult = await base44.integrations.Core.UploadFile({ file: photoFile });
+      console.log("Upload concluído:", uploadResult);
 
       // Criar registro
-      await base44.entities.TimeRecord.create({
+      const record = await base44.entities.TimeRecord.create({
         employee_id: employee.id,
         company_id: employee.company_id,
         timestamp: new Date().toISOString(),
         type: recordType,
         latitude: location?.latitude,
         longitude: location?.longitude,
-        photo_url: file_url,
+        photo_url: uploadResult.file_url,
         status: "pontual",
         delay_minutes: 0,
         verified: true
       });
+      
+      console.log("Registro criado:", record);
 
       setSuccess(true);
       setPhotoDataUrl(null);
@@ -238,8 +332,8 @@ export default function ClockIn() {
       }, 3000);
 
     } catch (error) {
-      setError("Erro ao registrar ponto. Tente novamente.");
-      console.error("Clock in error:", error);
+      console.error("Erro ao registrar ponto:", error);
+      setError("Erro ao registrar ponto: " + (error.message || "Tente novamente"));
     } finally {
       setLoading(false);
     }
@@ -384,7 +478,17 @@ export default function ClockIn() {
                       playsInline
                       muted
                       className="w-full h-full object-cover"
+                      style={{ transform: 'scaleX(-1)' }}
                     />
+                    {!cameraReady && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                        <div className="text-center text-white">
+                          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-3" />
+                          <p className="text-lg font-semibold">Preparando câmera...</p>
+                          <p className="text-sm opacity-80">Aguarde alguns segundos</p>
+                        </div>
+                      </div>
+                    )}
                     <Button
                       onClick={stopCamera}
                       variant="destructive"
@@ -408,9 +512,10 @@ export default function ClockIn() {
                       onClick={capturePhoto}
                       className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                       size="lg"
+                      disabled={!cameraReady}
                     >
                       <Camera className="w-5 h-5 mr-2" />
-                      📸 Capturar Foto
+                      {cameraReady ? '📸 Capturar Foto' : 'Aguarde...'}
                     </Button>
                   </div>
                 </div>
@@ -424,6 +529,7 @@ export default function ClockIn() {
                       src={photoDataUrl}
                       alt="Foto capturada"
                       className="w-full h-full object-cover"
+                      style={{ transform: 'scaleX(-1)' }}
                     />
                     <div className="absolute top-4 left-4">
                       <Badge className="bg-green-500 text-white">
