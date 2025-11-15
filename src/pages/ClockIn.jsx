@@ -20,10 +20,9 @@ export default function ClockIn() {
   const [employee, setEmployee] = useState(null);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [recordType, setRecordType] = useState("entrada");
-  const [cameraActive, setCameraActive] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const [location, setLocation] = useState(null);
-  const [photoDataUrl, setPhotoDataUrl] = useState(null);
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
@@ -32,6 +31,7 @@ export default function ClockIn() {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     loadUserData();
@@ -43,7 +43,7 @@ export default function ClockIn() {
 
     return () => {
       clearInterval(timer);
-      stopCamera();
+      cleanup();
     };
   }, []);
 
@@ -118,175 +118,72 @@ export default function ClockIn() {
     }
   };
 
-  const startCamera = async () => {
+  const openCamera = async () => {
     try {
-      setCameraReady(false);
-      
+      setError(null);
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: false 
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        } 
       });
       
       streamRef.current = stream;
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        
-        // Aguardar o vídeo estar pronto
-        videoRef.current.onloadedmetadata = async () => {
-          try {
-            await videoRef.current.play();
-            
-            // Aguardar 1 segundo para garantir que frames estão chegando
-            setTimeout(() => {
-              setCameraReady(true);
-              setCameraActive(true);
-              setError(null);
-              console.log("Câmera pronta - dimensões:", videoRef.current.videoWidth, "x", videoRef.current.videoHeight);
-            }, 1000);
-          } catch (playErr) {
-            console.error("Erro ao iniciar reprodução:", playErr);
-            setError("Erro ao iniciar vídeo da câmera");
-          }
-        };
-        
-        videoRef.current.onerror = (err) => {
-          console.error("Erro no elemento de vídeo:", err);
-          setError("Erro ao carregar vídeo da câmera");
-        };
+        await videoRef.current.play();
       }
+      
+      setShowCamera(true);
     } catch (err) {
-      setError("Erro ao acessar a câmera. Por favor, permita o acesso.");
-      console.error("Camera error:", err);
+      setError("Erro ao acessar câmera. Verifique as permissões.");
+      console.error(err);
     }
   };
 
-  const stopCamera = () => {
-    setCameraReady(false);
-    setCameraActive(false);
+  const captureImage = async () => {
+    const video = videoRef.current;
+    if (!video || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    
+    canvas.toBlob((blob) => {
+      setCapturedPhoto(blob);
+      cleanup();
+      setShowCamera(false);
+    }, 'image/jpeg', 0.9);
+  };
+
+  const cleanup = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
-        track.stop();
-        console.log("Track parado:", track.kind);
-      });
+      streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-    
     if (videoRef.current) {
       videoRef.current.srcObject = null;
-      videoRef.current.onloadedmetadata = null;
-      videoRef.current.onerror = null;
     }
   };
 
-  const capturePhoto = () => {
-    const video = videoRef.current;
-    
-    if (!video) {
-      setError("Vídeo não disponível");
-      return;
-    }
-
-    if (!cameraReady) {
-      setError("Aguarde a câmera estar pronta");
-      return;
-    }
-
-    // Verificar se o vídeo tem dimensões válidas
-    if (video.videoWidth === 0 || video.videoHeight === 0) {
-      setError("Vídeo ainda não carregou. Aguarde mais um momento.");
-      console.log("Dimensões do vídeo:", video.videoWidth, video.videoHeight);
-      return;
-    }
-
-    // Verificar readyState
-    if (video.readyState < 2) {
-      setError("Vídeo ainda carregando. Tente novamente em um momento.");
-      console.log("ReadyState:", video.readyState);
-      return;
-    }
-
-    try {
-      // Criar canvas com as dimensões exatas do vídeo
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      
-      console.log("Canvas criado:", canvas.width, "x", canvas.height);
-      
-      const ctx = canvas.getContext('2d', { willReadFrequently: false });
-      
-      if (!ctx) {
-        setError("Erro ao criar contexto do canvas");
-        return;
-      }
-
-      // Desenhar o frame atual do vídeo
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      // Verificar se a imagem não está preta (pelo menos alguns pixels devem ter cor)
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-      let totalBrightness = 0;
-      
-      // Checar brightness de alguns pixels
-      for (let i = 0; i < 1000; i += 4) {
-        totalBrightness += data[i] + data[i + 1] + data[i + 2];
-      }
-      
-      console.log("Brightness total:", totalBrightness);
-      
-      if (totalBrightness < 100) {
-        setError("Imagem muito escura. Verifique a iluminação e permissões da câmera.");
-        return;
-      }
-      
-      // Converter para data URL
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-      
-      console.log("Data URL gerado, tamanho:", dataUrl.length);
-      
-      setPhotoDataUrl(dataUrl);
-      stopCamera();
-      setError(null);
-      
-    } catch (err) {
-      console.error("Erro ao capturar foto:", err);
-      setError("Erro ao processar imagem: " + err.message);
-    }
-  };
-
-  const handleRetakePhoto = () => {
-    setPhotoDataUrl(null);
-    setError(null);
-    startCamera();
-  };
-
-  const dataURLtoBlob = (dataUrl) => {
-    const arr = dataUrl.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], { type: mime });
+  const retakePhoto = () => {
+    setCapturedPhoto(null);
+    openCamera();
   };
 
   const handleClockIn = async () => {
     if (!employee) {
-      setError("Cadastro de funcionário não encontrado");
+      setError("Cadastro não encontrado");
       return;
     }
 
-    if (!photoDataUrl) {
-      setError("Por favor, tire uma foto antes de registrar o ponto");
+    if (!capturedPhoto) {
+      setError("Tire uma foto antes de registrar");
       return;
     }
 
@@ -294,37 +191,29 @@ export default function ClockIn() {
     setError(null);
 
     try {
-      console.log("Iniciando upload da foto...");
+      const photoFile = new File([capturedPhoto], `ponto-${Date.now()}.jpg`, { 
+        type: 'image/jpeg' 
+      });
       
-      // Converter data URL para blob e depois para file
-      const photoBlob = dataURLtoBlob(photoDataUrl);
-      console.log("Blob criado, tamanho:", photoBlob.size);
-      
-      const photoFile = new File([photoBlob], `clockin-${Date.now()}.jpg`, { type: 'image/jpeg' });
-      console.log("File criado:", photoFile.name, photoFile.size);
-      
-      // Upload da foto
-      const uploadResult = await base44.integrations.Core.UploadFile({ file: photoFile });
-      console.log("Upload concluído:", uploadResult);
+      const { file_url } = await base44.integrations.Core.UploadFile({ 
+        file: photoFile 
+      });
 
-      // Criar registro
-      const record = await base44.entities.TimeRecord.create({
+      await base44.entities.TimeRecord.create({
         employee_id: employee.id,
         company_id: employee.company_id,
         timestamp: new Date().toISOString(),
         type: recordType,
         latitude: location?.latitude,
         longitude: location?.longitude,
-        photo_url: uploadResult.file_url,
+        photo_url: file_url,
         status: "pontual",
         delay_minutes: 0,
         verified: true
       });
-      
-      console.log("Registro criado:", record);
 
       setSuccess(true);
-      setPhotoDataUrl(null);
+      setCapturedPhoto(null);
       
       setTimeout(() => {
         setSuccess(false);
@@ -332,8 +221,8 @@ export default function ClockIn() {
       }, 3000);
 
     } catch (error) {
-      console.error("Erro ao registrar ponto:", error);
-      setError("Erro ao registrar ponto: " + (error.message || "Tente novamente"));
+      setError("Erro ao registrar ponto");
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -373,7 +262,7 @@ export default function ClockIn() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <Loader2 className="w-12 h-12 animate-spin text-purple-600 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
         </div>
       </div>
@@ -432,7 +321,7 @@ export default function ClockIn() {
             {/* Tipo de registro */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Registro</label>
-              <Select value={recordType} onValueChange={setRecordType} disabled={loading || cameraActive}>
+              <Select value={recordType} onValueChange={setRecordType} disabled={loading || showCamera}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -453,129 +342,114 @@ export default function ClockIn() {
               </div>
             )}
 
-            {/* Câmera e Foto */}
-            <div className="space-y-4">
-              {/* Botão para ativar câmera */}
-              {!cameraActive && !photoDataUrl && (
-                <Button
-                  onClick={startCamera}
-                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                  size="lg"
-                  disabled={loading}
-                >
-                  <Camera className="w-5 h-5 mr-2" />
-                  📸 Ativar Câmera
-                </Button>
-              )}
+            {/* Canvas oculto para captura */}
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-              {/* Preview da câmera */}
-              {cameraActive && !photoDataUrl && (
-                <div className="space-y-4">
-                  <div className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover"
-                      style={{ transform: 'scaleX(-1)' }}
-                    />
-                    {!cameraReady && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-                        <div className="text-center text-white">
-                          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-3" />
-                          <p className="text-lg font-semibold">Preparando câmera...</p>
-                          <p className="text-sm opacity-80">Aguarde alguns segundos</p>
-                        </div>
-                      </div>
+            {/* Interface da câmera */}
+            {!showCamera && !capturedPhoto && (
+              <Button
+                onClick={openCamera}
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                size="lg"
+                disabled={loading}
+              >
+                <Camera className="w-5 h-5 mr-2" />
+                📸 Tirar Foto
+              </Button>
+            )}
+
+            {/* Preview da câmera */}
+            {showCamera && (
+              <div className="space-y-4">
+                <div className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                    style={{ transform: 'scaleX(-1)' }}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={() => {
+                      cleanup();
+                      setShowCamera(false);
+                    }}
+                    variant="outline"
+                    size="lg"
+                  >
+                    <X className="w-5 h-5 mr-2" />
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={captureImage}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                    size="lg"
+                  >
+                    <Camera className="w-5 h-5 mr-2" />
+                    📸 Capturar
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Preview da foto capturada */}
+            {capturedPhoto && (
+              <div className="space-y-4">
+                <div className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
+                  <img
+                    src={URL.createObjectURL(capturedPhoto)}
+                    alt="Foto capturada"
+                    className="w-full h-full object-cover"
+                    style={{ transform: 'scaleX(-1)' }}
+                  />
+                  <div className="absolute top-4 left-4">
+                    <Badge className="bg-green-500 text-white">
+                      ✓ Foto Capturada
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={retakePhoto}
+                    variant="outline"
+                    size="lg"
+                    disabled={loading}
+                  >
+                    <RefreshCw className="w-5 h-5 mr-2" />
+                    Tirar Novamente
+                  </Button>
+                  <Button
+                    onClick={handleClockIn}
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg"
+                    size="lg"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Registrando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        ✅ Registrar Ponto
+                      </>
                     )}
-                    <Button
-                      onClick={stopCamera}
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-4 right-4 shadow-lg"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      onClick={stopCamera}
-                      variant="outline"
-                      size="lg"
-                    >
-                      <X className="w-5 h-5 mr-2" />
-                      Cancelar
-                    </Button>
-                    <Button
-                      onClick={capturePhoto}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                      size="lg"
-                      disabled={!cameraReady}
-                    >
-                      <Camera className="w-5 h-5 mr-2" />
-                      {cameraReady ? '📸 Capturar Foto' : 'Aguarde...'}
-                    </Button>
-                  </div>
+                  </Button>
                 </div>
-              )}
 
-              {/* Preview da foto capturada */}
-              {photoDataUrl && (
-                <div className="space-y-4">
-                  <div className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
-                    <img
-                      src={photoDataUrl}
-                      alt="Foto capturada"
-                      className="w-full h-full object-cover"
-                      style={{ transform: 'scaleX(-1)' }}
-                    />
-                    <div className="absolute top-4 left-4">
-                      <Badge className="bg-green-500 text-white">
-                        ✓ Foto Capturada
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      onClick={handleRetakePhoto}
-                      variant="outline"
-                      size="lg"
-                      disabled={loading}
-                    >
-                      <RefreshCw className="w-5 h-5 mr-2" />
-                      Tirar Novamente
-                    </Button>
-                    <Button
-                      onClick={handleClockIn}
-                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg"
-                      size="lg"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Registrando...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="w-5 h-5 mr-2" />
-                          ✅ Registrar Ponto
-                        </>
-                      )}
-                    </Button>
-                  </div>
-
-                  <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                    <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
-                      👆 Revise sua foto e clique em "Registrar Ponto" para confirmar o registro.
-                    </AlertDescription>
-                  </Alert>
-                </div>
-              )}
-            </div>
+                <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                  <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
+                    👆 Revise sua foto e clique em "Registrar Ponto" para confirmar.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
 
             {/* Último registro */}
             {lastRecord && !success && (
