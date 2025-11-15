@@ -29,9 +29,11 @@ export default function ClockIn() {
   const [error, setError] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [lastRecord, setLastRecord] = useState(null);
+  const [cameraReady, setCameraReady] = useState(false);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const readyCheckRef = useRef(null);
 
   useEffect(() => {
     loadUserData();
@@ -121,12 +123,13 @@ export default function ClockIn() {
   const openCamera = async () => {
     try {
       setError(null);
+      setCameraReady(false);
       
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'user',
-          width: { ideal: 640 },
-          height: { ideal: 480 }
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         } 
       });
       
@@ -134,7 +137,19 @@ export default function ClockIn() {
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        
+        // Esperar o vídeo carregar completamente
+        await new Promise((resolve) => {
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current.play().then(() => {
+              // Aguardar 1.5 segundos após o play para garantir que frames estão disponíveis
+              setTimeout(() => {
+                setCameraReady(true);
+                resolve();
+              }, 1500);
+            });
+          };
+        });
       }
       
       setShowCamera(true);
@@ -152,50 +167,97 @@ export default function ClockIn() {
       return;
     }
 
-    if (video.videoWidth === 0 || video.videoHeight === 0) {
-      setError("Vídeo ainda não está pronto. Tente novamente em 1 segundo.");
+    // Verificações rigorosas
+    if (!cameraReady) {
+      setError("⏳ Aguarde a câmera ficar pronta...");
       return;
     }
 
+    if (video.readyState !== 4) {
+      setError("Câmera ainda não está totalmente pronta. Aguarde mais um segundo.");
+      return;
+    }
+
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      setError("Dimensões do vídeo inválidas. Aguarde...");
+      return;
+    }
+
+    console.log("Capturando - Dimensões:", video.videoWidth, "x", video.videoHeight);
+    console.log("ReadyState:", video.readyState);
+
     try {
+      // Criar canvas com as dimensões exatas do vídeo
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { alpha: false });
+      
+      // Preencher com branco primeiro (para debug)
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Desenhar o frame do vídeo
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       
-      // Verificar brightness
-      const imageData = ctx.getImageData(0, 0, Math.min(100, canvas.width), Math.min(100, canvas.height));
-      let sum = 0;
+      // Verificar brightness da imagem capturada
+      const sampleSize = 100;
+      const imageData = ctx.getImageData(
+        canvas.width / 2 - sampleSize / 2, 
+        canvas.height / 2 - sampleSize / 2, 
+        sampleSize, 
+        sampleSize
+      );
+      
+      let totalBrightness = 0;
+      let pixelCount = 0;
+      
       for (let i = 0; i < imageData.data.length; i += 4) {
-        sum += imageData.data[i] + imageData.data[i+1] + imageData.data[i+2];
+        const r = imageData.data[i];
+        const g = imageData.data[i + 1];
+        const b = imageData.data[i + 2];
+        const brightness = (r + g + b) / 3;
+        totalBrightness += brightness;
+        pixelCount++;
       }
       
-      if (sum < 500) {
-        setError("Imagem muito escura. Melhore a iluminação.");
+      const avgBrightness = totalBrightness / pixelCount;
+      console.log("Brightness médio:", avgBrightness);
+      
+      if (avgBrightness < 15) {
+        setError("❌ Imagem muito escura (brightness: " + avgBrightness.toFixed(1) + "). Melhore a iluminação ou limpe a câmera.");
         return;
       }
       
+      if (avgBrightness > 250) {
+        setError("❌ Imagem muito clara (brightness: " + avgBrightness.toFixed(1) + "). Reduza a luz direta na câmera.");
+        return;
+      }
+      
+      // Converter para blob com qualidade máxima
       canvas.toBlob(async (blob) => {
-        if (blob) {
-          // Verificar se há rosto na foto
-          setVerifyingFace(true);
-          const faceDetected = await detectFace(blob);
-          setVerifyingFace(false);
-          
-          if (!faceDetected) {
-            setError("❌ Nenhum rosto detectado. Posicione seu rosto na câmera.");
-            return;
-          }
-          
-          setCapturedPhoto(blob);
-          cleanup();
-          setShowCamera(false);
-        } else {
+        if (!blob) {
           setError("Erro ao processar imagem");
+          return;
         }
-      }, 'image/jpeg', 0.92);
+
+        console.log("Blob criado:", blob.size, "bytes");
+        
+        // Verificar se há rosto na foto
+        setVerifyingFace(true);
+        const faceDetected = await detectFace(blob);
+        setVerifyingFace(false);
+        
+        if (!faceDetected) {
+          setError("❌ Nenhum rosto detectado. Posicione seu rosto de frente para a câmera.");
+          return;
+        }
+        
+        setCapturedPhoto(blob);
+        cleanup();
+        setShowCamera(false);
+      }, 'image/jpeg', 0.95);
       
     } catch (err) {
       console.error("Erro ao capturar:", err);
@@ -209,17 +271,19 @@ export default function ClockIn() {
       const { file_url } = await base44.integrations.Core.UploadFile({ file: photoFile });
       
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: "Analise esta imagem e responda APENAS 'SIM' se houver um rosto humano claramente visível, ou 'NAO' caso contrário. Seja rigoroso - a pessoa deve estar olhando para a câmera.",
+        prompt: "Analise esta imagem. Responda com face_detected=true APENAS se houver um rosto humano CLARAMENTE VISÍVEL e bem iluminado. Se a imagem estiver preta, escura demais, ou sem rosto, responda face_detected=false.",
         file_urls: [file_url],
         response_json_schema: {
           type: "object",
           properties: {
             face_detected: { type: "boolean" },
-            confidence: { type: "string" }
+            confidence: { type: "string" },
+            image_quality: { type: "string" }
           }
         }
       });
       
+      console.log("Detecção facial:", result);
       return result.face_detected;
     } catch (error) {
       console.error("Erro ao detectar rosto:", error);
@@ -228,6 +292,10 @@ export default function ClockIn() {
   };
 
   const cleanup = () => {
+    setCameraReady(false);
+    if (readyCheckRef.current) {
+      clearTimeout(readyCheckRef.current);
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -437,6 +505,26 @@ export default function ClockIn() {
                     className="w-full h-full object-cover"
                     style={{ transform: 'scaleX(-1)' }}
                   />
+                  
+                  {/* Status da câmera */}
+                  {!cameraReady && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                      <div className="text-center text-white">
+                        <Loader2 className="w-12 h-12 animate-spin mx-auto mb-3" />
+                        <p className="text-lg font-semibold">Preparando câmera...</p>
+                        <p className="text-sm opacity-80">Aguarde alguns segundos</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {cameraReady && !verifyingFace && (
+                    <div className="absolute top-4 right-4">
+                      <Badge className="bg-green-500 text-white">
+                        ● Câmera Pronta
+                      </Badge>
+                    </div>
+                  )}
+                  
                   {verifyingFace && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/70">
                       <div className="text-center text-white">
@@ -451,7 +539,7 @@ export default function ClockIn() {
                 <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                   <User className="h-4 w-4 text-blue-600" />
                   <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
-                    👤 Posicione seu rosto de frente para a câmera
+                    👤 Posicione seu rosto de frente para a câmera. Aguarde a luz verde "Câmera Pronta" antes de capturar.
                   </AlertDescription>
                 </Alert>
                 
@@ -472,12 +560,17 @@ export default function ClockIn() {
                     onClick={captureImage}
                     className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                     size="lg"
-                    disabled={verifyingFace}
+                    disabled={verifyingFace || !cameraReady}
                   >
                     {verifyingFace ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                         Verificando...
+                      </>
+                    ) : !cameraReady ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Preparando...
                       </>
                     ) : (
                       <>
