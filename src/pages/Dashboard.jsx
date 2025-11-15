@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Clock, TrendingUp, AlertCircle } from "lucide-react";
-import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { Users, Clock, TrendingUp, AlertCircle, UserCheck, UserX, Calendar } from "lucide-react";
+import { format, startOfMonth, endOfMonth, parseISO, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import StatsCard from "../components/dashboard/StatsCard";
 import AttendanceChart from "../components/dashboard/AttendanceChart";
@@ -15,6 +15,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Building2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -22,7 +24,9 @@ export default function Dashboard() {
     totalEmployees: 0,
     todayRecords: 0,
     monthPresence: 0,
-    delays: 0
+    delays: 0,
+    presentToday: 0,
+    absentToday: 0
   });
 
   useEffect(() => {
@@ -34,7 +38,6 @@ export default function Dashboard() {
       const userData = await base44.auth.me();
       setUser(userData);
       
-      // Se não tem company_id, criar uma
       if (!userData.company_id && userData.role === 'admin') {
         await initializeCompany(userData);
       }
@@ -81,19 +84,26 @@ export default function Dashboard() {
   }, [employees, timeRecords]);
 
   const calculateStats = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
+    const today = startOfDay(new Date());
     const monthStart = startOfMonth(new Date());
     const monthEnd = endOfMonth(new Date());
 
-    const activeEmployees = employees.filter(emp => emp.status === 'active').length;
+    const activeEmployees = employees.filter(emp => emp.status === 'active');
 
     const todayRecords = timeRecords.filter(record => {
-      const recordDate = new Date(record.timestamp);
-      recordDate.setHours(0, 0, 0, 0);
+      const recordDate = startOfDay(new Date(record.timestamp));
       return recordDate.getTime() === today.getTime();
-    }).length;
+    });
+
+    // Funcionários que bateram ponto hoje (entrada)
+    const employeesWithEntryToday = new Set(
+      todayRecords
+        .filter(r => r.type === 'entrada')
+        .map(r => r.employee_id)
+    );
+
+    const presentToday = employeesWithEntryToday.size;
+    const absentToday = activeEmployees.length - presentToday;
 
     const monthRecords = timeRecords.filter(record => {
       const recordDate = parseISO(record.timestamp);
@@ -107,11 +117,35 @@ export default function Dashboard() {
     const delays = timeRecords.filter(record => record.status === 'atrasado').length;
 
     setStats({
-      totalEmployees: activeEmployees,
-      todayRecords,
+      totalEmployees: activeEmployees.length,
+      todayRecords: todayRecords.length,
       monthPresence,
-      delays
+      delays,
+      presentToday,
+      absentToday
     });
+  };
+
+  const getPresentEmployees = () => {
+    const today = startOfDay(new Date());
+    const todayRecords = timeRecords.filter(record => {
+      const recordDate = startOfDay(new Date(record.timestamp));
+      return recordDate.getTime() === today.getTime() && record.type === 'entrada';
+    });
+
+    const presentEmployeeIds = new Set(todayRecords.map(r => r.employee_id));
+    return employees.filter(emp => presentEmployeeIds.has(emp.id) && emp.status === 'active');
+  };
+
+  const getAbsentEmployees = () => {
+    const today = startOfDay(new Date());
+    const todayRecords = timeRecords.filter(record => {
+      const recordDate = startOfDay(new Date(record.timestamp));
+      return recordDate.getTime() === today.getTime() && record.type === 'entrada';
+    });
+
+    const presentEmployeeIds = new Set(todayRecords.map(r => r.employee_id));
+    return employees.filter(emp => !presentEmployeeIds.has(emp.id) && emp.status === 'active');
   };
 
   if (!user) {
@@ -124,6 +158,9 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const presentEmployees = getPresentEmployees();
+  const absentEmployees = getAbsentEmployees();
 
   return (
     <div className="p-6 space-y-6">
@@ -159,13 +196,27 @@ export default function Dashboard() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatsCard
           title="Funcionários Ativos"
           value={stats.totalEmployees}
           icon={Users}
           gradient="from-blue-600 to-blue-400"
           trend={stats.totalEmployees > 0 ? "+2 este mês" : ""}
+        />
+        <StatsCard
+          title="Presentes Hoje"
+          value={stats.presentToday}
+          icon={UserCheck}
+          gradient="from-green-600 to-green-400"
+          trend={`${stats.totalEmployees > 0 ? Math.round((stats.presentToday/stats.totalEmployees)*100) : 0}%`}
+        />
+        <StatsCard
+          title="Ausentes Hoje"
+          value={stats.absentToday}
+          icon={UserX}
+          gradient="from-orange-600 to-orange-400"
+          trend={stats.absentToday > 0 ? 'Atenção' : 'Ótimo!'}
         />
         <StatsCard
           title="Registros Hoje"
@@ -177,16 +228,87 @@ export default function Dashboard() {
           title="Presença (Mês)"
           value={`${stats.monthPresence}%`}
           icon={TrendingUp}
-          gradient="from-green-600 to-green-400"
+          gradient="from-emerald-600 to-emerald-400"
           trend={stats.monthPresence > 90 ? 'Excelente!' : stats.monthPresence > 0 ? 'Bom' : ''}
         />
         <StatsCard
           title="Atrasos (Mês)"
           value={stats.delays}
           icon={AlertCircle}
-          gradient="from-orange-600 to-orange-400"
+          gradient="from-red-600 to-red-400"
         />
       </div>
+
+      {/* Presentes e Ausentes Hoje */}
+      {employees.length > 0 && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Presentes */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-600">
+                <UserCheck className="w-5 h-5" />
+                Presentes Hoje ({presentEmployees.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {presentEmployees.length > 0 ? (
+                  presentEmployees.map((emp) => (
+                    <div key={emp.id} className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <Avatar>
+                        <AvatarImage src={emp.photo_url} />
+                        <AvatarFallback className="bg-green-600 text-white">
+                          {emp.full_name?.charAt(0) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{emp.full_name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{emp.employee_number || "Sem matrícula"}</p>
+                      </div>
+                      <Badge className="bg-green-500">Presente</Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500 py-4">Nenhum funcionário presente ainda</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Ausentes */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-600">
+                <UserX className="w-5 h-5" />
+                Ausentes Hoje ({absentEmployees.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {absentEmployees.length > 0 ? (
+                  absentEmployees.map((emp) => (
+                    <div key={emp.id} className="flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                      <Avatar>
+                        <AvatarImage src={emp.photo_url} />
+                        <AvatarFallback className="bg-orange-600 text-white">
+                          {emp.full_name?.charAt(0) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{emp.full_name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{emp.employee_number || "Sem matrícula"}</p>
+                      </div>
+                      <Badge variant="outline" className="text-orange-600 border-orange-600">Ausente</Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-green-600 py-4 font-medium">✅ Todos presentes!</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Charts and Tables */}
       {timeRecords.length > 0 ? (
