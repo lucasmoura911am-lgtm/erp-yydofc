@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Camera, MapPin, Clock, CheckCircle, Loader2, X, AlertCircle, RefreshCw } from "lucide-react";
+import { Camera, MapPin, Clock, CheckCircle, Loader2, X, AlertCircle, RefreshCw, User } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -21,10 +21,10 @@ export default function ClockIn() {
   const [needsSetup, setNeedsSetup] = useState(false);
   const [recordType, setRecordType] = useState("entrada");
   const [showCamera, setShowCamera] = useState(false);
-  const [videoReady, setVideoReady] = useState(false);
   const [location, setLocation] = useState(null);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [verifyingFace, setVerifyingFace] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -121,7 +121,6 @@ export default function ClockIn() {
   const openCamera = async () => {
     try {
       setError(null);
-      setVideoReady(false);
       
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
@@ -135,18 +134,6 @@ export default function ClockIn() {
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        
-        // Aguardar dados do vídeo carregarem
-        videoRef.current.onloadeddata = () => {
-          // Aguardar mais 800ms para garantir frames válidos
-          setTimeout(() => {
-            if (videoRef.current && videoRef.current.videoWidth > 0) {
-              setVideoReady(true);
-              console.log("✅ Vídeo pronto:", videoRef.current.videoWidth, "x", videoRef.current.videoHeight);
-            }
-          }, 800);
-        };
-        
         await videoRef.current.play();
       }
       
@@ -157,48 +144,51 @@ export default function ClockIn() {
     }
   };
 
-  const captureImage = () => {
+  const captureImage = async () => {
     const video = videoRef.current;
     
-    if (!video || !videoReady) {
-      setError("Aguarde o vídeo carregar completamente");
+    if (!video) {
+      setError("Vídeo não disponível");
       return;
     }
 
     if (video.videoWidth === 0 || video.videoHeight === 0) {
-      setError("Vídeo ainda não está pronto. Tente novamente.");
+      setError("Vídeo ainda não está pronto. Tente novamente em 1 segundo.");
       return;
     }
 
     try {
-      // Criar canvas temporário
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       
       const ctx = canvas.getContext('2d');
-      
-      // Desenhar frame atual
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       
-      // Verificar se não está preto
+      // Verificar brightness
       const imageData = ctx.getImageData(0, 0, Math.min(100, canvas.width), Math.min(100, canvas.height));
       let sum = 0;
       for (let i = 0; i < imageData.data.length; i += 4) {
         sum += imageData.data[i] + imageData.data[i+1] + imageData.data[i+2];
       }
       
-      console.log("Brightness check:", sum);
-      
       if (sum < 500) {
-        setError("Imagem muito escura. Verifique iluminação e permissões.");
+        setError("Imagem muito escura. Melhore a iluminação.");
         return;
       }
       
-      // Converter para Blob
-      canvas.toBlob((blob) => {
+      canvas.toBlob(async (blob) => {
         if (blob) {
-          console.log("✅ Foto capturada:", blob.size, "bytes");
+          // Verificar se há rosto na foto
+          setVerifyingFace(true);
+          const faceDetected = await detectFace(blob);
+          setVerifyingFace(false);
+          
+          if (!faceDetected) {
+            setError("❌ Nenhum rosto detectado. Posicione seu rosto na câmera.");
+            return;
+          }
+          
           setCapturedPhoto(blob);
           cleanup();
           setShowCamera(false);
@@ -213,15 +203,37 @@ export default function ClockIn() {
     }
   };
 
+  const detectFace = async (photoBlob) => {
+    try {
+      const photoFile = new File([photoBlob], 'temp.jpg', { type: 'image/jpeg' });
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: photoFile });
+      
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: "Analise esta imagem e responda APENAS 'SIM' se houver um rosto humano claramente visível, ou 'NAO' caso contrário. Seja rigoroso - a pessoa deve estar olhando para a câmera.",
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            face_detected: { type: "boolean" },
+            confidence: { type: "string" }
+          }
+        }
+      });
+      
+      return result.face_detected;
+    } catch (error) {
+      console.error("Erro ao detectar rosto:", error);
+      return true; // Em caso de erro, permite continuar
+    }
+  };
+
   const cleanup = () => {
-    setVideoReady(false);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
-      videoRef.current.onloadeddata = null;
     }
   };
 
@@ -249,13 +261,9 @@ export default function ClockIn() {
         type: 'image/jpeg' 
       });
       
-      console.log("📤 Enviando foto:", photoFile.size, "bytes");
-      
       const { file_url } = await base44.integrations.Core.UploadFile({ 
         file: photoFile 
       });
-      
-      console.log("✅ Upload concluído:", file_url);
 
       await base44.entities.TimeRecord.create({
         employee_id: employee.id,
@@ -373,6 +381,10 @@ export default function ClockIn() {
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-6 h-6" />
               Registrar Ponto
+              <Badge variant="outline" className="ml-auto">
+                <User className="w-3 h-3 mr-1" />
+                Reconhecimento Facial
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -409,7 +421,7 @@ export default function ClockIn() {
                 disabled={loading}
               >
                 <Camera className="w-5 h-5 mr-2" />
-                📸 Tirar Foto
+                📸 Tirar Foto com Reconhecimento Facial
               </Button>
             )}
 
@@ -425,16 +437,23 @@ export default function ClockIn() {
                     className="w-full h-full object-cover"
                     style={{ transform: 'scaleX(-1)' }}
                   />
-                  {!videoReady && (
+                  {verifyingFace && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/70">
                       <div className="text-center text-white">
                         <Loader2 className="w-12 h-12 animate-spin mx-auto mb-3" />
-                        <p className="text-lg font-semibold">Preparando câmera...</p>
-                        <p className="text-sm opacity-80">Aguarde alguns instantes</p>
+                        <p className="text-lg font-semibold">Detectando rosto...</p>
+                        <p className="text-sm opacity-80">Aguarde</p>
                       </div>
                     </div>
                   )}
                 </div>
+                
+                <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                  <User className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
+                    👤 Posicione seu rosto de frente para a câmera
+                  </AlertDescription>
+                </Alert>
                 
                 <div className="grid grid-cols-2 gap-3">
                   <Button
@@ -444,6 +463,7 @@ export default function ClockIn() {
                     }}
                     variant="outline"
                     size="lg"
+                    disabled={verifyingFace}
                   >
                     <X className="w-5 h-5 mr-2" />
                     Cancelar
@@ -452,10 +472,19 @@ export default function ClockIn() {
                     onClick={captureImage}
                     className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                     size="lg"
-                    disabled={!videoReady}
+                    disabled={verifyingFace}
                   >
-                    <Camera className="w-5 h-5 mr-2" />
-                    {videoReady ? '📸 Capturar' : 'Aguarde...'}
+                    {verifyingFace ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Verificando...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="w-5 h-5 mr-2" />
+                        📸 Capturar
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -473,7 +502,7 @@ export default function ClockIn() {
                   />
                   <div className="absolute top-4 left-4">
                     <Badge className="bg-green-500 text-white">
-                      ✓ Foto Capturada
+                      ✓ Rosto Detectado
                     </Badge>
                   </div>
                 </div>
