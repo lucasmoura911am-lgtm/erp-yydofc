@@ -21,6 +21,7 @@ export default function ClockIn() {
   const [needsSetup, setNeedsSetup] = useState(false);
   const [recordType, setRecordType] = useState("entrada");
   const [showCamera, setShowCamera] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const [location, setLocation] = useState(null);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -31,7 +32,6 @@ export default function ClockIn() {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-  const canvasRef = useRef(null);
 
   useEffect(() => {
     loadUserData();
@@ -121,6 +121,8 @@ export default function ClockIn() {
   const openCamera = async () => {
     try {
       setError(null);
+      setVideoReady(false);
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'user',
@@ -133,6 +135,18 @@ export default function ClockIn() {
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        
+        // Aguardar dados do vídeo carregarem
+        videoRef.current.onloadeddata = () => {
+          // Aguardar mais 800ms para garantir frames válidos
+          setTimeout(() => {
+            if (videoRef.current && videoRef.current.videoWidth > 0) {
+              setVideoReady(true);
+              console.log("✅ Vídeo pronto:", videoRef.current.videoWidth, "x", videoRef.current.videoHeight);
+            }
+          }, 800);
+        };
+        
         await videoRef.current.play();
       }
       
@@ -143,31 +157,71 @@ export default function ClockIn() {
     }
   };
 
-  const captureImage = async () => {
+  const captureImage = () => {
     const video = videoRef.current;
-    if (!video || !canvasRef.current) return;
+    
+    if (!video || !videoReady) {
+      setError("Aguarde o vídeo carregar completamente");
+      return;
+    }
 
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-    
-    canvas.toBlob((blob) => {
-      setCapturedPhoto(blob);
-      cleanup();
-      setShowCamera(false);
-    }, 'image/jpeg', 0.9);
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      setError("Vídeo ainda não está pronto. Tente novamente.");
+      return;
+    }
+
+    try {
+      // Criar canvas temporário
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      const ctx = canvas.getContext('2d');
+      
+      // Desenhar frame atual
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Verificar se não está preto
+      const imageData = ctx.getImageData(0, 0, Math.min(100, canvas.width), Math.min(100, canvas.height));
+      let sum = 0;
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        sum += imageData.data[i] + imageData.data[i+1] + imageData.data[i+2];
+      }
+      
+      console.log("Brightness check:", sum);
+      
+      if (sum < 500) {
+        setError("Imagem muito escura. Verifique iluminação e permissões.");
+        return;
+      }
+      
+      // Converter para Blob
+      canvas.toBlob((blob) => {
+        if (blob) {
+          console.log("✅ Foto capturada:", blob.size, "bytes");
+          setCapturedPhoto(blob);
+          cleanup();
+          setShowCamera(false);
+        } else {
+          setError("Erro ao processar imagem");
+        }
+      }, 'image/jpeg', 0.92);
+      
+    } catch (err) {
+      console.error("Erro ao capturar:", err);
+      setError("Erro ao capturar imagem: " + err.message);
+    }
   };
 
   const cleanup = () => {
+    setVideoReady(false);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+      videoRef.current.onloadeddata = null;
     }
   };
 
@@ -195,9 +249,13 @@ export default function ClockIn() {
         type: 'image/jpeg' 
       });
       
+      console.log("📤 Enviando foto:", photoFile.size, "bytes");
+      
       const { file_url } = await base44.integrations.Core.UploadFile({ 
         file: photoFile 
       });
+      
+      console.log("✅ Upload concluído:", file_url);
 
       await base44.entities.TimeRecord.create({
         employee_id: employee.id,
@@ -342,9 +400,6 @@ export default function ClockIn() {
               </div>
             )}
 
-            {/* Canvas oculto para captura */}
-            <canvas ref={canvasRef} style={{ display: 'none' }} />
-
             {/* Interface da câmera */}
             {!showCamera && !capturedPhoto && (
               <Button
@@ -370,6 +425,15 @@ export default function ClockIn() {
                     className="w-full h-full object-cover"
                     style={{ transform: 'scaleX(-1)' }}
                   />
+                  {!videoReady && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                      <div className="text-center text-white">
+                        <Loader2 className="w-12 h-12 animate-spin mx-auto mb-3" />
+                        <p className="text-lg font-semibold">Preparando câmera...</p>
+                        <p className="text-sm opacity-80">Aguarde alguns instantes</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
@@ -388,9 +452,10 @@ export default function ClockIn() {
                     onClick={captureImage}
                     className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                     size="lg"
+                    disabled={!videoReady}
                   >
                     <Camera className="w-5 h-5 mr-2" />
-                    📸 Capturar
+                    {videoReady ? '📸 Capturar' : 'Aguarde...'}
                   </Button>
                 </div>
               </div>
