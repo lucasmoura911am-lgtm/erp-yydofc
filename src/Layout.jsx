@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -18,7 +17,8 @@ import {
   Sun,
   Timer,
   BarChart3,
-  FileText
+  FileText,
+  Building
 } from "lucide-react";
 import {
   Sidebar,
@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 const adminNavigation = [
   {
@@ -79,6 +80,14 @@ const adminNavigation = [
   },
 ];
 
+const superAdminNavigation = [
+  {
+    title: "Empresas",
+    url: createPageUrl("Companies"),
+    icon: Building,
+  },
+];
+
 const employeeNavigation = [
   {
     title: "Bater Ponto",
@@ -97,6 +106,7 @@ export default function Layout({ children }) {
   const [user, setUser] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [company, setCompany] = useState(null);
 
   useEffect(() => {
     loadUser();
@@ -114,18 +124,33 @@ export default function Layout({ children }) {
     try {
       const userData = await base44.auth.me();
       setUser(userData);
+      
+      if (userData.company_id) {
+        const companies = await base44.entities.Company.filter({ id: userData.company_id });
+        if (companies.length > 0) {
+          setCompany(companies[0]);
+        }
+      }
     } catch (error) {
       console.error("Erro ao carregar usuário:", error);
     }
   };
 
   const handleLogout = () => {
-    // Redirecionar para Home após logout
     base44.auth.logout(window.location.origin + createPageUrl('Home'));
   };
 
   const isAdmin = user?.role === 'admin';
-  const navigation = isAdmin ? adminNavigation : employeeNavigation;
+  const isSuperAdmin = user?.email === 'admin@pontoflex.com'; // Super admin global
+  
+  let navigation = [];
+  if (isSuperAdmin) {
+    navigation = [...superAdminNavigation, ...adminNavigation];
+  } else if (isAdmin) {
+    navigation = adminNavigation;
+  } else {
+    navigation = employeeNavigation;
+  }
 
   return (
     <div className={darkMode ? 'dark' : ''}>
@@ -177,12 +202,19 @@ export default function Layout({ children }) {
                   <p className="text-xs text-gray-500 dark:text-gray-400">Controle de Ponto</p>
                 </div>
               </div>
+              {company && (
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <Badge variant="outline" className="text-xs">
+                    {company.name}
+                  </Badge>
+                </div>
+              )}
             </SidebarHeader>
             
             <SidebarContent className="p-4">
               <SidebarGroup>
                 <SidebarGroupLabel className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 py-2 mb-1">
-                  {isAdmin ? 'Administração' : 'Menu'}
+                  {isSuperAdmin ? 'Administração Global' : isAdmin ? 'Administração' : 'Menu'}
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
@@ -210,7 +242,7 @@ export default function Layout({ children }) {
                 </SidebarGroupContent>
               </SidebarGroup>
 
-              {isAdmin && (
+              {isAdmin && !isSuperAdmin && (
                 <SidebarGroup className="mt-6">
                   <SidebarGroupLabel className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 py-2 mb-1">
                     Configurações
@@ -255,7 +287,7 @@ export default function Layout({ children }) {
                         {user.full_name || user.email}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {isAdmin ? 'Administrador' : 'Funcionário'}
+                        {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Administrador' : 'Funcionário'}
                       </p>
                     </div>
                   </div>
@@ -328,7 +360,7 @@ export default function Layout({ children }) {
                       </Link>
                     );
                   })}
-                  {isAdmin && (
+                  {isAdmin && !isSuperAdmin && (
                     <Link
                       to={createPageUrl("Settings")}
                       onClick={() => setMobileMenuOpen(false)}

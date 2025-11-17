@@ -10,6 +10,8 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Home from './pages/Home';
 import Announcements from './pages/Announcements';
+import Companies from './pages/Companies';
+import CompanySetup from './pages/CompanySetup';
 import __Layout from './Layout.jsx';
 
 
@@ -26,6 +28,8 @@ export const PAGES = {
     "Settings": Settings,
     "Home": Home,
     "Announcements": Announcements,
+    "Companies": Companies,
+    "CompanySetup": CompanySetup,
 }
 
 export const pagesConfig = {
