@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Camera, MapPin, Clock, CheckCircle, Loader2, X, AlertCircle, RefreshCw, User } from "lucide-react";
+import { Camera, MapPin, Clock, CheckCircle, Loader2, X, AlertCircle, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ export default function ClockIn() {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     loadUserData();
@@ -133,9 +134,7 @@ export default function ClockIn() {
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play();
-        };
+        await videoRef.current.play();
       }
       
       setShowCamera(true);
@@ -145,18 +144,18 @@ export default function ClockIn() {
     }
   };
 
-  const captureImage = () => {
+  const captureImage = async () => {
     const video = videoRef.current;
     
     if (!video || video.readyState < 2) {
-      setError("⏳ Aguarde a câmera carregar completamente...");
+      setError("⏳ Aguarde a câmera carregar...");
       return;
     }
 
     try {
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 1280;
-      canvas.height = video.videoHeight || 720;
+      const canvas = canvasRef.current || document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
       
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -288,7 +287,6 @@ export default function ClockIn() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header com relógio */}
         <Card className="bg-gradient-to-br from-purple-600 to-blue-600 text-white border-none shadow-2xl">
           <CardContent className="p-8 text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-2">
@@ -307,7 +305,6 @@ export default function ClockIn() {
           </CardContent>
         </Card>
 
-        {/* Sucesso */}
         {success && (
           <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
             <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
@@ -317,7 +314,6 @@ export default function ClockIn() {
           </Alert>
         )}
 
-        {/* Erro */}
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-5 w-5" />
@@ -325,7 +321,6 @@ export default function ClockIn() {
           </Alert>
         )}
 
-        {/* Card principal */}
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -334,7 +329,6 @@ export default function ClockIn() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Tipo de registro */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Registro</label>
               <Select value={recordType} onValueChange={setRecordType} disabled={loading || showCamera}>
@@ -350,7 +344,6 @@ export default function ClockIn() {
               </Select>
             </div>
 
-            {/* Localização */}
             {location && (
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
                 <MapPin className="w-4 h-4 text-green-600" />
@@ -358,7 +351,6 @@ export default function ClockIn() {
               </div>
             )}
 
-            {/* Interface da câmera */}
             {!showCamera && !capturedPhoto && (
               <Button
                 onClick={openCamera}
@@ -371,7 +363,6 @@ export default function ClockIn() {
               </Button>
             )}
 
-            {/* Preview da câmera */}
             {showCamera && (
               <div className="space-y-4">
                 <div className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
@@ -386,9 +377,8 @@ export default function ClockIn() {
                 </div>
                 
                 <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                  <User className="h-4 w-4 text-blue-600" />
                   <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
-                    👤 Posicione seu rosto de frente para a câmera
+                    📸 Use a câmera como espelho. Quando estiver pronto, clique em "Capturar Foto"
                   </AlertDescription>
                 </Alert>
                 
@@ -416,7 +406,6 @@ export default function ClockIn() {
               </div>
             )}
 
-            {/* Preview da foto capturada */}
             {capturedPhoto && (
               <div className="space-y-4">
                 <div className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
@@ -426,11 +415,6 @@ export default function ClockIn() {
                     className="w-full h-full object-cover"
                     style={{ transform: 'scaleX(-1)' }}
                   />
-                  <div className="absolute top-4 left-4">
-                    <Badge className="bg-green-500 text-white">
-                      ✓ Foto Capturada
-                    </Badge>
-                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
@@ -462,16 +446,9 @@ export default function ClockIn() {
                     )}
                   </Button>
                 </div>
-
-                <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                  <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
-                    👆 Revise sua foto e clique em "Registrar Ponto" para confirmar.
-                  </AlertDescription>
-                </Alert>
               </div>
             )}
 
-            {/* Último registro */}
             {lastRecord && !success && (
               <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -498,6 +475,8 @@ export default function ClockIn() {
             )}
           </CardContent>
         </Card>
+        
+        <canvas ref={canvasRef} style={{ display: 'none' }} />
       </div>
     </div>
   );
