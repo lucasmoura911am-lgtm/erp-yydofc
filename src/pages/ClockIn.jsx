@@ -21,6 +21,7 @@ export default function ClockIn() {
   const [needsSetup, setNeedsSetup] = useState(false);
   const [recordType, setRecordType] = useState("entrada");
   const [showCamera, setShowCamera] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [location, setLocation] = useState(null);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -118,37 +119,102 @@ export default function ClockIn() {
     }
   };
 
+  const waitForVideo = (video) => {
+    return new Promise((resolve, reject) => {
+      if (video.readyState >= 2) {
+        resolve();
+        return;
+      }
+
+      const timeout = setTimeout(() => {
+        reject(new Error("Timeout aguardando vídeo"));
+      }, 10000);
+
+      video.onloadeddata = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+
+      video.onerror = () => {
+        clearTimeout(timeout);
+        reject(new Error("Erro ao carregar vídeo"));
+      };
+    });
+  };
+
   const openCamera = async () => {
     try {
       setError(null);
+      setCameraReady(false);
+      setShowCamera(true);
       
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const constraints = { 
         video: { 
           facingMode: 'user',
           width: { ideal: 1280 },
           height: { ideal: 720 }
-        } 
-      });
+        },
+        audio: false
+      };
       
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        const video = videoRef.current;
+        
+        // Configurar atributos explicitamente
+        video.setAttribute("autoplay", "true");
+        video.setAttribute("muted", "true");
+        video.setAttribute("playsinline", "true");
+        video.muted = true;
+        video.playsInline = true;
+        video.autoplay = true;
+        
+        // Atribuir stream
+        video.srcObject = stream;
+        
+        // Aguardar vídeo carregar
+        try {
+          await waitForVideo(video);
+          
+          // Tentar play
+          await video.play();
+          
+          // Aguardar mais um pouco para garantir frames
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          setCameraReady(true);
+        } catch (err) {
+          console.error("Erro ao iniciar vídeo:", err);
+          setError("Erro ao iniciar câmera. Tente novamente.");
+          cleanup();
+          setShowCamera(false);
+        }
       }
       
-      setShowCamera(true);
     } catch (err) {
+      console.error("Erro ao acessar câmera:", err);
       setError("Erro ao acessar câmera. Verifique as permissões.");
-      console.error(err);
+      setShowCamera(false);
     }
   };
 
-  const captureImage = async () => {
+  const captureImage = () => {
     const video = videoRef.current;
     
-    if (!video || video.readyState < 2) {
-      setError("⏳ Aguarde a câmera carregar...");
+    if (!video) {
+      setError("Vídeo não disponível");
+      return;
+    }
+
+    if (!cameraReady || video.readyState < 2) {
+      setError("⏳ Aguarde a câmera ficar pronta...");
+      return;
+    }
+
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      setError("Câmera ainda não está pronta. Aguarde mais um momento.");
       return;
     }
 
@@ -157,32 +223,42 @@ export default function ClockIn() {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: false });
+      
+      // Desenhar o frame atual do vídeo
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       
+      // Converter para blob
       canvas.toBlob((blob) => {
         if (blob && blob.size > 1000) {
           setCapturedPhoto(blob);
           cleanup();
           setShowCamera(false);
         } else {
-          setError("Erro ao capturar. Tente novamente.");
+          setError("Erro ao capturar imagem. Tente novamente.");
         }
       }, 'image/jpeg', 0.92);
       
     } catch (err) {
       console.error("Erro ao capturar:", err);
-      setError("Erro ao capturar imagem. Tente novamente.");
+      setError("Erro ao capturar imagem: " + err.message);
     }
   };
 
   const cleanup = () => {
+    setCameraReady(false);
+    
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+      });
       streamRef.current = null;
     }
+    
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+      videoRef.current.onloadeddata = null;
+      videoRef.current.onerror = null;
     }
   };
 
@@ -374,11 +450,29 @@ export default function ClockIn() {
                     className="w-full h-full object-cover"
                     style={{ transform: 'scaleX(-1)' }}
                   />
+                  
+                  {!cameraReady && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                      <div className="text-center text-white">
+                        <Loader2 className="w-12 h-12 animate-spin mx-auto mb-3" />
+                        <p className="text-lg font-semibold">Preparando câmera...</p>
+                        <p className="text-sm opacity-80">Aguarde alguns segundos</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {cameraReady && (
+                    <div className="absolute top-4 right-4">
+                      <Badge className="bg-green-500 text-white">
+                        ● Câmera Pronta
+                      </Badge>
+                    </div>
+                  )}
                 </div>
                 
                 <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                   <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
-                    📸 Use a câmera como espelho. Quando estiver pronto, clique em "Capturar Foto"
+                    📸 Use a câmera como espelho. Quando ver a mensagem "Câmera Pronta", clique em "Capturar Foto"
                   </AlertDescription>
                 </Alert>
                 
@@ -398,9 +492,19 @@ export default function ClockIn() {
                     onClick={captureImage}
                     className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                     size="lg"
+                    disabled={!cameraReady}
                   >
-                    <Camera className="w-5 h-5 mr-2" />
-                    📸 Capturar Foto
+                    {!cameraReady ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Preparando...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="w-5 h-5 mr-2" />
+                        📸 Capturar Foto
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
