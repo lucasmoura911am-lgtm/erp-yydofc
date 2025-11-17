@@ -10,7 +10,7 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Home from './pages/Home';
 import Announcements from './pages/Announcements';
-import Layout from './Layout.jsx';
+import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
@@ -31,5 +31,5 @@ export const PAGES = {
 export const pagesConfig = {
     mainPage: "Dashboard",
     Pages: PAGES,
-    Layout: Layout,
+    Layout: __Layout,
 };
