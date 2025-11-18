@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Camera, MapPin, Clock, CheckCircle, Loader2, X, AlertCircle, RefreshCw } from "lucide-react";
+import { Camera, MapPin, Clock, CheckCircle, Loader2, X, AlertCircle, RefreshCw, Smile, Meh, Frown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -14,12 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 export default function ClockIn() {
   const [user, setUser] = useState(null);
   const [employee, setEmployee] = useState(null);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [recordType, setRecordType] = useState("entrada");
+  const [mood, setMood] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [location, setLocation] = useState(null);
@@ -155,24 +157,20 @@ export default function ClockIn() {
       if (videoRef.current) {
         const video = videoRef.current;
         
-        // Garantir atributos para Base44
         video.setAttribute("autoplay", "");
         video.setAttribute("muted", "");
         video.setAttribute("playsinline", "");
         
         video.srcObject = stream;
         
-        // Aguardar vídeo carregar
         await waitForVideo(video);
         
-        // Tentar play explícito
         try {
           await video.play();
         } catch (playError) {
           console.log("Play error (pode ser ignorado):", playError);
         }
         
-        // Marcar como pronto
         setCameraReady(true);
         setShowCamera(true);
       }
@@ -250,6 +248,11 @@ export default function ClockIn() {
       return;
     }
 
+    if (!mood) {
+      setError("Selecione como você está se sentindo");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -272,11 +275,13 @@ export default function ClockIn() {
         photo_url: file_url,
         status: "pontual",
         delay_minutes: 0,
-        verified: true
+        verified: true,
+        mood: mood
       });
 
       setSuccess(true);
       setCapturedPhoto(null);
+      setMood("");
       
       setTimeout(() => {
         setSuccess(false);
@@ -289,6 +294,17 @@ export default function ClockIn() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getMoodEmoji = (moodValue) => {
+    const moods = {
+      muito_feliz: "😄",
+      feliz: "😊",
+      neutro: "😐",
+      triste: "😔",
+      muito_triste: "😢"
+    };
+    return moods[moodValue] || "";
   };
 
   if (needsSetup) {
@@ -482,6 +498,24 @@ export default function ClockIn() {
                     style={{ transform: 'scaleX(-1)' }}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Como você está se sentindo hoje?
+                  </Label>
+                  <Select value={mood} onValueChange={setMood}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione seu humor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="muito_feliz">😄 Muito Feliz</SelectItem>
+                      <SelectItem value="feliz">😊 Feliz</SelectItem>
+                      <SelectItem value="neutro">😐 Neutro</SelectItem>
+                      <SelectItem value="triste">😔 Triste</SelectItem>
+                      <SelectItem value="muito_triste">😢 Muito Triste</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-3">
                   <Button
@@ -497,7 +531,7 @@ export default function ClockIn() {
                     onClick={handleClockIn}
                     className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg"
                     size="lg"
-                    disabled={loading}
+                    disabled={loading || !mood}
                   >
                     {loading ? (
                       <>
@@ -528,6 +562,11 @@ export default function ClockIn() {
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {format(new Date(lastRecord.timestamp), "dd/MM/yyyy 'às' HH:mm")}
                     </p>
+                    {lastRecord.mood && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {getMoodEmoji(lastRecord.mood)} Humor: {lastRecord.mood.replace('_', ' ')}
+                      </p>
+                    )}
                   </div>
                   <Badge className={
                     lastRecord.status === 'pontual' ? 'bg-green-500' :

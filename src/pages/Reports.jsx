@@ -51,16 +51,39 @@ export default function Reports() {
     enabled: !!user?.company_id,
   });
 
+  const getMoodEmoji = (mood) => {
+    const moods = {
+      muito_feliz: "😄",
+      feliz: "😊",
+      neutro: "😐",
+      triste: "😔",
+      muito_triste: "😢"
+    };
+    return moods[mood] || "";
+  };
+
+  const getMoodLabel = (mood) => {
+    const labels = {
+      muito_feliz: "Muito Feliz",
+      feliz: "Feliz",
+      neutro: "Neutro",
+      triste: "Triste",
+      muito_triste: "Muito Triste"
+    };
+    return labels[mood] || "";
+  };
+
   const exportFullReport = () => {
-    let csv = 'Data/Hora,Funcionário,CPF,Tipo,Status,Atraso (min),Latitude,Longitude,Endereço\n';
+    let csv = 'Data/Hora,Funcionário,CPF,Tipo,Status,Atraso (min),Humor,Latitude,Longitude,Endereço\n';
     
     timeRecords.forEach(record => {
       const employee = employees.find(e => e.id === record.employee_id);
       const employeeName = employee ? employee.full_name : 'Desconhecido';
       const employeeCPF = employee ? employee.cpf : '-';
       const timestamp = format(new Date(record.timestamp), "dd/MM/yyyy HH:mm:ss");
+      const moodText = record.mood ? getMoodLabel(record.mood) : '-';
       
-      csv += `${timestamp},${employeeName},${employeeCPF},${record.type},${record.status},${record.delay_minutes || 0},${record.latitude || '-'},${record.longitude || '-'},"${record.location_address || '-'}"\n`;
+      csv += `${timestamp},${employeeName},${employeeCPF},${record.type},${record.status},${record.delay_minutes || 0},${moodText},${record.latitude || '-'},${record.longitude || '-'},"${record.location_address || '-'}"\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -109,7 +132,6 @@ export default function Reports() {
              recordDate <= monthEnd;
     });
 
-    // Gerar HTML para impressão
     const reportHTML = `
 <!DOCTYPE html>
 <html>
@@ -239,6 +261,9 @@ export default function Reports() {
       border-top: 1px solid #ddd;
       padding-top: 20px;
     }
+    .mood-emoji {
+      font-size: 18px;
+    }
     @media print {
       body { padding: 20px; }
       .no-print { display: none; }
@@ -310,6 +335,7 @@ export default function Reports() {
         <th>Hora</th>
         <th>Tipo</th>
         <th>Status</th>
+        <th>Humor</th>
         <th>Atraso (min)</th>
         <th>Localização</th>
       </tr>
@@ -321,6 +347,7 @@ export default function Reports() {
           <td>${format(new Date(record.timestamp), 'HH:mm:ss')}</td>
           <td><span class="badge badge-${record.type}">${record.type}</span></td>
           <td><span class="badge badge-${record.status}">${record.status}</span></td>
+          <td><span class="mood-emoji">${record.mood ? getMoodEmoji(record.mood) + ' ' + getMoodLabel(record.mood) : '-'}</span></td>
           <td>${record.delay_minutes || 0}</td>
           <td>${record.latitude && record.longitude ? `${record.latitude.toFixed(6)}, ${record.longitude.toFixed(6)}` : 'N/A'}</td>
         </tr>
@@ -356,7 +383,6 @@ export default function Reports() {
 </html>
     `;
 
-    // Abrir em nova janela
     const printWindow = window.open('', '_blank');
     printWindow.document.write(reportHTML);
     printWindow.document.close();
@@ -400,7 +426,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Exporta todos os registros de ponto com informações detalhadas de data, hora, funcionário, tipo, status, atrasos e localização.
+              Exporta todos os registros de ponto com informações detalhadas de data, hora, funcionário, tipo, status, humor, atrasos e localização.
             </p>
             <Button 
               onClick={exportFullReport}
@@ -455,7 +481,7 @@ export default function Reports() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Gera um relatório completo e formatado com todos os registros de ponto do mês, incluindo dados do funcionário, empresa, resumo estatístico e espaço para assinatura. Pronto para impressão ou exportação em PDF.
+            Gera um relatório completo e formatado com todos os registros de ponto do mês, incluindo dados do funcionário, empresa, humor registrado, resumo estatístico e espaço para assinatura. Pronto para impressão ou exportação em PDF.
           </p>
 
           <div className="grid md:grid-cols-2 gap-4">
