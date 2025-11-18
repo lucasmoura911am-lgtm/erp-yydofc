@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Camera, MapPin, Clock, CheckCircle, Loader2, X, AlertCircle, RefreshCw, Smile, Meh, Frown } from "lucide-react";
+import { Camera, MapPin, Clock, CheckCircle, Loader2, X, AlertCircle, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -121,86 +121,69 @@ export default function ClockIn() {
     }
   };
 
-  const waitForVideo = (video) => {
-    return new Promise((resolve) => {
-      if (video.readyState >= 2) {
-        resolve();
-        return;
-      }
-      
-      const checkReady = () => {
-        if (video.readyState >= 2) {
-          video.removeEventListener('loadeddata', checkReady);
-          resolve();
-        }
-      };
-      
-      video.addEventListener('loadeddata', checkReady);
-    });
-  };
-
   const openCamera = async () => {
     try {
       setError(null);
+      setShowCamera(true);
       setCameraReady(false);
       
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const constraints = { 
         video: { 
           facingMode: 'user',
           width: { ideal: 1280 },
           height: { ideal: 720 }
         } 
-      });
+      };
       
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       
       if (videoRef.current) {
         const video = videoRef.current;
-        
-        video.setAttribute("autoplay", "");
-        video.setAttribute("muted", "");
-        video.setAttribute("playsinline", "");
-        
         video.srcObject = stream;
         
-        await waitForVideo(video);
-        
-        try {
-          await video.play();
-        } catch (playError) {
-          console.log("Play error (pode ser ignorado):", playError);
-        }
-        
-        setCameraReady(true);
-        setShowCamera(true);
+        video.onloadedmetadata = () => {
+          video.play().then(() => {
+            setCameraReady(true);
+          }).catch(err => {
+            console.error("Erro ao iniciar vídeo:", err);
+            setError("Erro ao iniciar câmera");
+          });
+        };
       }
       
     } catch (err) {
+      console.error("Erro ao acessar câmera:", err);
       setError("Erro ao acessar câmera. Verifique as permissões.");
-      console.error(err);
+      setShowCamera(false);
     }
   };
 
   const captureImage = () => {
     const video = videoRef.current;
     
-    if (!video || !cameraReady) {
+    if (!video || !cameraReady || video.readyState < 2) {
       setError("⏳ Aguarde a câmera carregar completamente...");
       return;
     }
 
-    if (video.readyState < 2) {
-      setError("⏳ Câmera ainda não está pronta. Aguarde mais um momento.");
-      return;
-    }
-
     try {
-      const canvas = canvasRef.current || document.createElement('canvas');
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        setError("Erro ao preparar captura");
+        return;
+      }
+
       canvas.width = video.videoWidth || 1280;
       canvas.height = video.videoHeight || 720;
       
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Espelhar horizontalmente
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+      ctx.restore();
       
       canvas.toBlob((blob) => {
         if (blob && blob.size > 1000) {
@@ -211,7 +194,7 @@ export default function ClockIn() {
         } else {
           setError("Erro ao capturar. Tente novamente.");
         }
-      }, 'image/jpeg', 0.92);
+      }, 'image/jpeg', 0.95);
       
     } catch (err) {
       console.error("Erro ao capturar:", err);
@@ -222,9 +205,7 @@ export default function ClockIn() {
   const cleanup = () => {
     setCameraReady(false);
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
-        track.stop();
-      });
+      streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     if (videoRef.current) {
@@ -234,6 +215,7 @@ export default function ClockIn() {
 
   const retakePhoto = () => {
     setCapturedPhoto(null);
+    setMood("");
     openCamera();
   };
 
@@ -305,6 +287,17 @@ export default function ClockIn() {
       muito_triste: "😢"
     };
     return moods[moodValue] || "";
+  };
+
+  const getMoodLabel = (moodValue) => {
+    const labels = {
+      muito_feliz: "Muito Feliz",
+      feliz: "Feliz",
+      neutro: "Neutro",
+      triste: "Triste",
+      muito_triste: "Muito Triste"
+    };
+    return labels[moodValue] || "";
   };
 
   if (needsSetup) {
@@ -459,7 +452,7 @@ export default function ClockIn() {
                 
                 <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                   <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
-                    📸 Use como espelho. Quando pronto, clique em "Capturar Foto"
+                    📸 Posicione-se na câmera e clique em "Capturar Foto"
                   </AlertDescription>
                 </Alert>
                 
@@ -495,24 +488,33 @@ export default function ClockIn() {
                     src={URL.createObjectURL(capturedPhoto)}
                     alt="Foto capturada"
                     className="w-full h-full object-cover"
-                    style={{ transform: 'scaleX(-1)' }}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Como você está se sentindo hoje?
+                  <Label className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    😊 Como você está se sentindo hoje?
                   </Label>
                   <Select value={mood} onValueChange={setMood}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-12 text-base">
                       <SelectValue placeholder="Selecione seu humor" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="muito_feliz">😄 Muito Feliz</SelectItem>
-                      <SelectItem value="feliz">😊 Feliz</SelectItem>
-                      <SelectItem value="neutro">😐 Neutro</SelectItem>
-                      <SelectItem value="triste">😔 Triste</SelectItem>
-                      <SelectItem value="muito_triste">😢 Muito Triste</SelectItem>
+                      <SelectItem value="muito_feliz" className="text-base py-3">
+                        <span className="text-2xl mr-2">😄</span> Muito Feliz
+                      </SelectItem>
+                      <SelectItem value="feliz" className="text-base py-3">
+                        <span className="text-2xl mr-2">😊</span> Feliz
+                      </SelectItem>
+                      <SelectItem value="neutro" className="text-base py-3">
+                        <span className="text-2xl mr-2">😐</span> Neutro
+                      </SelectItem>
+                      <SelectItem value="triste" className="text-base py-3">
+                        <span className="text-2xl mr-2">😔</span> Triste
+                      </SelectItem>
+                      <SelectItem value="muito_triste" className="text-base py-3">
+                        <span className="text-2xl mr-2">😢</span> Muito Triste
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -564,7 +566,7 @@ export default function ClockIn() {
                     </p>
                     {lastRecord.mood && (
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {getMoodEmoji(lastRecord.mood)} Humor: {lastRecord.mood.replace('_', ' ')}
+                        {getMoodEmoji(lastRecord.mood)} {getMoodLabel(lastRecord.mood)}
                       </p>
                     )}
                   </div>
