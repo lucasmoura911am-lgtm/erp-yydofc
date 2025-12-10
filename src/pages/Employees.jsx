@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -84,6 +83,19 @@ export default function Employees() {
     queryFn: () => user?.company_id ? base44.entities.Shift.filter({ company_id: user.company_id }) : [],
     enabled: !!user?.company_id,
   });
+
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teams', user?.company_id],
+    queryFn: () => user?.company_id ? base44.entities.Team.filter({ company_id: user.company_id }) : [],
+    enabled: !!user?.company_id,
+  });
+
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['allUsers'],
+    queryFn: () => base44.entities.User.list(),
+  });
+
+  const supervisors = allUsers.filter(u => u.is_supervisor && u.company_id === user?.company_id);
 
   const createMutation = useMutation({
     mutationFn: async (data) => {

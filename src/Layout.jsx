@@ -19,7 +19,8 @@ import {
   BarChart3,
   FileText,
   Building,
-  Edit3
+  Edit3,
+  Shield
 } from "lucide-react";
 import {
   Sidebar,
@@ -63,6 +64,16 @@ const adminNavigation = [
     title: "Funcionários",
     url: createPageUrl("Employees"),
     icon: Users,
+  },
+  {
+    title: "Times",
+    url: createPageUrl("Teams"),
+    icon: Users,
+  },
+  {
+    title: "Supervisores",
+    url: createPageUrl("Supervisors"),
+    icon: Shield,
   },
   {
     title: "Setores",
@@ -270,6 +281,14 @@ export default function Layout({ children }) {
                           <Link to={createPageUrl("Settings")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300">
                             <Settings className="w-5 h-5" />
                             <span className="font-medium">Configurações</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild className="hover:bg-gray-100 dark:hover:bg-gray-800">
+                          <Link to={createPageUrl("UsersManagement")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300">
+                            <Shield className="w-5 h-5" />
+                            <span className="font-medium">Usuários e Acessos</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

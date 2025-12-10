@@ -16,6 +16,9 @@ import PublicClockIn from './pages/PublicClockIn';
 import ManageTimeRecords from './pages/ManageTimeRecords';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import SupervisorDashboard from './pages/SupervisorDashboard';
+import Teams from './pages/Teams';
+import Supervisors from './pages/Supervisors';
+import UsersManagement from './pages/UsersManagement';
 import __Layout from './Layout.jsx';
 
 
@@ -38,6 +41,9 @@ export const PAGES = {
     "ManageTimeRecords": ManageTimeRecords,
     "EmployeeDashboard": EmployeeDashboard,
     "SupervisorDashboard": SupervisorDashboard,
+    "Teams": Teams,
+    "Supervisors": Supervisors,
+    "UsersManagement": UsersManagement,
 }
 
 export const pagesConfig = {

@@ -29,11 +29,15 @@ export default function SupervisorDashboard() {
     setUser(userData);
   };
 
-  const { data: employees = [] } = useQuery({
+  const { data: allEmployees = [] } = useQuery({
     queryKey: ['employees', user?.company_id],
     queryFn: () => user?.company_id ? base44.entities.Employee.filter({ company_id: user.company_id, status: 'active' }) : [],
     enabled: !!user?.company_id,
   });
+
+  const employees = user?.is_supervisor 
+    ? allEmployees.filter(emp => emp.supervisor_email === user.email || user.supervised_teams?.some(teamId => emp.team_id === teamId))
+    : allEmployees;
 
   const { data: timeRecords = [] } = useQuery({
     queryKey: ['timeRecords', user?.company_id],
