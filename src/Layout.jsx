@@ -45,6 +45,11 @@ const adminNavigation = [
     icon: LayoutDashboard,
   },
   {
+    title: "Dashboard Supervisor",
+    url: createPageUrl("SupervisorDashboard"),
+    icon: BarChart3,
+  },
+  {
     title: "Registros de Ponto",
     url: createPageUrl("TimeRecords"),
     icon: Clock,
@@ -95,6 +100,11 @@ const superAdminNavigation = [
 ];
 
 const employeeNavigation = [
+  {
+    title: "Meu Dashboard",
+    url: createPageUrl("EmployeeDashboard"),
+    icon: LayoutDashboard,
+  },
   {
     title: "Bater Ponto",
     url: createPageUrl("ClockIn"),

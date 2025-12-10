@@ -14,6 +14,8 @@ import Companies from './pages/Companies';
 import CompanySetup from './pages/CompanySetup';
 import PublicClockIn from './pages/PublicClockIn';
 import ManageTimeRecords from './pages/ManageTimeRecords';
+import EmployeeDashboard from './pages/EmployeeDashboard';
+import SupervisorDashboard from './pages/SupervisorDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -34,6 +36,8 @@ export const PAGES = {
     "CompanySetup": CompanySetup,
     "PublicClockIn": PublicClockIn,
     "ManageTimeRecords": ManageTimeRecords,
+    "EmployeeDashboard": EmployeeDashboard,
+    "SupervisorDashboard": SupervisorDashboard,
 }
 
 export const pagesConfig = {
