@@ -44,9 +44,11 @@ export default function Employees() {
     position_id: "",
     department_id: "",
     shift_id: "",
+    team_id: "",
+    supervisor_email: "",
     employee_number: "",
     status: "active",
-    user_email: "" // Added user_email
+    user_email: ""
   });
 
   const queryClient = useQueryClient();
@@ -134,9 +136,11 @@ export default function Employees() {
       position_id: "",
       department_id: "",
       shift_id: "",
+      team_id: "",
+      supervisor_email: "",
       employee_number: "",
       status: "active",
-      user_email: "" // Reset user_email
+      user_email: ""
     });
     setEditingEmployee(null);
   };
@@ -166,9 +170,11 @@ export default function Employees() {
       position_id: employee.position_id || "",
       department_id: employee.department_id || "",
       shift_id: employee.shift_id || "",
+      team_id: employee.team_id || "",
+      supervisor_email: employee.supervisor_email || "",
       employee_number: employee.employee_number || "",
       status: employee.status || "active",
-      user_email: employee.user_email || "" // Adicionar user_email
+      user_email: employee.user_email || ""
     });
     setDialogOpen(true);
   };
@@ -421,6 +427,42 @@ export default function Employees() {
                     {shifts.map((shift) => (
                       <SelectItem key={shift.id} value={shift.id}>
                         {shift.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Time/Equipe</Label>
+                <Select
+                  value={formData.team_id}
+                  onValueChange={(value) => setFormData({ ...formData, team_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Supervisor</Label>
+                <Select
+                  value={formData.supervisor_email}
+                  onValueChange={(value) => setFormData({ ...formData, supervisor_email: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {supervisors.map((sup) => (
+                      <SelectItem key={sup.email} value={sup.email}>
+                        {sup.full_name} ({sup.email})
                       </SelectItem>
                     ))}
                   </SelectContent>
