@@ -13,6 +13,7 @@ import Announcements from './pages/Announcements';
 import Companies from './pages/Companies';
 import CompanySetup from './pages/CompanySetup';
 import PublicClockIn from './pages/PublicClockIn';
+import ManageTimeRecords from './pages/ManageTimeRecords';
 import __Layout from './Layout.jsx';
 
 
@@ -32,6 +33,7 @@ export const PAGES = {
     "Companies": Companies,
     "CompanySetup": CompanySetup,
     "PublicClockIn": PublicClockIn,
+    "ManageTimeRecords": ManageTimeRecords,
 }
 
 export const pagesConfig = {

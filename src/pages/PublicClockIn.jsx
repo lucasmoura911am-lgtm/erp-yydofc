@@ -118,24 +118,39 @@ export default function PublicClockIn() {
   };
 
   const calculateStatus = (timestamp, type) => {
-    if (!shift || type !== 'entrada') {
+    if (!shift) {
       return { status: 'pontual', delayMinutes: 0 };
     }
 
     const recordTime = new Date(timestamp);
-    const [startHour, startMinute] = shift.start_time.split(':').map(Number);
-    const expectedTime = new Date(recordTime);
-    expectedTime.setHours(startHour, startMinute, 0, 0);
-
     const toleranceMinutes = shift.tolerance_minutes || 15;
-    const diffMinutes = differenceInMinutes(recordTime, expectedTime);
 
-    if (diffMinutes <= toleranceMinutes && diffMinutes >= -30) {
-      return { status: 'pontual', delayMinutes: 0 };
-    } else if (diffMinutes > toleranceMinutes) {
-      return { status: 'atrasado', delayMinutes: diffMinutes };
-    } else if (diffMinutes < -30) {
-      return { status: 'adiantado', delayMinutes: 0 };
+    if (type === 'entrada') {
+      const [startHour, startMinute] = shift.start_time.split(':').map(Number);
+      const expectedTime = new Date(recordTime);
+      expectedTime.setHours(startHour, startMinute, 0, 0);
+      const diffMinutes = differenceInMinutes(recordTime, expectedTime);
+
+      if (diffMinutes >= -toleranceMinutes && diffMinutes <= toleranceMinutes) {
+        return { status: 'pontual', delayMinutes: 0 };
+      } else if (diffMinutes > toleranceMinutes) {
+        return { status: 'atrasado', delayMinutes: diffMinutes };
+      } else {
+        return { status: 'adiantado', delayMinutes: 0 };
+      }
+    } else if (type === 'saida') {
+      const [endHour, endMinute] = shift.end_time.split(':').map(Number);
+      const expectedTime = new Date(recordTime);
+      expectedTime.setHours(endHour, endMinute, 0, 0);
+      const diffMinutes = differenceInMinutes(recordTime, expectedTime);
+
+      if (diffMinutes >= -toleranceMinutes && diffMinutes <= toleranceMinutes) {
+        return { status: 'pontual', delayMinutes: 0 };
+      } else if (diffMinutes > toleranceMinutes) {
+        return { status: 'hora_extra', delayMinutes: 0 };
+      } else {
+        return { status: 'adiantado', delayMinutes: Math.abs(diffMinutes) };
+      }
     }
 
     return { status: 'pontual', delayMinutes: 0 };

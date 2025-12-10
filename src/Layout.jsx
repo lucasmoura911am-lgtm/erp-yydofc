@@ -18,7 +18,8 @@ import {
   Timer,
   BarChart3,
   FileText,
-  Building
+  Building,
+  Edit3
 } from "lucide-react";
 import {
   Sidebar,
@@ -47,6 +48,11 @@ const adminNavigation = [
     title: "Registros de Ponto",
     url: createPageUrl("TimeRecords"),
     icon: Clock,
+  },
+  {
+    title: "Gestão de Pontos",
+    url: createPageUrl("ManageTimeRecords"),
+    icon: Edit3,
   },
   {
     title: "Funcionários",
