@@ -12,6 +12,7 @@ import Home from './pages/Home';
 import Announcements from './pages/Announcements';
 import Companies from './pages/Companies';
 import CompanySetup from './pages/CompanySetup';
+import PublicClockIn from './pages/PublicClockIn';
 import __Layout from './Layout.jsx';
 
 
@@ -30,6 +31,7 @@ export const PAGES = {
     "Announcements": Announcements,
     "Companies": Companies,
     "CompanySetup": CompanySetup,
+    "PublicClockIn": PublicClockIn,
 }
 
 export const pagesConfig = {

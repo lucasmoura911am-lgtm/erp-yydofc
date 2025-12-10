@@ -355,6 +355,18 @@ export default function Home() {
                   </TabsContent>
                 </Tabs>
 
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <a 
+                    href={createPageUrl('PublicClockIn')}
+                    className="block w-full text-center py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all"
+                  >
+                    🚀 Bater Ponto Rápido (Sem Login)
+                  </a>
+                  <p className="text-xs text-center text-gray-500 mt-2">
+                    Para funcionários: bata ponto apenas com sua matrícula
+                  </p>
+                </div>
+
                 <div className="mt-8 pt-6 border-t border-gray-200">
                   <p className="text-xs text-center text-gray-500 leading-relaxed">
                     <Lock className="w-3 h-3 inline mr-1" />
