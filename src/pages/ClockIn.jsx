@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Camera, MapPin, Clock, CheckCircle, Loader2, X, AlertCircle, RefreshCw } from "lucide-react";
-import { format } from "date-fns";
+import { format, parse, differenceInMinutes, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 export default function ClockIn() {
   const [user, setUser] = useState(null);
   const [employee, setEmployee] = useState(null);
+  const [shift, setShift] = useState(null);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [recordType, setRecordType] = useState("entrada");
   const [mood, setMood] = useState("");
@@ -61,9 +62,11 @@ export default function ClockIn() {
         });
         
         if (employees.length > 0) {
-          setEmployee(employees[0]);
-          await base44.auth.updateMe({ employee_id: employees[0].id });
-          await loadLastRecord(employees[0].id);
+          const emp = employees[0];
+          setEmployee(emp);
+          await base44.auth.updateMe({ employee_id: emp.id });
+          await loadShift(emp.shift_id);
+          await loadLastRecord(emp.id);
         } else {
           setNeedsSetup(true);
           return;
@@ -73,8 +76,10 @@ export default function ClockIn() {
           id: userData.employee_id 
         });
         if (employeeData.length > 0) {
-          setEmployee(employeeData[0]);
-          await loadLastRecord(employeeData[0].id);
+          const emp = employeeData[0];
+          setEmployee(emp);
+          await loadShift(emp.shift_id);
+          await loadLastRecord(emp.id);
         } else {
           setNeedsSetup(true);
           return;
@@ -83,6 +88,18 @@ export default function ClockIn() {
     } catch (error) {
       setError("Erro ao carregar dados do usuário");
       console.error(error);
+    }
+  };
+
+  const loadShift = async (shiftId) => {
+    if (!shiftId) return;
+    try {
+      const shifts = await base44.entities.Shift.filter({ id: shiftId });
+      if (shifts.length > 0) {
+        setShift(shifts[0]);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar escala:", error);
     }
   };
 
@@ -102,6 +119,108 @@ export default function ClockIn() {
       }
     } catch (error) {
       console.error("Erro ao carregar último registro:", error);
+    }
+  };
+
+  const calculateStatus = (timestamp, type) => {
+    if (!shift || type !== 'entrada') {
+      return { status: 'pontual', delayMinutes: 0 };
+    }
+
+    const recordTime = new Date(timestamp);
+    const recordHour = format(recordTime, 'HH:mm');
+    
+    const [startHour, startMinute] = shift.start_time.split(':').map(Number);
+    const expectedTime = new Date(recordTime);
+    expectedTime.setHours(startHour, startMinute, 0, 0);
+
+    const toleranceMinutes = shift.tolerance_minutes || 15;
+    const diffMinutes = differenceInMinutes(recordTime, expectedTime);
+
+    if (diffMinutes <= toleranceMinutes && diffMinutes >= -30) {
+      return { status: 'pontual', delayMinutes: 0 };
+    } else if (diffMinutes > toleranceMinutes) {
+      return { status: 'atrasado', delayMinutes: diffMinutes };
+    } else if (diffMinutes < -30) {
+      return { status: 'adiantado', delayMinutes: 0 };
+    }
+
+    return { status: 'pontual', delayMinutes: 0 };
+  };
+
+  const updateHoursBank = async (employeeId, companyId, date) => {
+    try {
+      const dateStr = format(startOfDay(new Date(date)), 'yyyy-MM-dd');
+      
+      const records = await base44.entities.TimeRecord.filter({
+        employee_id: employeeId,
+        company_id: companyId
+      });
+
+      const dayRecords = records.filter(r => {
+        const recordDate = format(startOfDay(new Date(r.timestamp)), 'yyyy-MM-dd');
+        return recordDate === dateStr;
+      });
+
+      const entrada = dayRecords.find(r => r.type === 'entrada');
+      const saida = dayRecords.find(r => r.type === 'saida');
+      const pausa = dayRecords.find(r => r.type === 'pausa');
+      const retorno = dayRecords.find(r => r.type === 'retorno');
+
+      if (!entrada || !saida) {
+        return;
+      }
+
+      const entradaTime = new Date(entrada.timestamp);
+      const saidaTime = new Date(saida.timestamp);
+      let workedMinutes = differenceInMinutes(saidaTime, entradaTime);
+
+      if (pausa && retorno) {
+        const pausaTime = new Date(pausa.timestamp);
+        const retornoTime = new Date(retorno.timestamp);
+        const breakMinutes = differenceInMinutes(retornoTime, pausaTime);
+        workedMinutes -= breakMinutes;
+      } else if (shift && shift.break_minutes) {
+        workedMinutes -= shift.break_minutes;
+      }
+
+      const expectedMinutes = shift ? 
+        (differenceInMinutes(
+          parse(shift.end_time, 'HH:mm', new Date()),
+          parse(shift.start_time, 'HH:mm', new Date())
+        ) - (shift.break_minutes || 0)) : 480;
+
+      const balanceMinutes = workedMinutes - expectedMinutes;
+      const overtimeMinutes = balanceMinutes > 0 ? balanceMinutes : 0;
+      const missingMinutes = balanceMinutes < 0 ? Math.abs(balanceMinutes) : 0;
+
+      const existingBank = await base44.entities.HoursBank.filter({
+        employee_id: employeeId,
+        date: dateStr
+      });
+
+      if (existingBank.length > 0) {
+        await base44.entities.HoursBank.update(existingBank[0].id, {
+          worked_minutes: workedMinutes,
+          expected_minutes: expectedMinutes,
+          balance_minutes: balanceMinutes,
+          overtime_minutes: overtimeMinutes,
+          missing_minutes: missingMinutes
+        });
+      } else {
+        await base44.entities.HoursBank.create({
+          employee_id: employeeId,
+          company_id: companyId,
+          date: dateStr,
+          worked_minutes: workedMinutes,
+          expected_minutes: expectedMinutes,
+          balance_minutes: balanceMinutes,
+          overtime_minutes: overtimeMinutes,
+          missing_minutes: missingMinutes
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar banco de horas:", error);
     }
   };
 
@@ -179,7 +298,6 @@ export default function ClockIn() {
       
       const ctx = canvas.getContext('2d');
       
-      // Espelhar horizontalmente
       ctx.save();
       ctx.scale(-1, 1);
       ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
@@ -247,19 +365,26 @@ export default function ClockIn() {
         file: photoFile 
       });
 
+      const timestamp = new Date().toISOString();
+      const { status, delayMinutes } = calculateStatus(timestamp, recordType);
+
       await base44.entities.TimeRecord.create({
         employee_id: employee.id,
         company_id: employee.company_id,
-        timestamp: new Date().toISOString(),
+        timestamp: timestamp,
         type: recordType,
         latitude: location?.latitude,
         longitude: location?.longitude,
         photo_url: file_url,
-        status: "pontual",
-        delay_minutes: 0,
+        status: status,
+        delay_minutes: delayMinutes,
         verified: true,
         mood: mood
       });
+
+      if (recordType === 'saida') {
+        await updateHoursBank(employee.id, employee.company_id, timestamp);
+      }
 
       setSuccess(true);
       setCapturedPhoto(null);
@@ -357,6 +482,11 @@ export default function ClockIn() {
                 <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
                   {employee.full_name}
                 </Badge>
+                {shift && (
+                  <p className="text-sm mt-2 opacity-80">
+                    Horário: {shift.start_time} às {shift.end_time}
+                  </p>
+                )}
               </div>
             )}
           </CardContent>
@@ -575,7 +705,9 @@ export default function ClockIn() {
                     lastRecord.status === 'atrasado' ? 'bg-orange-500' :
                     'bg-blue-500'
                   }>
-                    {lastRecord.status === 'pontual' ? '✓ Pontual' : lastRecord.status}
+                    {lastRecord.status === 'pontual' ? '✓ Pontual' : 
+                     lastRecord.status === 'atrasado' ? `Atraso ${lastRecord.delay_minutes}min` : 
+                     lastRecord.status}
                   </Badge>
                 </div>
               </div>

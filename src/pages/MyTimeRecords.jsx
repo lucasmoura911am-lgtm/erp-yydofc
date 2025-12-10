@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import HoursBankCard from "../components/hours/HoursBankCard";
 
 export default function MyTimeRecords() {
   const [user, setUser] = useState(null);
@@ -36,6 +37,12 @@ export default function MyTimeRecords() {
   const { data: myRecords = [] } = useQuery({
     queryKey: ['myRecords', user?.employee_id],
     queryFn: () => user?.employee_id ? base44.entities.TimeRecord.filter({ employee_id: user.employee_id }, '-timestamp') : [],
+    enabled: !!user?.employee_id,
+  });
+
+  const { data: hoursBank = [] } = useQuery({
+    queryKey: ['hoursBank', user?.employee_id],
+    queryFn: () => user?.employee_id ? base44.entities.HoursBank.filter({ employee_id: user.employee_id }, '-date') : [],
     enabled: !!user?.employee_id,
   });
 
@@ -78,6 +85,11 @@ export default function MyTimeRecords() {
           Acompanhe seu histórico de ponto
         </p>
       </div>
+
+      {/* Hours Bank */}
+      {hoursBank.length > 0 && (
+        <HoursBankCard hoursBank={hoursBank} />
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
