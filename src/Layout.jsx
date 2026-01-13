@@ -20,7 +20,8 @@ import {
   FileText,
   Building,
   Edit3,
-  Shield
+  Shield,
+  ListTodo
 } from "lucide-react";
 import {
   Sidebar,
@@ -96,6 +97,16 @@ const adminNavigation = [
     icon: FileText,
   },
   {
+    title: "Plano de Trabalho",
+    url: createPageUrl("TasksDashboard"),
+    icon: ListTodo,
+  },
+  {
+    title: "Gestão de Tarefas",
+    url: createPageUrl("ManageTasks"),
+    icon: Edit3,
+  },
+  {
     title: "Avisos",
     url: createPageUrl("Announcements"),
     icon: LayoutDashboard,
@@ -125,6 +136,11 @@ const employeeNavigation = [
     title: "Meus Registros",
     url: createPageUrl("MyTimeRecords"),
     icon: BarChart3,
+  },
+  {
+    title: "Minhas Tarefas",
+    url: createPageUrl("MyTasks"),
+    icon: ListTodo,
   },
 ];
 
