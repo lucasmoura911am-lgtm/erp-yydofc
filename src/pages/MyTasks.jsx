@@ -127,45 +127,6 @@ export default function MyTasks() {
     }
   };
 
-  const handlePhotoUpload = async (file, type) => {
-    try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      if (type === 'before') {
-        setPhotoBefore(file_url);
-      } else {
-        setPhotoAfter(file_url);
-      }
-    } catch (error) {
-      alert('Erro ao fazer upload da foto');
-    }
-  };
-
-  const handleSubmitCompletion = async () => {
-    if (!photoBefore || !photoAfter) {
-      alert('É obrigatório enviar as fotos antes e depois!');
-      return;
-    }
-
-    setUploading(true);
-    try {
-      await updateTaskMutation.mutateAsync({
-        id: selectedTask.id,
-        data: {
-          ...selectedTask,
-          status: 'concluida',
-          completed_at: new Date().toISOString(),
-          photo_before_url: photoBefore,
-          photo_after_url: photoAfter,
-          observation: observation
-        }
-      });
-    } catch (error) {
-      alert('Erro ao concluir tarefa');
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const pendingTasks = myTasks.filter(t => t.status === 'pendente' || t.status === 'em_andamento' || t.status === 'atrasada');
   const completedTasks = myTasks.filter(t => t.status === 'concluida');
 
