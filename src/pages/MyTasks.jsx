@@ -91,12 +91,28 @@ export default function MyTasks() {
       const now = new Date().toISOString();
       const newStatus = isPast(parseISO(selectedTask.due_date)) ? 'atrasada' : 'em_andamento';
       
+      const updateData = {
+        title: selectedTask.title,
+        description: selectedTask.description,
+        employee_id: selectedTask.employee_id,
+        company_id: selectedTask.company_id,
+        supervisor_email: selectedTask.supervisor_email,
+        due_date: selectedTask.due_date,
+        location: selectedTask.location,
+        priority: selectedTask.priority,
+        frequency: selectedTask.frequency,
+        status: newStatus,
+        started_at: now,
+        photo_before_url: photoToUpload
+      };
+      
       await updateTaskMutation.mutateAsync({
         id: selectedTask.id,
-        data: { ...selectedTask, status: newStatus, started_at: now, photo_before_url: photoToUpload }
+        data: updateData
       });
     } catch (error) {
-      alert('Erro ao iniciar tarefa');
+      console.error('Erro ao iniciar tarefa:', error);
+      alert('Erro ao iniciar tarefa: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setUploading(false);
     }
@@ -110,18 +126,31 @@ export default function MyTasks() {
 
     setUploading(true);
     try {
+      const updateData = {
+        title: selectedTask.title,
+        description: selectedTask.description,
+        employee_id: selectedTask.employee_id,
+        company_id: selectedTask.company_id,
+        supervisor_email: selectedTask.supervisor_email,
+        due_date: selectedTask.due_date,
+        location: selectedTask.location,
+        priority: selectedTask.priority,
+        frequency: selectedTask.frequency,
+        status: 'concluida',
+        started_at: selectedTask.started_at,
+        completed_at: new Date().toISOString(),
+        photo_before_url: selectedTask.photo_before_url,
+        photo_after_url: photoToUpload,
+        observation: observation
+      };
+      
       await updateTaskMutation.mutateAsync({
         id: selectedTask.id,
-        data: {
-          ...selectedTask,
-          status: 'concluida',
-          completed_at: new Date().toISOString(),
-          photo_after_url: photoToUpload,
-          observation: observation
-        }
+        data: updateData
       });
     } catch (error) {
-      alert('Erro ao concluir tarefa');
+      console.error('Erro ao concluir tarefa:', error);
+      alert('Erro ao concluir tarefa: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setUploading(false);
     }
