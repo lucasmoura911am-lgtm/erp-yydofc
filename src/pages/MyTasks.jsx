@@ -22,9 +22,9 @@ export default function MyTasks() {
   const [user, setUser] = useState(null);
   const [employee, setEmployee] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState(null); // 'start' or 'complete'
   const [selectedTask, setSelectedTask] = useState(null);
-  const [photoBefore, setPhotoBefore] = useState(null);
-  const [photoAfter, setPhotoAfter] = useState(null);
+  const [photoToUpload, setPhotoToUpload] = useState(null);
   const [observation, setObservation] = useState("");
   const [uploading, setUploading] = useState(false);
 
@@ -63,24 +63,68 @@ export default function MyTasks() {
 
   const resetForm = () => {
     setSelectedTask(null);
-    setPhotoBefore(null);
-    setPhotoAfter(null);
+    setDialogType(null);
+    setPhotoToUpload(null);
     setObservation("");
   };
 
-  const handleStart = async (task) => {
-    const now = new Date().toISOString();
-    const newStatus = isPast(parseISO(task.due_date)) ? 'atrasada' : 'em_andamento';
-    
-    await updateTaskMutation.mutateAsync({
-      id: task.id,
-      data: { ...task, status: newStatus, started_at: now }
-    });
+  const handleStartClick = (task) => {
+    setSelectedTask(task);
+    setDialogType('start');
+    setDialogOpen(true);
   };
 
-  const handleComplete = (task) => {
+  const handleCompleteClick = (task) => {
     setSelectedTask(task);
+    setDialogType('complete');
     setDialogOpen(true);
+  };
+
+  const handleStartSubmit = async () => {
+    if (!photoToUpload) {
+      alert('É obrigatório enviar a foto ANTES de iniciar!');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const now = new Date().toISOString();
+      const newStatus = isPast(parseISO(selectedTask.due_date)) ? 'atrasada' : 'em_andamento';
+      
+      await updateTaskMutation.mutateAsync({
+        id: selectedTask.id,
+        data: { ...selectedTask, status: newStatus, started_at: now, photo_before_url: photoToUpload }
+      });
+    } catch (error) {
+      alert('Erro ao iniciar tarefa');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCompleteSubmit = async () => {
+    if (!photoToUpload) {
+      alert('É obrigatório enviar a foto DEPOIS de concluir!');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      await updateTaskMutation.mutateAsync({
+        id: selectedTask.id,
+        data: {
+          ...selectedTask,
+          status: 'concluida',
+          completed_at: new Date().toISOString(),
+          photo_after_url: photoToUpload,
+          observation: observation
+        }
+      });
+    } catch (error) {
+      alert('Erro ao concluir tarefa');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handlePhotoUpload = async (file, type) => {
@@ -198,19 +242,19 @@ export default function MyTasks() {
 
                   <div className="flex gap-2 pt-2">
                     {task.status === 'pendente' && (
-                      <Button onClick={() => handleStart(task)} className="flex-1 bg-blue-600">
+                      <Button onClick={() => handleStartClick(task)} className="flex-1 bg-blue-600">
                         <Play className="w-4 h-4 mr-2" />
                         Iniciar
                       </Button>
                     )}
                     {task.status === 'em_andamento' && (
-                      <Button onClick={() => handleComplete(task)} className="flex-1 bg-green-600">
+                      <Button onClick={() => handleCompleteClick(task)} className="flex-1 bg-green-600">
                         <CheckCircle className="w-4 h-4 mr-2" />
                         Concluir
                       </Button>
                     )}
                     {task.status === 'atrasada' && (
-                      <Button onClick={() => handleComplete(task)} className="flex-1 bg-orange-600">
+                      <Button onClick={() => handleCompleteClick(task)} className="flex-1 bg-orange-600">
                         <CheckCircle className="w-4 h-4 mr-2" />
                         Concluir Agora
                       </Button>
@@ -242,11 +286,13 @@ export default function MyTasks() {
         </div>
       )}
 
-      {/* Completion Dialog */}
+      {/* Photo Upload Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Concluir Tarefa</DialogTitle>
+            <DialogTitle>
+              {dialogType === 'start' ? '📸 Iniciar Tarefa - Foto ANTES' : '✅ Concluir Tarefa - Foto DEPOIS'}
+            </DialogTitle>
           </DialogHeader>
           {selectedTask && (
             <div className="space-y-4">
@@ -255,71 +301,71 @@ export default function MyTasks() {
                 <p className="text-sm text-gray-500">{selectedTask.description}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Foto ANTES *</Label>
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                    {photoBefore ? (
-                      <img src={photoBefore} alt="Antes" className="w-full h-40 object-cover rounded" />
-                    ) : (
-                      <label className="cursor-pointer block">
-                        <Camera className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-500">Tire uma foto</p>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          className="hidden"
-                          onChange={(e) => handlePhotoUpload(e.target.files[0], 'before')}
-                        />
-                      </label>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Foto DEPOIS *</Label>
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                    {photoAfter ? (
-                      <img src={photoAfter} alt="Depois" className="w-full h-40 object-cover rounded" />
-                    ) : (
-                      <label className="cursor-pointer block">
-                        <Camera className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-500">Tire uma foto</p>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          className="hidden"
-                          onChange={(e) => handlePhotoUpload(e.target.files[0], 'after')}
-                        />
-                      </label>
-                    )}
-                  </div>
-                </div>
-              </div>
-
               <div className="space-y-2">
-                <Label>Observação</Label>
-                <Textarea
-                  value={observation}
-                  onChange={(e) => setObservation(e.target.value)}
-                  rows={3}
-                  placeholder="Adicione comentários sobre a execução..."
-                />
+                <Label>{dialogType === 'start' ? 'Foto ANTES de iniciar *' : 'Foto DEPOIS de executar *'}</Label>
+                <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                  {photoToUpload ? (
+                    <div className="space-y-2">
+                      <img src={photoToUpload} alt="Upload" className="w-full h-64 object-cover rounded" />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setPhotoToUpload(null)}
+                      >
+                        Trocar Foto
+                      </Button>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer block">
+                      <Camera className="w-16 h-16 mx-auto text-gray-400 mb-3" />
+                      <p className="text-base font-medium text-gray-700">
+                        {dialogType === 'start' ? 'Tire uma foto do local ANTES' : 'Tire uma foto do trabalho CONCLUÍDO'}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">Clique para usar a câmera</p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            try {
+                              const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                              setPhotoToUpload(file_url);
+                            } catch (error) {
+                              alert('Erro ao fazer upload da foto');
+                            }
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
+
+              {dialogType === 'complete' && (
+                <div className="space-y-2">
+                  <Label>Observação</Label>
+                  <Textarea
+                    value={observation}
+                    onChange={(e) => setObservation(e.target.value)}
+                    rows={3}
+                    placeholder="Adicione comentários sobre a execução..."
+                  />
+                </div>
+              )}
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancelar
                 </Button>
                 <Button 
-                  onClick={handleSubmitCompletion} 
-                  disabled={!photoBefore || !photoAfter || uploading}
-                  className="bg-green-600"
+                  onClick={dialogType === 'start' ? handleStartSubmit : handleCompleteSubmit}
+                  disabled={!photoToUpload || uploading}
+                  className={dialogType === 'start' ? 'bg-blue-600' : 'bg-green-600'}
                 >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  {uploading ? 'Enviando...' : 'Concluir Tarefa'}
+                  {uploading ? 'Enviando...' : dialogType === 'start' ? '▶️ Iniciar Tarefa' : '✅ Concluir Tarefa'}
                 </Button>
               </DialogFooter>
             </div>

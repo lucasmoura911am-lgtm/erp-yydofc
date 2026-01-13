@@ -148,61 +148,76 @@ export default function TasksDashboard() {
         </Card>
       </div>
 
-      {/* Employee Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
-            Status por Funcionário
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {employees.map((emp) => {
-              const status = getEmployeeStatus(emp.id);
-              const progress = getEmployeeProgress(emp.id);
-              const lastActivity = getLastActivity(emp.id);
-              const pending = getPendingCount(emp.id);
+      {/* Employee Status - Clean Visual */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold">👥 Status da Equipe</h2>
+        
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {employees.map((emp) => {
+            const status = getEmployeeStatus(emp.id);
+            const progress = getEmployeeProgress(emp.id);
+            const pending = getPendingCount(emp.id);
+            const empTasks = todayTasks.filter(t => t.employee_id === emp.id);
+            const completed = empTasks.filter(t => t.status === 'concluida').length;
 
-              return (
-                <Card key={emp.id} className="border-2" style={{ borderColor: status.color === 'green' ? '#22c55e' : status.color === 'yellow' ? '#eab308' : status.color === 'red' ? '#ef4444' : '#e5e7eb' }}>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={emp.photo_url} />
-                        <AvatarFallback className="bg-gradient-to-br from-purple-600 to-blue-600 text-white">
-                          {emp.full_name?.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-medium">{emp.full_name}</p>
-                        <Badge variant="outline" className={`${status.color === 'green' ? 'bg-green-100 text-green-800' : status.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' : status.color === 'red' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
-                          {status.icon} {status.label}
-                        </Badge>
+            const bgColor = status.color === 'green' ? 'from-green-500 to-green-600' : 
+                           status.color === 'yellow' ? 'from-yellow-500 to-yellow-600' : 
+                           status.color === 'red' ? 'from-red-500 to-red-600' : 'from-gray-400 to-gray-500';
+
+            return (
+              <Card key={emp.id} className="relative overflow-hidden">
+                <div className={`absolute inset-0 bg-gradient-to-br ${bgColor} opacity-10`}></div>
+                <CardContent className="p-6 relative space-y-4">
+                  {/* Header */}
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-16 h-16 border-4" style={{ borderColor: status.color === 'green' ? '#22c55e' : status.color === 'yellow' ? '#eab308' : status.color === 'red' ? '#ef4444' : '#9ca3af' }}>
+                      <AvatarImage src={emp.photo_url} />
+                      <AvatarFallback className="bg-gradient-to-br from-purple-600 to-blue-600 text-white text-xl">
+                        {emp.full_name?.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="font-bold text-lg">{emp.full_name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-4xl">{status.icon}</span>
+                        <span className={`text-sm font-semibold ${status.color === 'green' ? 'text-green-700' : status.color === 'yellow' ? 'text-yellow-700' : status.color === 'red' ? 'text-red-700' : 'text-gray-700'}`}>
+                          {status.label}
+                        </span>
                       </div>
                     </div>
+                  </div>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Progresso</span>
-                        <span className="font-bold">{progress}%</span>
-                      </div>
-                      <Progress value={progress} className="h-2" />
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 gap-3 text-center">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border">
+                      <p className="text-2xl font-bold text-green-600">{completed}</p>
+                      <p className="text-xs text-gray-500">Concluídas</p>
                     </div>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border">
+                      <p className="text-2xl font-bold text-orange-600">{pending}</p>
+                      <p className="text-xs text-gray-500">Pendentes</p>
+                    </div>
+                  </div>
 
-                    <div className="text-xs text-gray-500 space-y-1">
-                      <p className="truncate">📋 {lastActivity}</p>
-                      {pending > 0 && (
-                        <p className="text-orange-600 font-medium">⚠️ {pending} tarefa(s) pendente(s)</p>
-                      )}
+                  {/* Progress Bar */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="font-medium">Progresso</span>
+                      <span className="font-bold">{progress}%</span>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div 
+                        className={`h-3 rounded-full transition-all duration-500 bg-gradient-to-r ${bgColor}`}
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
