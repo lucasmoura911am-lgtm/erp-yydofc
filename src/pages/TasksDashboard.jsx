@@ -189,28 +189,49 @@ export default function TasksDashboard() {
 
                   {/* Stats */}
                   <div className="grid grid-cols-2 gap-3 text-center">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border">
-                      <p className="text-2xl font-bold text-green-600">{completed}</p>
-                      <p className="text-xs text-gray-500">Concluídas</p>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border">
-                      <p className="text-2xl font-bold text-orange-600">{pending}</p>
-                      <p className="text-xs text-gray-500">Pendentes</p>
-                    </div>
+                   <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border">
+                     <p className="text-2xl font-bold text-green-600">{completed}</p>
+                     <p className="text-xs text-gray-500">Concluídas</p>
+                   </div>
+                   <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border">
+                     <p className="text-2xl font-bold text-orange-600">{pending}</p>
+                     <p className="text-xs text-gray-500">Pendentes</p>
+                   </div>
                   </div>
+
+                  {/* Task Photos */}
+                  {empTasks.some(t => t.photo_before_url || t.photo_after_url) && (
+                   <div className="space-y-2">
+                     <p className="text-xs font-semibold text-gray-600">📸 Últimas Fotos</p>
+                     <div className="grid grid-cols-2 gap-2">
+                       {empTasks.filter(t => t.photo_before_url || t.photo_after_url).slice(0, 2).map((task, idx) => (
+                         <div key={idx} className="relative group cursor-pointer">
+                           <img 
+                             src={task.photo_after_url || task.photo_before_url} 
+                             alt="Tarefa" 
+                             className="w-full h-20 object-cover rounded-lg border-2 border-gray-200 hover:border-blue-500 transition-all"
+                           />
+                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                             <p className="text-white text-xs font-semibold text-center px-2">{task.title}</p>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                  )}
 
                   {/* Progress Bar */}
                   <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="font-medium">Progresso</span>
-                      <span className="font-bold">{progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className={`h-3 rounded-full transition-all duration-500 bg-gradient-to-r ${bgColor}`}
-                        style={{ width: `${progress}%` }}
-                      ></div>
-                    </div>
+                   <div className="flex justify-between text-xs">
+                     <span className="font-medium">Progresso</span>
+                     <span className="font-bold">{progress}%</span>
+                   </div>
+                   <div className="w-full bg-gray-200 rounded-full h-3">
+                     <div 
+                       className={`h-3 rounded-full transition-all duration-500 bg-gradient-to-r ${bgColor}`}
+                       style={{ width: `${progress}%` }}
+                     ></div>
+                   </div>
                   </div>
                 </CardContent>
               </Card>

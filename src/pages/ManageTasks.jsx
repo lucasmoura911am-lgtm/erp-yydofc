@@ -115,9 +115,15 @@ export default function ManageTasks() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const data = { 
-      ...formData, 
+      title: formData.title,
+      description: formData.description,
+      employee_id: formData.employee_id,
       company_id: user.company_id,
       supervisor_email: user.email,
+      due_date: formData.due_date,
+      location: formData.location,
+      priority: formData.priority,
+      frequency: formData.frequency,
       status: 'pendente'
     };
     
