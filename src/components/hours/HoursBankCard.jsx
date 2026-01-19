@@ -66,11 +66,14 @@ export default function HoursBankCard({ hoursBank }) {
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {hoursBank.slice(0, 10).map((record) => (
               <div key={record.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium">{record.date}</p>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{new Date(record.date).toLocaleDateString('pt-BR')}</p>
                   <p className="text-xs text-gray-500">
-                    Trabalhado: {formatMinutes(record.worked_minutes)}
+                    Trabalhado: {formatMinutes(record.worked_minutes)} / Esperado: {formatMinutes(record.expected_minutes)}
                   </p>
+                  {record.notes && (
+                    <p className="text-xs text-gray-400 mt-1">{record.notes}</p>
+                  )}
                 </div>
                 <Badge variant="outline" className={
                   record.balance_minutes > 0 ? 'bg-green-100 text-green-800' :

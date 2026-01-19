@@ -165,6 +165,7 @@ export default function ClockIn() {
     try {
       const dateStr = format(startOfDay(new Date(date)), 'yyyy-MM-dd');
       
+      // Buscar todos os registros do dia
       const records = await base44.entities.TimeRecord.filter({
         employee_id: employeeId,
         company_id: companyId
@@ -173,65 +174,94 @@ export default function ClockIn() {
       const dayRecords = records.filter(r => {
         const recordDate = format(startOfDay(new Date(r.timestamp)), 'yyyy-MM-dd');
         return recordDate === dateStr;
-      });
+      }).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-      const entrada = dayRecords.find(r => r.type === 'entrada');
-      const saida = dayRecords.find(r => r.type === 'saida');
-      const pausa = dayRecords.find(r => r.type === 'pausa');
-      const retorno = dayRecords.find(r => r.type === 'retorno');
+      // Encontrar registros de entrada e saída (podem ter múltiplos)
+      const entradas = dayRecords.filter(r => r.type === 'entrada');
+      const saidas = dayRecords.filter(r => r.type === 'saida');
 
-      if (!entrada || !saida) {
+      // Só calcular se tiver pelo menos uma entrada E uma saída
+      if (entradas.length === 0 || saidas.length === 0) {
+        console.log(`Dia ${dateStr} incompleto: ${entradas.length} entradas, ${saidas.length} saídas`);
         return;
       }
 
-      const entradaTime = new Date(entrada.timestamp);
-      const saidaTime = new Date(saida.timestamp);
-      let workedMinutes = differenceInMinutes(saidaTime, entradaTime);
+      // Calcular total de minutos trabalhados
+      let totalWorkedMinutes = 0;
+      
+      // Pegar primeira entrada e última saída
+      const primeiraEntrada = entradas[0];
+      const ultimaSaida = saidas[saidas.length - 1];
+      
+      const entradaTime = new Date(primeiraEntrada.timestamp);
+      const saidaTime = new Date(ultimaSaida.timestamp);
+      
+      // Total bruto (entrada até saída)
+      let grossMinutes = differenceInMinutes(saidaTime, entradaTime);
 
-      if (pausa && retorno) {
-        const pausaTime = new Date(pausa.timestamp);
-        const retornoTime = new Date(retorno.timestamp);
-        const breakMinutes = differenceInMinutes(retornoTime, pausaTime);
-        workedMinutes -= breakMinutes;
-      } else if (shift && shift.break_minutes) {
-        workedMinutes -= shift.break_minutes;
+      // Subtrair pausas (tempo entre "pausa" e "retorno")
+      const pausas = dayRecords.filter(r => r.type === 'pausa');
+      const retornos = dayRecords.filter(r => r.type === 'retorno');
+      
+      let totalBreakMinutes = 0;
+      
+      // Calcular cada pausa que tem retorno correspondente
+      for (let i = 0; i < Math.min(pausas.length, retornos.length); i++) {
+        const pausaTime = new Date(pausas[i].timestamp);
+        const retornoTime = new Date(retornos[i].timestamp);
+        const breakDuration = differenceInMinutes(retornoTime, pausaTime);
+        if (breakDuration > 0) {
+          totalBreakMinutes += breakDuration;
+        }
       }
 
+      // Se não tem registros de pausa, usar pausa padrão da escala
+      if (totalBreakMinutes === 0 && shift && shift.break_minutes) {
+        totalBreakMinutes = shift.break_minutes;
+      }
+
+      // Minutos efetivamente trabalhados
+      totalWorkedMinutes = grossMinutes - totalBreakMinutes;
+
+      // Calcular minutos esperados da escala
       const expectedMinutes = shift ? 
         (differenceInMinutes(
           parse(shift.end_time, 'HH:mm', new Date()),
           parse(shift.start_time, 'HH:mm', new Date())
-        ) - (shift.break_minutes || 0)) : 480;
+        ) - (shift.break_minutes || 0)) : 480; // Default: 8h
 
-      const balanceMinutes = workedMinutes - expectedMinutes;
+      // Saldo = trabalhado - esperado
+      const balanceMinutes = totalWorkedMinutes - expectedMinutes;
       const overtimeMinutes = balanceMinutes > 0 ? balanceMinutes : 0;
       const missingMinutes = balanceMinutes < 0 ? Math.abs(balanceMinutes) : 0;
 
+      // Verificar se já existe registro para este dia
       const existingBank = await base44.entities.HoursBank.filter({
         employee_id: employeeId,
         date: dateStr
       });
 
+      const bankData = {
+        worked_minutes: Math.max(0, totalWorkedMinutes),
+        expected_minutes: expectedMinutes,
+        balance_minutes: balanceMinutes,
+        overtime_minutes: overtimeMinutes,
+        missing_minutes: missingMinutes,
+        notes: `${entradas.length} entrada(s), ${saidas.length} saída(s), ${totalBreakMinutes}min de pausa`
+      };
+
       if (existingBank.length > 0) {
-        await base44.entities.HoursBank.update(existingBank[0].id, {
-          worked_minutes: workedMinutes,
-          expected_minutes: expectedMinutes,
-          balance_minutes: balanceMinutes,
-          overtime_minutes: overtimeMinutes,
-          missing_minutes: missingMinutes
-        });
+        await base44.entities.HoursBank.update(existingBank[0].id, bankData);
       } else {
         await base44.entities.HoursBank.create({
           employee_id: employeeId,
           company_id: companyId,
           date: dateStr,
-          worked_minutes: workedMinutes,
-          expected_minutes: expectedMinutes,
-          balance_minutes: balanceMinutes,
-          overtime_minutes: overtimeMinutes,
-          missing_minutes: missingMinutes
+          ...bankData
         });
       }
+
+      console.log(`Banco de horas atualizado para ${dateStr}:`, bankData);
     } catch (error) {
       console.error("Erro ao atualizar banco de horas:", error);
     }
