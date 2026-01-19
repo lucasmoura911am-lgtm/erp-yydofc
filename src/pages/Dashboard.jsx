@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Clock, TrendingUp, AlertCircle, UserCheck, UserX, Calendar } from "lucide-react";
 import { format, startOfMonth, endOfMonth, parseISO, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Input } from "@/components/ui/input";
 import StatsCard from "../components/dashboard/StatsCard";
 import AttendanceChart from "../components/dashboard/AttendanceChart";
 import RecentRecords from "../components/dashboard/RecentRecords";
@@ -20,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [stats, setStats] = useState({
     totalEmployees: 0,
     todayRecords: 0,
@@ -81,18 +83,18 @@ export default function Dashboard() {
 
   useEffect(() => {
     calculateStats();
-  }, [employees, timeRecords]);
+  }, [employees, timeRecords, selectedDate]);
 
   const calculateStats = () => {
-    const today = startOfDay(new Date());
-    const monthStart = startOfMonth(new Date());
-    const monthEnd = endOfMonth(new Date());
+    const selectedDayDate = startOfDay(new Date(selectedDate));
+    const monthStart = startOfMonth(new Date(selectedDate));
+    const monthEnd = endOfMonth(new Date(selectedDate));
 
     const activeEmployees = employees.filter(emp => emp.status === 'active');
 
     const todayRecords = timeRecords.filter(record => {
       const recordDate = startOfDay(new Date(record.timestamp));
-      return recordDate.getTime() === today.getTime();
+      return recordDate.getTime() === selectedDayDate.getTime();
     });
 
     // Funcionários que bateram ponto hoje (entrada)
@@ -127,10 +129,10 @@ export default function Dashboard() {
   };
 
   const getPresentEmployees = () => {
-    const today = startOfDay(new Date());
+    const selectedDayDate = startOfDay(new Date(selectedDate));
     const todayRecords = timeRecords.filter(record => {
       const recordDate = startOfDay(new Date(record.timestamp));
-      return recordDate.getTime() === today.getTime() && record.type === 'entrada';
+      return recordDate.getTime() === selectedDayDate.getTime() && record.type === 'entrada';
     });
 
     const presentEmployeeIds = new Set(todayRecords.map(r => r.employee_id));
@@ -138,10 +140,10 @@ export default function Dashboard() {
   };
 
   const getAbsentEmployees = () => {
-    const today = startOfDay(new Date());
+    const selectedDayDate = startOfDay(new Date(selectedDate));
     const todayRecords = timeRecords.filter(record => {
       const recordDate = startOfDay(new Date(record.timestamp));
-      return recordDate.getTime() === today.getTime() && record.type === 'entrada';
+      return recordDate.getTime() === selectedDayDate.getTime() && record.type === 'entrada';
     });
 
     const presentEmployeeIds = new Set(todayRecords.map(r => r.employee_id));
@@ -172,8 +174,16 @@ export default function Dashboard() {
             Visão geral do controle de ponto
           </p>
         </div>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          {format(new Date(), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+        <div className="flex items-center gap-3">
+          <Input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-48"
+          />
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {format(new Date(selectedDate), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+          </div>
         </div>
       </div>
 
@@ -247,7 +257,7 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-green-600">
                 <UserCheck className="w-5 h-5" />
-                Presentes Hoje ({presentEmployees.length})
+                Presentes ({presentEmployees.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -280,7 +290,7 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-orange-600">
                 <UserX className="w-5 h-5" />
-                Ausentes Hoje ({absentEmployees.length})
+                Ausentes ({absentEmployees.length})
               </CardTitle>
             </CardHeader>
             <CardContent>

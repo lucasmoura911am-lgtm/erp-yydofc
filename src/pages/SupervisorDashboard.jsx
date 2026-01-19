@@ -6,6 +6,7 @@ import { Users, Clock, TrendingUp, AlertTriangle, CheckCircle, XCircle, Award, T
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, startOfDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -19,6 +20,7 @@ import { Progress } from "@/components/ui/progress";
 
 export default function SupervisorDashboard() {
   const [user, setUser] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   useEffect(() => {
     loadUser();
@@ -51,13 +53,13 @@ export default function SupervisorDashboard() {
     enabled: !!user?.company_id,
   });
 
-  const today = startOfDay(new Date());
-  const monthStart = startOfMonth(new Date());
-  const monthEnd = endOfMonth(new Date());
+  const selectedDayDate = startOfDay(new Date(selectedDate));
+  const monthStart = startOfMonth(new Date(selectedDate));
+  const monthEnd = endOfMonth(new Date(selectedDate));
 
   const todayRecords = timeRecords.filter(r => {
     const recordDate = startOfDay(new Date(r.timestamp));
-    return recordDate.getTime() === today.getTime();
+    return recordDate.getTime() === selectedDayDate.getTime();
   });
 
   const monthRecords = timeRecords.filter(r => {
@@ -115,11 +117,24 @@ export default function SupervisorDashboard() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard Supervisor</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Visão completa da equipe e banco de horas
-        </p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard Supervisor</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Visão completa da equipe e banco de horas
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-48"
+          />
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {format(new Date(selectedDate), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+          </div>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -139,7 +154,7 @@ export default function SupervisorDashboard() {
 
         <Card className="bg-gradient-to-br from-green-50 to-emerald-50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Presentes Hoje</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Presentes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
@@ -152,7 +167,7 @@ export default function SupervisorDashboard() {
 
         <Card className="bg-gradient-to-br from-orange-50 to-red-50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Ausentes Hoje</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Ausentes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
