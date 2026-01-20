@@ -93,7 +93,9 @@ export default function Dashboard() {
     const activeEmployees = employees.filter(emp => emp.status === 'active');
 
     const todayRecords = timeRecords.filter(record => {
-      const recordDateStr = format(new Date(record.timestamp), 'yyyy-MM-dd');
+      // Extrair apenas a data (ignorando hora/timezone)
+      const recordDate = new Date(record.timestamp);
+      const recordDateStr = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}-${String(recordDate.getDate()).padStart(2, '0')}`;
       return recordDateStr === selectedDayStr;
     });
 
@@ -131,7 +133,9 @@ export default function Dashboard() {
   const getPresentEmployees = () => {
     const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
     const todayRecords = timeRecords.filter(record => {
-      const recordDateStr = format(new Date(record.timestamp), 'yyyy-MM-dd');
+      // Extrair apenas a data (ignorando hora/timezone)
+      const recordDate = new Date(record.timestamp);
+      const recordDateStr = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}-${String(recordDate.getDate()).padStart(2, '0')}`;
       return recordDateStr === selectedDayStr && record.type === 'entrada';
     });
 
@@ -142,7 +146,9 @@ export default function Dashboard() {
   const getAbsentEmployees = () => {
     const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
     const todayRecords = timeRecords.filter(record => {
-      const recordDateStr = format(new Date(record.timestamp), 'yyyy-MM-dd');
+      // Extrair apenas a data (ignorando hora/timezone)
+      const recordDate = new Date(record.timestamp);
+      const recordDateStr = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}-${String(recordDate.getDate()).padStart(2, '0')}`;
       return recordDateStr === selectedDayStr && record.type === 'entrada';
     });
 

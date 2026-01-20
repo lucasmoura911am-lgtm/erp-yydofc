@@ -168,8 +168,10 @@ export default function ManageTimeRecords() {
     const matchesSearch = employee?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          employee?.employee_number?.includes(searchTerm);
     
-    const matchesDate = !dateFilter || 
-                       format(new Date(record.timestamp), 'yyyy-MM-dd') === dateFilter;
+    // Extrair apenas a data (ignorando hora/timezone)
+    const recordDate = new Date(record.timestamp);
+    const recordDateStr = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}-${String(recordDate.getDate()).padStart(2, '0')}`;
+    const matchesDate = !dateFilter || recordDateStr === dateFilter;
 
     return matchesSearch && matchesDate;
   });

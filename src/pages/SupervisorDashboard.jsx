@@ -58,7 +58,9 @@ export default function SupervisorDashboard() {
   const monthEnd = endOfMonth(new Date(selectedDate));
 
   const todayRecords = timeRecords.filter(r => {
-    const recordDateStr = format(new Date(r.timestamp), 'yyyy-MM-dd');
+    // Extrair apenas a data (ignorando hora/timezone)
+    const recordDate = new Date(r.timestamp);
+    const recordDateStr = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}-${String(recordDate.getDate()).padStart(2, '0')}`;
     return recordDateStr === selectedDayStr;
   });
 
