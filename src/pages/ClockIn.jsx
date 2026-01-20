@@ -172,8 +172,8 @@ export default function ClockIn() {
       });
 
       const dayRecords = records.filter(r => {
-        const recordDate = format(startOfDay(new Date(r.timestamp)), 'yyyy-MM-dd');
-        return recordDate === dateStr;
+        const recordDateStr = format(new Date(r.timestamp), 'yyyy-MM-dd');
+        return recordDateStr === dateStr;
       }).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
       // Encontrar registros de entrada e saída (podem ter múltiplos)

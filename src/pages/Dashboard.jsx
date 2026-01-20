@@ -86,15 +86,15 @@ export default function Dashboard() {
   }, [employees, timeRecords, selectedDate]);
 
   const calculateStats = () => {
-    const selectedDayDate = startOfDay(new Date(selectedDate));
+    const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
     const monthStart = startOfMonth(new Date(selectedDate));
     const monthEnd = endOfMonth(new Date(selectedDate));
 
     const activeEmployees = employees.filter(emp => emp.status === 'active');
 
     const todayRecords = timeRecords.filter(record => {
-      const recordDate = startOfDay(new Date(record.timestamp));
-      return recordDate.getTime() === selectedDayDate.getTime();
+      const recordDateStr = format(new Date(record.timestamp), 'yyyy-MM-dd');
+      return recordDateStr === selectedDayStr;
     });
 
     // Funcionários que bateram ponto hoje (entrada)
@@ -129,10 +129,10 @@ export default function Dashboard() {
   };
 
   const getPresentEmployees = () => {
-    const selectedDayDate = startOfDay(new Date(selectedDate));
+    const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
     const todayRecords = timeRecords.filter(record => {
-      const recordDate = startOfDay(new Date(record.timestamp));
-      return recordDate.getTime() === selectedDayDate.getTime() && record.type === 'entrada';
+      const recordDateStr = format(new Date(record.timestamp), 'yyyy-MM-dd');
+      return recordDateStr === selectedDayStr && record.type === 'entrada';
     });
 
     const presentEmployeeIds = new Set(todayRecords.map(r => r.employee_id));
@@ -140,10 +140,10 @@ export default function Dashboard() {
   };
 
   const getAbsentEmployees = () => {
-    const selectedDayDate = startOfDay(new Date(selectedDate));
+    const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
     const todayRecords = timeRecords.filter(record => {
-      const recordDate = startOfDay(new Date(record.timestamp));
-      return recordDate.getTime() === selectedDayDate.getTime() && record.type === 'entrada';
+      const recordDateStr = format(new Date(record.timestamp), 'yyyy-MM-dd');
+      return recordDateStr === selectedDayStr && record.type === 'entrada';
     });
 
     const presentEmployeeIds = new Set(todayRecords.map(r => r.employee_id));

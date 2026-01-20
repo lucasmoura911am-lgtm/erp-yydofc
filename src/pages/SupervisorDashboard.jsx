@@ -53,13 +53,13 @@ export default function SupervisorDashboard() {
     enabled: !!user?.company_id,
   });
 
-  const selectedDayDate = startOfDay(new Date(selectedDate));
+  const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
   const monthStart = startOfMonth(new Date(selectedDate));
   const monthEnd = endOfMonth(new Date(selectedDate));
 
   const todayRecords = timeRecords.filter(r => {
-    const recordDate = startOfDay(new Date(r.timestamp));
-    return recordDate.getTime() === selectedDayDate.getTime();
+    const recordDateStr = format(new Date(r.timestamp), 'yyyy-MM-dd');
+    return recordDateStr === selectedDayStr;
   });
 
   const monthRecords = timeRecords.filter(r => {
