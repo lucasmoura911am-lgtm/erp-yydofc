@@ -22,6 +22,10 @@ import TasksDashboard from './pages/TasksDashboard';
 import Teams from './pages/Teams';
 import TimeRecords from './pages/TimeRecords';
 import UsersManagement from './pages/UsersManagement';
+import MyVacations from './pages/MyVacations';
+import ManageVacations from './pages/ManageVacations';
+import MyPayslips from './pages/MyPayslips';
+import ManagePayslips from './pages/ManagePayslips';
 import __Layout from './Layout.jsx';
 
 
@@ -50,6 +54,10 @@ export const PAGES = {
     "Teams": Teams,
     "TimeRecords": TimeRecords,
     "UsersManagement": UsersManagement,
+    "MyVacations": MyVacations,
+    "ManageVacations": ManageVacations,
+    "MyPayslips": MyPayslips,
+    "ManagePayslips": ManagePayslips,
 }
 
 export const pagesConfig = {

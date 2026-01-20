@@ -107,6 +107,16 @@ const adminNavigation = [
     icon: Edit3,
   },
   {
+    title: "Gestão de Férias",
+    url: createPageUrl("ManageVacations"),
+    icon: Calendar,
+  },
+  {
+    title: "Gestão de Holerites",
+    url: createPageUrl("ManagePayslips"),
+    icon: FileText,
+  },
+  {
     title: "Avisos",
     url: createPageUrl("Announcements"),
     icon: LayoutDashboard,
@@ -141,6 +151,16 @@ const employeeNavigation = [
     title: "Minhas Tarefas",
     url: createPageUrl("MyTasks"),
     icon: ListTodo,
+  },
+  {
+    title: "Minhas Férias",
+    url: createPageUrl("MyVacations"),
+    icon: Calendar,
+  },
+  {
+    title: "Meus Holerites",
+    url: createPageUrl("MyPayslips"),
+    icon: FileText,
   },
 ];
 
