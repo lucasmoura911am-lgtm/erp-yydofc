@@ -93,9 +93,8 @@ export default function Dashboard() {
     const activeEmployees = employees.filter(emp => emp.status === 'active');
 
     const todayRecords = timeRecords.filter(record => {
-      // Extrair apenas a data (ignorando hora/timezone)
-      const recordDate = new Date(record.timestamp);
-      const recordDateStr = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}-${String(recordDate.getDate()).padStart(2, '0')}`;
+      // Extrair data diretamente do timestamp string (YYYY-MM-DD)
+      const recordDateStr = record.timestamp.substring(0, 10);
       return recordDateStr === selectedDayStr;
     });
 
@@ -133,9 +132,8 @@ export default function Dashboard() {
   const getPresentEmployees = () => {
     const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
     const todayRecords = timeRecords.filter(record => {
-      // Extrair apenas a data (ignorando hora/timezone)
-      const recordDate = new Date(record.timestamp);
-      const recordDateStr = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}-${String(recordDate.getDate()).padStart(2, '0')}`;
+      // Extrair data diretamente do timestamp string (YYYY-MM-DD)
+      const recordDateStr = record.timestamp.substring(0, 10);
       return recordDateStr === selectedDayStr && record.type === 'entrada';
     });
 
@@ -146,9 +144,8 @@ export default function Dashboard() {
   const getAbsentEmployees = () => {
     const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
     const todayRecords = timeRecords.filter(record => {
-      // Extrair apenas a data (ignorando hora/timezone)
-      const recordDate = new Date(record.timestamp);
-      const recordDateStr = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}-${String(recordDate.getDate()).padStart(2, '0')}`;
+      // Extrair data diretamente do timestamp string (YYYY-MM-DD)
+      const recordDateStr = record.timestamp.substring(0, 10);
       return recordDateStr === selectedDayStr && record.type === 'entrada';
     });
 

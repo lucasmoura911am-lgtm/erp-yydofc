@@ -172,7 +172,8 @@ export default function ClockIn() {
       });
 
       const dayRecords = records.filter(r => {
-        const recordDateStr = format(new Date(r.timestamp), 'yyyy-MM-dd');
+        // Extrair data diretamente do timestamp string (YYYY-MM-DD)
+        const recordDateStr = r.timestamp.substring(0, 10);
         return recordDateStr === dateStr;
       }).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
