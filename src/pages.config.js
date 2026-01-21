@@ -26,6 +26,7 @@ import TasksDashboard from './pages/TasksDashboard';
 import Teams from './pages/Teams';
 import TimeRecords from './pages/TimeRecords';
 import UsersManagement from './pages/UsersManagement';
+import HoursBank from './pages/HoursBank';
 import __Layout from './Layout.jsx';
 
 
@@ -58,6 +59,7 @@ export const PAGES = {
     "Teams": Teams,
     "TimeRecords": TimeRecords,
     "UsersManagement": UsersManagement,
+    "HoursBank": HoursBank,
 }
 
 export const pagesConfig = {

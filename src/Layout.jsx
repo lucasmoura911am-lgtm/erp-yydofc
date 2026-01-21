@@ -52,6 +52,11 @@ const adminNavigation = [
     icon: BarChart3,
   },
   {
+    title: "Banco de Horas",
+    url: createPageUrl("HoursBank"),
+    icon: Clock,
+  },
+  {
     title: "Registros de Ponto",
     url: createPageUrl("TimeRecords"),
     icon: Clock,
