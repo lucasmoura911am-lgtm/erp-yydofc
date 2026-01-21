@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { format, parseISO, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import TaskCalendar from "../components/tasks/TaskCalendar";
 
 export default function MyTasks() {
   const [user, setUser] = useState(null);
@@ -181,6 +182,9 @@ export default function MyTasks() {
         </p>
       </div>
 
+      {/* Calendar */}
+      <TaskCalendar tasks={myTasks} />
+
       {/* Pending Tasks */}
       <div>
         <h2 className="text-xl font-bold mb-4">📋 Tarefas Pendentes ({pendingTasks.length})</h2>
@@ -215,10 +219,15 @@ export default function MyTasks() {
                     </div>
                   )}
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Badge variant="outline" className={statusColors[task.status]}>
                       {task.status}
                     </Badge>
+                    {task.frequency && task.frequency !== 'avulsa' && (
+                      <Badge variant="outline" className="bg-purple-100 text-purple-800">
+                        {task.frequency}
+                      </Badge>
+                    )}
                   </div>
 
                   {isLate && (
