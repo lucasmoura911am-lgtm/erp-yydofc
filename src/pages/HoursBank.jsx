@@ -43,13 +43,20 @@ export default function HoursBank() {
     enabled: !!user?.company_id,
   });
 
+  const { data: shifts = [] } = useQuery({
+    queryKey: ['shifts', user?.company_id],
+    queryFn: () => user?.company_id ? base44.entities.Shift.filter({ company_id: user.company_id }) : [],
+    enabled: !!user?.company_id,
+  });
+
   const getEmployeeHoursSummary = (employeeId) => {
     const startDate = startOfMonth(subMonths(new Date(), periodMonths - 1));
     const endDate = endOfMonth(new Date());
     
     const employeeRecords = hoursBank.filter(h => {
-      const recordDate = new Date(h.date);
-      return h.employee_id === employeeId && recordDate >= startDate && recordDate <= endDate;
+      if (h.employee_id !== employeeId) return false;
+      const recordDate = new Date(h.date + 'T00:00:00');
+      return recordDate >= startDate && recordDate <= endDate;
     });
 
     const totalBalance = employeeRecords.reduce((sum, r) => sum + (r.balance_minutes || 0), 0);
@@ -64,7 +71,7 @@ export default function HoursBank() {
       totalMissing,
       totalWorked,
       totalExpected,
-      records: employeeRecords
+      records: employeeRecords.sort((a, b) => new Date(b.date) - new Date(a.date))
     };
   };
 
@@ -83,13 +90,14 @@ export default function HoursBank() {
   }));
 
   const filteredEmployees = employeesWithSummary.filter(emp => {
-    const matchesSearch = emp.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (emp.employee_number && emp.employee_number.toLowerCase().includes(searchTerm.toLowerCase()));
     const balance = emp.summary.totalBalance;
     
     let matchesStatus = true;
     if (statusFilter === "deficit") matchesStatus = balance < 0;
     else if (statusFilter === "excess") matchesStatus = balance > 0;
-    else if (statusFilter === "balanced") matchesStatus = balance === 0;
+    else if (statusFilter === "balanced") matchesStatus = Math.abs(balance) < 30;
     
     return matchesSearch && matchesStatus;
   });
@@ -227,6 +235,11 @@ export default function HoursBank() {
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-base truncate">{emp.full_name}</CardTitle>
                     <p className="text-xs text-gray-500">{emp.employee_number || 'Sem matrícula'}</p>
+                    {emp.shift_id && (
+                      <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                        {shifts.find(s => s.id === emp.shift_id)?.name || 'Escala não encontrada'}
+                      </p>
+                    )}
                   </div>
                   <StatusIcon className={`w-5 h-5 ${status.text}`} />
                 </div>
@@ -268,7 +281,7 @@ export default function HoursBank() {
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full transition-all bg-gradient-to-r ${status.bg}`}
-                      style={{ width: `${Math.min((emp.summary.totalWorked / emp.summary.totalExpected) * 100, 100)}%` }}
+                      style={{ width: `${emp.summary.totalExpected > 0 ? Math.min((emp.summary.totalWorked / emp.summary.totalExpected) * 100, 100) : 0}%` }}
                     ></div>
                   </div>
                 </div>
@@ -276,12 +289,17 @@ export default function HoursBank() {
                 {/* Recent Records */}
                 {emp.summary.records.length > 0 && (
                   <div className="pt-2 border-t">
-                    <p className="text-xs font-semibold text-gray-600 mb-2">Últimos Registros ({emp.summary.records.length})</p>
+                    <p className="text-xs font-semibold text-gray-600 mb-2">Últimos Registros ({emp.summary.records.length} dias)</p>
                     <div className="space-y-1 max-h-24 overflow-y-auto">
                       {emp.summary.records.slice(0, 5).map((record, idx) => (
                         <div key={idx} className="flex justify-between text-xs bg-gray-50 dark:bg-gray-800 rounded px-2 py-1">
-                          <span className="text-gray-600">{format(new Date(record.date), 'dd/MM/yyyy')}</span>
-                          <span className={record.balance_minutes < 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
+                          <div className="flex-1">
+                            <span className="text-gray-600">{format(new Date(record.date + 'T00:00:00'), 'dd/MM/yyyy')}</span>
+                            {record.notes && (
+                              <p className="text-[10px] text-gray-400 truncate">{record.notes}</p>
+                            )}
+                          </div>
+                          <span className={record.balance_minutes < 0 ? 'text-red-600 font-semibold' : record.balance_minutes > 0 ? 'text-green-600 font-semibold' : 'text-gray-600'}>
                             {formatMinutes(record.balance_minutes)}
                           </span>
                         </div>
