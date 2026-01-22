@@ -48,6 +48,7 @@ export default function EmployeeDashboard() {
     enabled: !!user?.employee_id,
   });
 
+  // Filtrar registros do mês (incluindo manuais e automáticos)
   const monthRecords = myRecords.filter(record => {
     const recordDate = parseISO(record.timestamp);
     const monthStart = startOfMonth(new Date());
@@ -55,6 +56,7 @@ export default function EmployeeDashboard() {
     return recordDate >= monthStart && recordDate <= monthEnd;
   });
 
+  // Filtrar registros de hoje (incluindo manuais e automáticos)
   const todayRecords = myRecords.filter(record => {
     const recordDate = startOfDay(new Date(record.timestamp));
     const today = startOfDay(new Date());

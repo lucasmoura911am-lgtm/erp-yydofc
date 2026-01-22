@@ -3,9 +3,10 @@ import { parseISO, differenceInMinutes, getDay, getHours } from "date-fns";
 /**
  * Calcula horas CLT para um período mensal de registros de ponto
  * Inclui: HE 50%, HE 100%, Adicional Noturno, DSR, Feriado/Domingo
+ * IMPORTANTE: Processa todos os registros, incluindo manuais e automáticos
  */
 export function calculateCLTHours(timeRecords, shift, holidays = []) {
-  // Agrupar registros por dia
+  // Agrupar todos os registros por dia (incluindo manuais)
   const recordsByDay = {};
   
   timeRecords.forEach(record => {
