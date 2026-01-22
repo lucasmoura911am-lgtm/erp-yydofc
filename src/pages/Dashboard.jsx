@@ -92,13 +92,13 @@ export default function Dashboard() {
 
     const activeEmployees = employees.filter(emp => emp.status === 'active');
 
+    // Filtrar registros do dia (incluindo manuais e automáticos)
     const todayRecords = timeRecords.filter(record => {
-      // Extrair data diretamente do timestamp string (YYYY-MM-DD)
       const recordDateStr = record.timestamp.substring(0, 10);
       return recordDateStr === selectedDayStr;
     });
 
-    // Funcionários que bateram ponto hoje (entrada)
+    // Funcionários que bateram ponto hoje (entrada) - incluindo registros manuais
     const employeesWithEntryToday = new Set(
       todayRecords
         .filter(r => r.type === 'entrada')
@@ -108,6 +108,7 @@ export default function Dashboard() {
     const presentToday = employeesWithEntryToday.size;
     const absentToday = activeEmployees.length - presentToday;
 
+    // Filtrar registros do mês (incluindo manuais)
     const monthRecords = timeRecords.filter(record => {
       const recordDate = parseISO(record.timestamp);
       return recordDate >= monthStart && recordDate <= monthEnd;
@@ -117,7 +118,8 @@ export default function Dashboard() {
     const uniqueDays = new Set(monthRecords.map(r => format(parseISO(r.timestamp), 'yyyy-MM-dd'))).size;
     const monthPresence = uniqueDays > 0 ? Math.round((uniqueDays / workDays) * 100) : 0;
 
-    const delays = timeRecords.filter(record => record.status === 'atrasado').length;
+    // Contar atrasos do mês (incluindo registros manuais)
+    const delays = monthRecords.filter(record => record.status === 'atrasado').length;
 
     setStats({
       totalEmployees: activeEmployees.length,
@@ -131,8 +133,8 @@ export default function Dashboard() {
 
   const getPresentEmployees = () => {
     const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
+    // Incluir registros manuais e automáticos
     const todayRecords = timeRecords.filter(record => {
-      // Extrair data diretamente do timestamp string (YYYY-MM-DD)
       const recordDateStr = record.timestamp.substring(0, 10);
       return recordDateStr === selectedDayStr && record.type === 'entrada';
     });
@@ -143,8 +145,8 @@ export default function Dashboard() {
 
   const getAbsentEmployees = () => {
     const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
+    // Incluir registros manuais e automáticos
     const todayRecords = timeRecords.filter(record => {
-      // Extrair data diretamente do timestamp string (YYYY-MM-DD)
       const recordDateStr = record.timestamp.substring(0, 10);
       return recordDateStr === selectedDayStr && record.type === 'entrada';
     });
