@@ -4,8 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Download, FileText, Calendar, User } from "lucide-react";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { calculateCLTHours, formatCurrency } from "../components/reports/CLTCalculator";
 import {
   Select,
   SelectContent,
@@ -48,6 +49,12 @@ export default function Reports() {
       const companies = await base44.entities.Company.filter({ id: user.company_id });
       return companies[0] || null;
     },
+    enabled: !!user?.company_id,
+  });
+
+  const { data: shifts = [] } = useQuery({
+    queryKey: ['shifts', user?.company_id],
+    queryFn: () => user?.company_id ? base44.entities.Shift.filter({ company_id: user.company_id }) : [],
     enabled: !!user?.company_id,
   });
 
@@ -126,11 +133,24 @@ export default function Reports() {
     const monthEnd = endOfMonth(new Date(parseInt(year), parseInt(month) - 1));
 
     const monthRecords = timeRecords.filter(record => {
-      const recordDate = new Date(record.timestamp);
+      const recordDate = parseISO(record.timestamp);
       return record.employee_id === selectedEmployee && 
              recordDate >= monthStart && 
              recordDate <= monthEnd;
     });
+
+    // Buscar escala do funcionário
+    const employeeShift = shifts.find(s => s.id === employee.shift_id);
+
+    // Calcular horas CLT
+    const cltCalc = calculateCLTHours(monthRecords, employeeShift, []);
+    
+    // Valor base por hora (exemplo, ajustar conforme salário real)
+    const hourlyRate = 20; // R$ 20/hora base
+    const he50Value = (cltCalc.overtime50Minutes / 60) * hourlyRate * 1.5;
+    const he100Value = (cltCalc.overtime100Minutes / 60) * hourlyRate * 2;
+    const nightValue = (cltCalc.nightMinutes / 60) * hourlyRate * 0.2; // 20% adicional
+    const sundayValue = (cltCalc.sundayHolidayMinutes / 60) * hourlyRate * 2;
 
     const reportHTML = `
 <!DOCTYPE html>
@@ -324,6 +344,65 @@ export default function Reports() {
         <div class="summary-value">${monthRecords.reduce((sum, r) => sum + (r.delay_minutes || 0), 0)}</div>
         <div class="summary-label">Min. de Atraso</div>
       </div>
+    </div>
+  </div>
+
+  <div class="summary" style="background: #f0fdf4; border-left-color: #16a34a;">
+    <h3 style="color: #15803d;">📋 Cálculos CLT - Consolidado Mensal</h3>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="summary-value" style="color: #15803d;">${cltCalc.totalWorkedHours}</div>
+        <div class="summary-label">Total Trabalhado</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-value" style="color: #15803d;">${cltCalc.expectedHours}</div>
+        <div class="summary-label">Horas Esperadas</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-value" style="color: #ea580c;">${cltCalc.overtime50Hours}</div>
+        <div class="summary-label">Horas Extras 50%</div>
+        <div class="summary-label" style="font-size: 10px; color: #ea580c;">${formatCurrency(he50Value)}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-value" style="color: #dc2626;">${cltCalc.overtime100Hours}</div>
+        <div class="summary-label">Horas Extras 100%</div>
+        <div class="summary-label" style="font-size: 10px; color: #dc2626;">${formatCurrency(he100Value)}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-value" style="color: #7c3aed;">${cltCalc.nightHours}</div>
+        <div class="summary-label">Adicional Noturno</div>
+        <div class="summary-label" style="font-size: 10px; color: #7c3aed;">${formatCurrency(nightValue)}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-value" style="color: #0891b2;">${cltCalc.sundayHolidayHours}</div>
+        <div class="summary-label">Feriado/Domingo</div>
+        <div class="summary-label" style="font-size: 10px; color: #0891b2;">${formatCurrency(sundayValue)}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-value" style="color: #059669;">${cltCalc.dsrDays} dias</div>
+        <div class="summary-label">DSR (Descanso)</div>
+        <div class="summary-label" style="font-size: 10px;">${cltCalc.dsrHours}h remuneradas</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-value" style="color: ${cltCalc.exceedsMaxJourney ? '#dc2626' : '#059669'};">${cltCalc.averageDailyHours}</div>
+        <div class="summary-label">Média Diária</div>
+        <div class="summary-label" style="font-size: 10px; color: ${cltCalc.exceedsMaxJourney ? '#dc2626' : '#666'};">
+          ${cltCalc.exceedsMaxJourney ? '⚠️ Excede 10h/dia' : '✓ Dentro do limite'}
+        </div>
+      </div>
+    </div>
+    <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 6px;">
+      <p style="margin: 0; font-size: 13px; color: #666;">
+        <strong>Observações CLT:</strong>
+      </p>
+      <ul style="margin: 8px 0 0 20px; font-size: 12px; color: #666; line-height: 1.6;">
+        <li>HE 50%: Primeiras 2 horas extras por dia</li>
+        <li>HE 100%: Horas extras além das primeiras 2h</li>
+        <li>Adicional Noturno: 22h às 5h (20% sobre hora normal)</li>
+        <li>Trabalho em Domingo/Feriado: 100% sobre hora normal</li>
+        <li>DSR: Descanso Semanal Remunerado (sábados/domingos não trabalhados)</li>
+        <li>Jornada Máxima: 10 horas/dia (incluindo extras)</li>
+      </ul>
     </div>
   </div>
 

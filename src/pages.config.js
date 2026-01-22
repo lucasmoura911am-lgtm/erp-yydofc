@@ -7,6 +7,7 @@ import Departments from './pages/Departments';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import Employees from './pages/Employees';
 import Home from './pages/Home';
+import HoursBank from './pages/HoursBank';
 import ManagePayslips from './pages/ManagePayslips';
 import ManageTasks from './pages/ManageTasks';
 import ManageTimeRecords from './pages/ManageTimeRecords';
@@ -26,7 +27,6 @@ import TasksDashboard from './pages/TasksDashboard';
 import Teams from './pages/Teams';
 import TimeRecords from './pages/TimeRecords';
 import UsersManagement from './pages/UsersManagement';
-import HoursBank from './pages/HoursBank';
 import __Layout from './Layout.jsx';
 
 
@@ -40,6 +40,7 @@ export const PAGES = {
     "EmployeeDashboard": EmployeeDashboard,
     "Employees": Employees,
     "Home": Home,
+    "HoursBank": HoursBank,
     "ManagePayslips": ManagePayslips,
     "ManageTasks": ManageTasks,
     "ManageTimeRecords": ManageTimeRecords,
@@ -59,7 +60,6 @@ export const PAGES = {
     "Teams": Teams,
     "TimeRecords": TimeRecords,
     "UsersManagement": UsersManagement,
-    "HoursBank": HoursBank,
 }
 
 export const pagesConfig = {
