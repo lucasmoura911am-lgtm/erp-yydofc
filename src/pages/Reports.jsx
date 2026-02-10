@@ -157,135 +157,207 @@ export default function Reports() {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Relatório de Ponto - ${employee.full_name}</title>
+  <title>Relatório de Cartão Ponto Individual - ${employee.full_name}</title>
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
     body {
       font-family: Arial, sans-serif;
-      padding: 40px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      border-bottom: 3px solid #333;
-      padding-bottom: 20px;
-    }
-    .company-info {
-      margin-bottom: 20px;
-    }
-    .employee-info {
-      background: #f5f5f5;
+      font-size: 10pt;
       padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 30px;
+      max-width: 100%;
+      margin: 0 auto;
+      color: #000;
     }
-    .employee-info h3 {
-      margin-top: 0;
-      color: #6366f1;
+    .page-header {
+      text-align: center;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 10px;
     }
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 15px;
-    }
-    .info-item {
-      display: flex;
-      gap: 10px;
-    }
-    .info-label {
+    .page-header h1 {
+      font-size: 14pt;
       font-weight: bold;
-      color: #555;
+      margin-bottom: 5px;
     }
-    table {
+    .period-info {
+      font-size: 9pt;
+      margin-bottom: 3px;
+    }
+    .company-section {
+      border: 1px solid #000;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #f9f9f9;
+    }
+    .company-section h3 {
+      font-size: 10pt;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #666;
+      padding-bottom: 4px;
+    }
+    .info-row {
+      display: flex;
+      margin-bottom: 4px;
+      font-size: 9pt;
+    }
+    .info-row strong {
+      min-width: 100px;
+      font-weight: bold;
+    }
+    .employee-section {
+      border: 1px solid #000;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #fff;
+    }
+    .employee-section h3 {
+      font-size: 10pt;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #666;
+      padding-bottom: 4px;
+    }
+    .legend {
+      font-size: 8pt;
+      margin-bottom: 10px;
+      padding: 8px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+    }
+    .legend strong {
+      font-weight: bold;
+    }
+    table.timesheet {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 30px;
+      margin-bottom: 15px;
+      font-size: 8pt;
     }
-    th, td {
-      padding: 12px;
-      text-align: left;
-      border: 1px solid #ddd;
-    }
-    th {
-      background-color: #6366f1;
+    table.timesheet th {
+      background-color: #333;
       color: white;
+      padding: 6px 4px;
+      text-align: center;
+      border: 1px solid #000;
       font-weight: bold;
+      font-size: 8pt;
     }
-    tr:nth-child(even) {
+    table.timesheet td {
+      padding: 4px;
+      text-align: center;
+      border: 1px solid #666;
+    }
+    table.timesheet tr:nth-child(even) {
       background-color: #f9f9f9;
     }
-    .summary {
-      background: #f0f9ff;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 30px;
-      border-left: 4px solid #3b82f6;
+    table.timesheet .date-col {
+      text-align: left;
+      padding-left: 6px;
     }
-    .summary h3 {
-      margin-top: 0;
-      color: #1e40af;
+    table.timesheet .time-cell {
+      font-family: 'Courier New', monospace;
+      font-size: 8pt;
     }
-    .summary-grid {
+    table.timesheet .obs-cell {
+      text-align: left;
+      font-size: 7pt;
+      padding-left: 4px;
+    }
+    .totals-section {
+      border: 1px solid #000;
+      padding: 10px;
+      margin-bottom: 15px;
+      background: #f9f9f9;
+    }
+    .totals-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: 1fr 1fr;
       gap: 15px;
-      margin-top: 15px;
+      margin-top: 10px;
     }
-    .summary-item {
-      text-align: center;
-      padding: 15px;
+    .totals-box {
+      border: 1px solid #666;
+      padding: 8px;
       background: white;
-      border-radius: 6px;
     }
-    .summary-value {
-      font-size: 24px;
+    .totals-box h4 {
+      font-size: 9pt;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 3px;
+    }
+    .total-line {
+      display: flex;
+      justify-content: space-between;
+      font-size: 8pt;
+      margin-bottom: 3px;
+    }
+    .total-line strong {
       font-weight: bold;
-      color: #1e40af;
     }
-    .summary-label {
-      font-size: 12px;
-      color: #666;
-      margin-top: 5px;
+    .signature-section {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px solid #000;
     }
-    .signature {
-      margin-top: 60px;
-      border-top: 2px solid #333;
-      padding-top: 40px;
+    .signature-text {
+      font-size: 9pt;
+      margin-bottom: 40px;
+      text-align: justify;
+    }
+    .signature-boxes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-top: 50px;
+    }
+    .signature-box {
+      text-align: center;
     }
     .signature-line {
+      border-top: 1px solid #000;
+      padding-top: 8px;
       margin-top: 60px;
-      border-top: 1px solid #333;
-      width: 400px;
-      text-align: center;
-      padding-top: 10px;
+      font-size: 9pt;
     }
-    .badge {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 11px;
+    .clt-summary {
+      border: 2px solid #000;
+      padding: 10px;
+      margin-bottom: 15px;
+      background: #e8f5e9;
+    }
+    .clt-summary h4 {
+      font-size: 10pt;
+      margin-bottom: 8px;
       font-weight: bold;
     }
-    .badge-entrada { background: #dcfce7; color: #166534; }
-    .badge-saida { background: #fee2e2; color: #991b1b; }
-    .badge-pausa { background: #fef3c7; color: #92400e; }
-    .badge-retorno { background: #dbeafe; color: #1e40af; }
-    .badge-pontual { background: #dcfce7; color: #166534; }
-    .badge-atrasado { background: #fed7aa; color: #9a3412; }
-    .footer {
-      margin-top: 40px;
-      text-align: center;
-      color: #666;
-      font-size: 12px;
-      border-top: 1px solid #ddd;
-      padding-top: 20px;
+    .clt-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 8px;
     }
-    .mood-emoji {
-      font-size: 18px;
+    .clt-item {
+      text-align: center;
+      padding: 6px;
+      background: white;
+      border: 1px solid #666;
+    }
+    .clt-value {
+      font-size: 11pt;
+      font-weight: bold;
+      color: #2e7d32;
+    }
+    .clt-label {
+      font-size: 7pt;
+      color: #666;
+      margin-top: 2px;
     }
     @media print {
-      body { padding: 20px; }
+      body { padding: 10px; }
       .no-print { display: none; }
     }
   </style>
