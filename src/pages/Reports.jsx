@@ -601,23 +601,34 @@ export default function Reports() {
     </div>
   </div>
 
-  <div class="signature">
-    <p><strong>Declaração:</strong></p>
-    <p>Declaro que os registros de ponto acima conferem com minha jornada de trabalho no período mencionado.</p>
+  <div class="signature-section">
+    <div class="signature-text">
+      Concordo plenamente com as marcações acima efetuadas por mim, sendo que expressam o ocorrido no período.
+    </div>
     
-    <div class="signature-line">
-      <p><strong>${employee.full_name}</strong></p>
-      <p>CPF: ${employee.cpf}</p>
+    <div class="signature-boxes">
+      <div class="signature-box">
+        <div class="signature-line">
+          Assinatura do Funcionário
+        </div>
+        <div style="margin-top: 10px; font-size: 9pt;">
+          <strong>${employee.full_name}</strong>
+        </div>
+        <div style="font-size: 8pt; color: #666;">
+          CPF: ${employee.cpf}
+        </div>
+      </div>
+      
+      <div class="signature-box">
+        <div class="signature-line">
+          Assinatura do Gestor
+        </div>
+      </div>
     </div>
 
-    <div style="margin-top: 40px;">
-      <p>Local e Data: ________________, ${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+    <div style="margin-top: 30px; text-align: center; font-size: 8pt; color: #666; border-top: 1px solid #ccc; padding-top: 10px;">
+      Documento gerado automaticamente pelo sistema PontoFlex em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
     </div>
-  </div>
-
-  <div class="footer">
-    <p>Relatório gerado automaticamente pelo sistema PontoFlex</p>
-    <p>Data de geração: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
   </div>
 
   <div class="no-print" style="position: fixed; bottom: 20px; right: 20px;">
