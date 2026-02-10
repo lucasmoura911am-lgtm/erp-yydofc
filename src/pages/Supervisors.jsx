@@ -43,7 +43,27 @@ export default function Supervisors() {
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ['allUsers'],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: async () => {
+      // User não é uma entidade - buscar funcionários e criar lista de usuários
+      const employees = await base44.entities.Employee.list();
+      const uniqueEmails = new Set();
+      const users = [];
+      
+      employees.forEach(emp => {
+        if (emp.user_email && !uniqueEmails.has(emp.user_email)) {
+          uniqueEmails.add(emp.user_email);
+          users.push({
+            email: emp.user_email,
+            full_name: emp.full_name,
+            company_id: emp.company_id,
+            is_supervisor: emp.is_supervisor || false,
+            supervised_teams: emp.supervised_teams || []
+          });
+        }
+      });
+      
+      return users;
+    },
   });
 
   const { data: teams = [] } = useQuery({
@@ -56,9 +76,20 @@ export default function Supervisors() {
   const supervisors = companyUsers.filter(u => u.is_supervisor);
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ email, data }) => base44.entities.User.update(email, data),
+    mutationFn: async ({ email, data }) => {
+      // Atualizar todos os funcionários com este email
+      const employees = await base44.entities.Employee.filter({ user_email: email });
+      const updates = employees.map(emp => 
+        base44.entities.Employee.update(emp.id, {
+          is_supervisor: data.is_supervisor,
+          supervised_teams: data.supervised_teams
+        })
+      );
+      await Promise.all(updates);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['allUsers']);
+      queryClient.invalidateQueries(['employees']);
       setDialogOpen(false);
     },
   });
