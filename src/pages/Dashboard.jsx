@@ -86,9 +86,9 @@ export default function Dashboard() {
   }, [employees, timeRecords, selectedDate]);
 
   const calculateStats = () => {
-    const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
-    const monthStart = startOfMonth(new Date(selectedDate));
-    const monthEnd = endOfMonth(new Date(selectedDate));
+    const selectedDayStr = selectedDate; // Já está em formato yyyy-MM-dd
+    const monthStart = startOfMonth(new Date(selectedDate + 'T12:00:00'));
+    const monthEnd = endOfMonth(new Date(selectedDate + 'T12:00:00'));
 
     const activeEmployees = employees.filter(emp => emp.status === 'active');
 
@@ -132,7 +132,7 @@ export default function Dashboard() {
   };
 
   const getPresentEmployees = () => {
-    const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
+    const selectedDayStr = selectedDate; // Já está em formato yyyy-MM-dd
     // Incluir registros manuais e automáticos
     const todayRecords = timeRecords.filter(record => {
       const recordDateStr = record.timestamp.substring(0, 10);
@@ -144,7 +144,7 @@ export default function Dashboard() {
   };
 
   const getAbsentEmployees = () => {
-    const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
+    const selectedDayStr = selectedDate; // Já está em formato yyyy-MM-dd
     // Incluir registros manuais e automáticos
     const todayRecords = timeRecords.filter(record => {
       const recordDateStr = record.timestamp.substring(0, 10);
@@ -187,7 +187,7 @@ export default function Dashboard() {
             className="w-48"
           />
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            {format(new Date(selectedDate), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+            {format(new Date(selectedDate + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR })}
           </div>
         </div>
       </div>
