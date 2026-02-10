@@ -53,9 +53,9 @@ export default function SupervisorDashboard() {
     enabled: !!user?.company_id,
   });
 
-  const selectedDayStr = format(new Date(selectedDate), 'yyyy-MM-dd');
-  const monthStart = startOfMonth(new Date(selectedDate));
-  const monthEnd = endOfMonth(new Date(selectedDate));
+  const selectedDayStr = selectedDate; // Já está em formato yyyy-MM-dd
+  const monthStart = startOfMonth(new Date(selectedDate + 'T12:00:00'));
+  const monthEnd = endOfMonth(new Date(selectedDate + 'T12:00:00'));
 
   const todayRecords = timeRecords.filter(r => {
     // Extrair data diretamente do timestamp string (YYYY-MM-DD)
@@ -133,7 +133,7 @@ export default function SupervisorDashboard() {
             className="w-48"
           />
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            {format(new Date(selectedDate), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+            {format(new Date(selectedDate + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR })}
           </div>
         </div>
       </div>
