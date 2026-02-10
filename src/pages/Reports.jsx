@@ -417,114 +417,189 @@ export default function Reports() {
     A - Ausência
   </div>
 
-  <div class="summary">
-    <h3>Resumo do Período</h3>
-    <div class="summary-grid">
-      <div class="summary-item">
-        <div class="summary-value">${monthRecords.length}</div>
-        <div class="summary-label">Total de Registros</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value">${monthRecords.filter(r => r.status === 'pontual').length}</div>
-        <div class="summary-label">Pontuais</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value">${monthRecords.filter(r => r.status === 'atrasado').length}</div>
-        <div class="summary-label">Atrasos</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value">${monthRecords.reduce((sum, r) => sum + (r.delay_minutes || 0), 0)}</div>
-        <div class="summary-label">Min. de Atraso</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="summary" style="background: #f0fdf4; border-left-color: #16a34a;">
-    <h3 style="color: #15803d;">📋 Cálculos CLT - Consolidado Mensal</h3>
-    <div class="summary-grid">
-      <div class="summary-item">
-        <div class="summary-value" style="color: #15803d;">${cltCalc.totalWorkedHours}</div>
-        <div class="summary-label">Total Trabalhado</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value" style="color: #15803d;">${cltCalc.expectedHours}</div>
-        <div class="summary-label">Horas Esperadas</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value" style="color: #ea580c;">${cltCalc.overtime50Hours}</div>
-        <div class="summary-label">Horas Extras 50%</div>
-        <div class="summary-label" style="font-size: 10px; color: #ea580c;">${formatCurrency(he50Value)}</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value" style="color: #dc2626;">${cltCalc.overtime100Hours}</div>
-        <div class="summary-label">Horas Extras 100%</div>
-        <div class="summary-label" style="font-size: 10px; color: #dc2626;">${formatCurrency(he100Value)}</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value" style="color: #7c3aed;">${cltCalc.nightHours}</div>
-        <div class="summary-label">Adicional Noturno</div>
-        <div class="summary-label" style="font-size: 10px; color: #7c3aed;">${formatCurrency(nightValue)}</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value" style="color: #0891b2;">${cltCalc.sundayHolidayHours}</div>
-        <div class="summary-label">Feriado/Domingo</div>
-        <div class="summary-label" style="font-size: 10px; color: #0891b2;">${formatCurrency(sundayValue)}</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value" style="color: #059669;">${cltCalc.dsrDays} dias</div>
-        <div class="summary-label">DSR (Descanso)</div>
-        <div class="summary-label" style="font-size: 10px;">${cltCalc.dsrHours}h remuneradas</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value" style="color: ${cltCalc.exceedsMaxJourney ? '#dc2626' : '#059669'};">${cltCalc.averageDailyHours}</div>
-        <div class="summary-label">Média Diária</div>
-        <div class="summary-label" style="font-size: 10px; color: ${cltCalc.exceedsMaxJourney ? '#dc2626' : '#666'};">
-          ${cltCalc.exceedsMaxJourney ? '⚠️ Excede 10h/dia' : '✓ Dentro do limite'}
-        </div>
-      </div>
-    </div>
-    <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 6px;">
-      <p style="margin: 0; font-size: 13px; color: #666;">
-        <strong>Observações CLT:</strong>
-      </p>
-      <ul style="margin: 8px 0 0 20px; font-size: 12px; color: #666; line-height: 1.6;">
-        <li>HE 50%: Primeiras 2 horas extras por dia</li>
-        <li>HE 100%: Horas extras além das primeiras 2h</li>
-        <li>Adicional Noturno: 22h às 5h (20% sobre hora normal)</li>
-        <li>Trabalho em Domingo/Feriado: 100% sobre hora normal</li>
-        <li>DSR: Descanso Semanal Remunerado (sábados/domingos não trabalhados)</li>
-        <li>Jornada Máxima: 10 horas/dia (incluindo extras)</li>
-      </ul>
-    </div>
-  </div>
-
-  <h3>Registros Detalhados</h3>
-  <table>
+  <table class="timesheet">
     <thead>
       <tr>
-        <th>Data</th>
-        <th>Hora</th>
-        <th>Tipo</th>
-        <th>Status</th>
-        <th>Humor</th>
-        <th>Atraso (min)</th>
-        <th>Localização</th>
+        <th rowspan="2">Data</th>
+        <th colspan="4">Jornada Prevista</th>
+        <th colspan="4">Registros de Ponto</th>
+        <th rowspan="2">Trabalhadas</th>
+        <th rowspan="2">Observação</th>
+      </tr>
+      <tr>
+        <th>Ent.</th>
+        <th>Sai.</th>
+        <th>Ent.</th>
+        <th>Sai.</th>
+        <th>Ent.</th>
+        <th>Sai.</th>
+        <th>Ent.</th>
+        <th>Sai.</th>
       </tr>
     </thead>
     <tbody>
-      ${monthRecords.map(record => `
-        <tr>
-          <td>${format(new Date(record.timestamp), 'dd/MM/yyyy')}</td>
-          <td>${format(new Date(record.timestamp), 'HH:mm:ss')}</td>
-          <td><span class="badge badge-${record.type}">${record.type}</span></td>
-          <td><span class="badge badge-${record.status}">${record.status}</span></td>
-          <td><span class="mood-emoji">${record.mood ? getMoodEmoji(record.mood) + ' ' + getMoodLabel(record.mood) : '-'}</span></td>
-          <td>${record.delay_minutes || 0}</td>
-          <td>${record.latitude && record.longitude ? `${record.latitude.toFixed(6)}, ${record.longitude.toFixed(6)}` : 'N/A'}</td>
-        </tr>
-      `).join('')}
+      ${(() => {
+        // Agrupar registros por dia
+        const dayRecords = {};
+        monthRecords.forEach(record => {
+          const day = format(new Date(record.timestamp), 'yyyy-MM-dd');
+          if (!dayRecords[day]) dayRecords[day] = [];
+          dayRecords[day].push(record);
+        });
+
+        // Gerar todas as linhas do mês
+        const daysInMonth = [];
+        const currentDay = new Date(monthStart);
+        while (currentDay <= monthEnd) {
+          daysInMonth.push(new Date(currentDay));
+          currentDay.setDate(currentDay.getDate() + 1);
+        }
+
+        return daysInMonth.map(day => {
+          const dayKey = format(day, 'yyyy-MM-dd');
+          const records = (dayRecords[dayKey] || []).sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+          
+          const dayName = format(day, 'EEE', { locale: ptBR });
+          const dateStr = format(day, 'dd/MM/yy');
+          const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+          
+          // Jornada prevista (da escala)
+          const shiftStart = employeeShift?.start_time || '08:00';
+          const shiftEnd = employeeShift?.end_time || '18:00';
+          const breakTime = employeeShift?.break_minutes || 60;
+          const lunchStart = '12:00';
+          const lunchEnd = '13:00';
+
+          // Registros reais
+          const entrada1 = records.find(r => r.type === 'entrada');
+          const saida1 = records.find(r => r.type === 'pausa');
+          const entrada2 = records.find(r => r.type === 'retorno');
+          const saida2 = records.find(r => r.type === 'saida');
+
+          // Calcular horas trabalhadas
+          let horasTrabalhadas = '--:--';
+          let obs = '';
+          
+          if (records.length > 0) {
+            const hasManual = records.some(r => r.is_manual);
+            if (hasManual) obs = '* Manual';
+            
+            if (entrada1 && saida2) {
+              const totalMin = (new Date(saida2.timestamp) - new Date(entrada1.timestamp)) / 60000;
+              const workedMin = Math.max(0, totalMin - breakTime);
+              const hours = Math.floor(workedMin / 60);
+              const mins = Math.floor(workedMin % 60);
+              horasTrabalhadas = hours.toString().padStart(2, '0') + ':' + mins.toString().padStart(2, '0');
+            }
+          } else if (isWeekend) {
+            obs = '';
+          } else {
+            obs = 'Ausente';
+          }
+
+          return `
+            <tr>
+              <td class="date-col">${dateStr} ${dayName}</td>
+              <td class="time-cell">${shiftStart}</td>
+              <td class="time-cell">${lunchStart}</td>
+              <td class="time-cell">${lunchEnd}</td>
+              <td class="time-cell">${shiftEnd}</td>
+              <td class="time-cell">${entrada1 ? format(new Date(entrada1.timestamp), 'HH:mm') : '--:--'}</td>
+              <td class="time-cell">${saida1 ? format(new Date(saida1.timestamp), 'HH:mm') : '--:--'}</td>
+              <td class="time-cell">${entrada2 ? format(new Date(entrada2.timestamp), 'HH:mm') : '--:--'}</td>
+              <td class="time-cell">${saida2 ? format(new Date(saida2.timestamp), 'HH:mm') : '--:--'}</td>
+              <td class="time-cell"><strong>${horasTrabalhadas}</strong></td>
+              <td class="obs-cell">${obs}</td>
+            </tr>
+          `;
+        }).join('');
+      })()}
     </tbody>
   </table>
+
+  <div class="clt-summary">
+    <h4>CÁLCULOS CLT - CONSOLIDADO MENSAL</h4>
+    <div class="clt-grid">
+      <div class="clt-item">
+        <div class="clt-value">${cltCalc.totalWorkedHours}</div>
+        <div class="clt-label">Total Trabalhado</div>
+      </div>
+      <div class="clt-item">
+        <div class="clt-value">${cltCalc.overtime50Hours}</div>
+        <div class="clt-label">HE 50%</div>
+      </div>
+      <div class="clt-item">
+        <div class="clt-value">${cltCalc.overtime100Hours}</div>
+        <div class="clt-label">HE 100%</div>
+      </div>
+      <div class="clt-item">
+        <div class="clt-value">${cltCalc.nightHours}</div>
+        <div class="clt-label">Adicional Noturno</div>
+      </div>
+      <div class="clt-item">
+        <div class="clt-value">${cltCalc.sundayHolidayHours}</div>
+        <div class="clt-label">Feriado/Domingo</div>
+      </div>
+      <div class="clt-item">
+        <div class="clt-value">${cltCalc.dsrDays} dias</div>
+        <div class="clt-label">DSR</div>
+      </div>
+      <div class="clt-item">
+        <div class="clt-value">${cltCalc.averageDailyHours}</div>
+        <div class="clt-label">Média Diária</div>
+      </div>
+      <div class="clt-item">
+        <div class="clt-value">${monthRecords.filter(r => r.status === 'atrasado').length}</div>
+        <div class="clt-label">Atrasos</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="totals-section">
+    <strong>TOTAIS DO PERÍODO</strong>
+    <div class="totals-grid">
+      <div class="totals-box">
+        <h4>Horas</h4>
+        <div class="total-line">
+          <span>A Trabalhar:</span>
+          <strong>${cltCalc.expectedHours}</strong>
+        </div>
+        <div class="total-line">
+          <span>Trabalhadas:</span>
+          <strong>${cltCalc.totalWorkedHours}</strong>
+        </div>
+        <div class="total-line">
+          <span>Extras 50%:</span>
+          <strong>${cltCalc.overtime50Hours}</strong>
+        </div>
+        <div class="total-line">
+          <span>Extras 100%:</span>
+          <strong>${cltCalc.overtime100Hours}</strong>
+        </div>
+      </div>
+      <div class="totals-box">
+        <h4>Adicionais</h4>
+        <div class="total-line">
+          <span>DSR:</span>
+          <strong>${cltCalc.dsrDays} dias (${cltCalc.dsrHours}h)</strong>
+        </div>
+        <div class="total-line">
+          <span>Adicional Noturno:</span>
+          <strong>${cltCalc.nightHours}</strong>
+        </div>
+        <div class="total-line">
+          <span>Feriado/Domingo:</span>
+          <strong>${cltCalc.sundayHolidayHours}</strong>
+        </div>
+        <div class="total-line">
+          <span>Atrasos:</span>
+          <strong>${monthRecords.filter(r => r.status === 'atrasado').length}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="signature">
     <p><strong>Declaração:</strong></p>
