@@ -363,38 +363,58 @@ export default function Reports() {
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>RELATÓRIO DE PONTO MENSAL</h1>
-    <p>${format(monthStart, "MMMM 'de' yyyy", { locale: ptBR }).toUpperCase()}</p>
-  </div>
-
-  <div class="company-info">
-    <h3>Dados da Empresa</h3>
-    <p><strong>Empresa:</strong> ${company?.name || 'N/A'}</p>
-    <p><strong>CNPJ:</strong> ${company?.cnpj || 'N/A'}</p>
-    ${company?.address ? `<p><strong>Endereço:</strong> ${company.address}</p>` : ''}
-  </div>
-
-  <div class="employee-info">
-    <h3>Dados do Funcionário</h3>
-    <div class="info-grid">
-      <div class="info-item">
-        <span class="info-label">Nome:</span>
-        <span>${employee.full_name}</span>
-      </div>
-      <div class="info-item">
-        <span class="info-label">CPF:</span>
-        <span>${employee.cpf}</span>
-      </div>
-      <div class="info-item">
-        <span class="info-label">Matrícula:</span>
-        <span>${employee.employee_number || 'N/A'}</span>
-      </div>
-      <div class="info-item">
-        <span class="info-label">Telefone:</span>
-        <span>${employee.phone || 'N/A'}</span>
-      </div>
+  <div class="page-header">
+    <h1>RELATÓRIO DE CARTÃO PONTO INDIVIDUAL</h1>
+    <div class="period-info">
+      Período de ${format(monthStart, "dd/MM/yyyy")} à ${format(monthEnd, "dd/MM/yyyy")} - 
+      Data Emissão: ${format(new Date(), "dd/MM/yyyy")} - Pág.: 1
     </div>
+  </div>
+
+  <div class="company-section">
+    <h3>DADOS DA EMPRESA</h3>
+    <div class="info-row">
+      <strong>Empresa:</strong>
+      <span>${company?.name || 'N/A'}</span>
+    </div>
+    <div class="info-row">
+      <strong>CNPJ:</strong>
+      <span>${company?.cnpj || 'N/A'}</span>
+    </div>
+    ${company?.address ? `
+    <div class="info-row">
+      <strong>Endereço:</strong>
+      <span>${company.address}</span>
+    </div>
+    ` : ''}
+  </div>
+
+  <div class="employee-section">
+    <h3>FUNCIONÁRIO</h3>
+    <div class="info-row">
+      <strong>Nome:</strong>
+      <span>${employee.full_name}</span>
+    </div>
+    <div class="info-row">
+      <strong>Matrícula:</strong>
+      <span>${employee.employee_number || 'N/A'}</span>
+    </div>
+    <div class="info-row">
+      <strong>CPF:</strong>
+      <span>${employee.cpf}</span>
+    </div>
+    <div class="info-row">
+      <strong>Data Admissão:</strong>
+      <span>${employee.hire_date ? format(new Date(employee.hire_date), 'dd/MM/yyyy') : 'N/A'}</span>
+    </div>
+  </div>
+
+  <div class="legend">
+    <strong>Legenda:</strong> 
+    F - Feriado | 
+    * - Marcações Alteradas | 
+    M - Manual | 
+    A - Ausência
   </div>
 
   <div class="summary">
