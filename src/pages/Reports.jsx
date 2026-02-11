@@ -478,20 +478,38 @@ export default function Reports() {
           const entrada2 = records.find(r => r.type === 'retorno');
           const saida2 = records.find(r => r.type === 'saida');
 
-          // Calcular horas trabalhadas
+          // CÁLCULO CORRETO: (pausa - entrada) + (saida - retorno)
           let horasTrabalhadas = '--:--';
           let obs = '';
           
           if (records.length > 0) {
             const hasManual = records.some(r => r.is_manual);
-            if (hasManual) obs = '* Manual';
+            if (hasManual) obs += '* Manual ';
             
-            if (entrada1 && saida2) {
-              const totalMin = (new Date(saida2.timestamp) - new Date(entrada1.timestamp)) / 60000;
-              const workedMin = Math.max(0, totalMin - breakTime);
+            if (entrada1 && saida1 && entrada2 && saida2) {
+              // REGRA CORRETA CLT: soma dos períodos trabalhados
+              const toMinutes = (timestamp) => {
+                const d = new Date(timestamp);
+                return d.getHours() * 60 + d.getMinutes();
+              };
+              
+              const morning = toMinutes(saida1.timestamp) - toMinutes(entrada1.timestamp);
+              const afternoon = toMinutes(saida2.timestamp) - toMinutes(entrada2.timestamp);
+              const workedMin = Math.max(0, morning) + Math.max(0, afternoon);
+              
               const hours = Math.floor(workedMin / 60);
               const mins = Math.floor(workedMin % 60);
               horasTrabalhadas = hours.toString().padStart(2, '0') + ':' + mins.toString().padStart(2, '0');
+            } else if (entrada1 && saida2) {
+              // Fallback: sem pausa registrada
+              const totalMin = (new Date(saida2.timestamp) - new Date(entrada1.timestamp)) / 60000;
+              const workedMin = totalMin > 240 ? Math.max(0, totalMin - breakTime) : totalMin;
+              const hours = Math.floor(workedMin / 60);
+              const mins = Math.floor(workedMin % 60);
+              horasTrabalhadas = hours.toString().padStart(2, '0') + ':' + mins.toString().padStart(2, '0');
+              obs += 'Sem pausa ';
+            } else {
+              obs += 'Incompleto ';
             }
           } else if (isWeekend) {
             obs = '';
@@ -551,8 +569,8 @@ export default function Reports() {
         <div class="clt-label">Média Diária</div>
       </div>
       <div class="clt-item">
-        <div class="clt-value">${monthRecords.filter(r => r.status === 'atrasado').length}</div>
-        <div class="clt-label">Atrasos</div>
+        <div class="clt-value">${cltCalc.totalDelayHours}</div>
+        <div class="clt-label">Total Atrasos</div>
       </div>
     </div>
   </div>
@@ -595,7 +613,11 @@ export default function Reports() {
         </div>
         <div class="total-line">
           <span>Atrasos:</span>
-          <strong>${monthRecords.filter(r => r.status === 'atrasado').length}</strong>
+          <strong>${cltCalc.totalDelayHours}</strong>
+        </div>
+        <div class="total-line">
+          <span>Faltas/Ausências:</span>
+          <strong>${cltCalc.absenceHours}</strong>
         </div>
       </div>
     </div>
