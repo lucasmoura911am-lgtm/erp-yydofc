@@ -4,9 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Edit, Trash2, User } from "lucide-react";
+import { Plus, Search, Edit, Trash2, User, Key, Mail, Shield, UserPlus, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,15 @@ export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
+  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [accessForm, setAccessForm] = useState({
+    email: "",
+    password: "",
+    role: "user"
+  });
   const [formData, setFormData] = useState({
     cpf: "",
     full_name: "",
@@ -127,6 +137,86 @@ export default function Employees() {
     },
   });
 
+  const inviteUserMutation = useMutation({
+    mutationFn: async ({ email, role }) => {
+      await base44.users.inviteUser(email, role);
+      return { email, role };
+    },
+    onSuccess: () => {
+      alert('Convite enviado com sucesso!');
+      setInviteDialogOpen(false);
+      setAccessForm({ email: "", password: "", role: "user" });
+    },
+  });
+
+  const handleBulkUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      
+      const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
+        file_url,
+        json_schema: {
+          type: "object",
+          properties: {
+            employees: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  cpf: { type: "string" },
+                  full_name: { type: "string" },
+                  phone: { type: "string" },
+                  hire_date: { type: "string" },
+                  employee_number: { type: "string" },
+                  user_email: { type: "string" }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (result.status === "success" && result.output?.employees) {
+        const bulkData = result.output.employees.map(emp => ({
+          ...emp,
+          company_id: user.company_id,
+          status: "active"
+        }));
+        
+        await Promise.all(bulkData.map(data => base44.entities.Employee.create(data)));
+        queryClient.invalidateQueries(['employees']);
+        alert(`${bulkData.length} funcionários importados com sucesso!`);
+        setBulkUploadOpen(false);
+      }
+    } catch (error) {
+      alert('Erro ao importar: ' + error.message);
+    }
+  };
+
+  const handleAccessManagement = (employee) => {
+    setSelectedEmployee(employee);
+    setAccessForm({
+      email: employee.user_email || "",
+      password: "",
+      role: "user"
+    });
+    setAccessDialogOpen(true);
+  };
+
+  const handleInviteUser = () => {
+    if (!accessForm.email) {
+      alert('Digite o email do usuário');
+      return;
+    }
+    inviteUserMutation.mutate({
+      email: accessForm.email,
+      role: accessForm.role
+    });
+  };
+
   const resetForm = () => {
     setFormData({
       cpf: "",
@@ -216,16 +306,34 @@ export default function Employees() {
             Gerencie os funcionários da empresa
           </p>
         </div>
-        <Button
-          onClick={() => {
-            resetForm();
-            setDialogOpen(true);
-          }}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Funcionário
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setInviteDialogOpen(true)}
+            variant="outline"
+            className="border-green-600 text-green-600 hover:bg-green-50"
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Convidar Usuário
+          </Button>
+          <Button
+            onClick={() => setBulkUploadOpen(true)}
+            variant="outline"
+            className="border-blue-600 text-blue-600 hover:bg-blue-50"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Importar CSV
+          </Button>
+          <Button
+            onClick={() => {
+              resetForm();
+              setDialogOpen(true);
+            }}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Funcionário
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -259,8 +367,8 @@ export default function Employees() {
                   <TableHead>Funcionário</TableHead>
                   <TableHead>CPF</TableHead>
                   <TableHead>Matrícula</TableHead>
+                  <TableHead>Email/Login</TableHead>
                   <TableHead>Cargo</TableHead>
-                  <TableHead>Setor</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -284,8 +392,21 @@ export default function Employees() {
                     </TableCell>
                     <TableCell>{employee.cpf}</TableCell>
                     <TableCell>{employee.employee_number || "-"}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {employee.user_email ? (
+                          <>
+                            <span className="text-sm">{employee.user_email}</span>
+                            <Badge variant="outline" className="bg-green-100 text-green-800 text-xs">
+                              Ativo
+                            </Badge>
+                          </>
+                        ) : (
+                          <span className="text-sm text-gray-400">Sem acesso</span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{getPositionName(employee.position_id)}</TableCell>
-                    <TableCell>{getDepartmentName(employee.department_id)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={statusColors[employee.status]}>
                         {statusLabels[employee.status]}
@@ -293,6 +414,14 @@ export default function Employees() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleAccessManagement(employee)}
+                          title="Gerenciar Acesso"
+                        >
+                          <Key className="w-4 h-4 text-blue-600" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -501,6 +630,191 @@ export default function Employees() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Access Management Dialog */}
+      <Dialog open={accessDialogOpen} onOpenChange={setAccessDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-blue-600" />
+              Gerenciar Acesso
+            </DialogTitle>
+          </DialogHeader>
+          {selectedEmployee && (
+            <div className="space-y-4">
+              <Alert>
+                <AlertDescription>
+                  <strong>Funcionário:</strong> {selectedEmployee.full_name}
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2">
+                <Label>Email de Login</Label>
+                <Input
+                  type="email"
+                  value={accessForm.email}
+                  onChange={(e) => setAccessForm({ ...accessForm, email: e.target.value })}
+                  placeholder="email@exemplo.com"
+                />
+                <p className="text-xs text-gray-500">
+                  Email usado para fazer login no sistema
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Nível de Acesso</Label>
+                <Select
+                  value={accessForm.role}
+                  onValueChange={(value) => setAccessForm({ ...accessForm, role: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        <div>
+                          <div className="font-medium">Funcionário</div>
+                          <div className="text-xs text-gray-500">Acesso básico ao sistema</div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="admin">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-4 h-4" />
+                        <div>
+                          <div className="font-medium">Administrador</div>
+                          <div className="text-xs text-gray-500">Acesso total ao sistema</div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="pt-4 space-y-2">
+                <Button
+                  onClick={handleInviteUser}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  Enviar Convite por Email
+                </Button>
+                <p className="text-xs text-center text-gray-500">
+                  Um email será enviado com instruções para criar a senha
+                </p>
+              </div>
+
+              {selectedEmployee.user_email && (
+                <div className="pt-4 border-t">
+                  <Alert className="bg-blue-50">
+                    <AlertDescription className="text-blue-800">
+                      <strong>Status:</strong> Usuário já possui acesso ao sistema com o email {selectedEmployee.user_email}
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite User Dialog */}
+      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-green-600" />
+              Convidar Novo Usuário
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Alert>
+              <AlertDescription>
+                Envie um convite por email para que o usuário crie sua conta no sistema
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2">
+              <Label>Email *</Label>
+              <Input
+                type="email"
+                value={accessForm.email}
+                onChange={(e) => setAccessForm({ ...accessForm, email: e.target.value })}
+                placeholder="usuario@exemplo.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nível de Acesso *</Label>
+              <Select
+                value={accessForm.role}
+                onValueChange={(value) => setAccessForm({ ...accessForm, role: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">Funcionário (Acesso Básico)</SelectItem>
+                  <SelectItem value="admin">Administrador (Acesso Total)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleInviteUser}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Enviar Convite
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Upload Dialog */}
+      <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5 text-blue-600" />
+              Importação em Massa
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Alert>
+              <AlertDescription>
+                Faça upload de um arquivo CSV com os dados dos funcionários para cadastro em massa.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2">
+              <Label>Formato do CSV</Label>
+              <div className="text-xs bg-gray-50 p-3 rounded border">
+                <code>
+                  cpf,full_name,phone,hire_date,employee_number,user_email<br/>
+                  12345678900,João Silva,11999999999,2024-01-15,001,joao@email.com
+                </code>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Arquivo CSV</Label>
+              <Input
+                type="file"
+                accept=".csv,.xlsx"
+                onChange={handleBulkUpload}
+              />
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
