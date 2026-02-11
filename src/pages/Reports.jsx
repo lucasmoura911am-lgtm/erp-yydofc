@@ -134,9 +134,15 @@ export default function Reports() {
 
     const monthRecords = timeRecords.filter(record => {
       const recordDate = parseISO(record.timestamp);
+      
+      // Filtrar por data de contratação do funcionário
+      const hireDate = employee.hire_date ? new Date(employee.hire_date + 'T00:00:00') : null;
+      const isAfterHire = !hireDate || recordDate >= hireDate;
+      
       return record.employee_id === selectedEmployee && 
              recordDate >= monthStart && 
-             recordDate <= monthEnd;
+             recordDate <= monthEnd &&
+             isAfterHire;
     });
 
     // Buscar escala do funcionário
@@ -457,6 +463,13 @@ export default function Reports() {
 
         return daysInMonth.map(day => {
           const dayKey = format(day, 'yyyy-MM-dd');
+          
+          // Não mostrar dias anteriores à contratação
+          const hireDate = employee.hire_date ? new Date(employee.hire_date + 'T00:00:00') : null;
+          if (hireDate && day < hireDate) {
+            return ''; // Pular dias antes da contratação
+          }
+          
           const records = (dayRecords[dayKey] || []).sort((a, b) => 
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
@@ -541,20 +554,28 @@ export default function Reports() {
     <h4>CÁLCULOS CLT - CONSOLIDADO MENSAL</h4>
     <div class="clt-grid">
       <div class="clt-item">
+        <div class="clt-value">${cltCalc.expectedHours}</div>
+        <div class="clt-label">Jornada Prevista</div>
+      </div>
+      <div class="clt-item">
         <div class="clt-value">${cltCalc.totalWorkedHours}</div>
         <div class="clt-label">Total Trabalhado</div>
       </div>
       <div class="clt-item">
-        <div class="clt-value">${cltCalc.overtime50Hours}</div>
+        <div class="clt-value" style="color: ${cltCalc.overtime50Minutes > 0 ? '#d97706' : '#666'}">${cltCalc.overtime50Hours}</div>
         <div class="clt-label">HE 50%</div>
       </div>
       <div class="clt-item">
-        <div class="clt-value">${cltCalc.overtime100Hours}</div>
+        <div class="clt-value" style="color: ${cltCalc.overtime100Minutes > 0 ? '#dc2626' : '#666'}">${cltCalc.overtime100Hours}</div>
         <div class="clt-label">HE 100%</div>
       </div>
       <div class="clt-item">
-        <div class="clt-value">${cltCalc.nightHours}</div>
-        <div class="clt-label">Adicional Noturno</div>
+        <div class="clt-value">${cltCalc.totalDelayHours}</div>
+        <div class="clt-label">Total Atrasos</div>
+      </div>
+      <div class="clt-item">
+        <div class="clt-value">${cltCalc.absenceHours}</div>
+        <div class="clt-label">Faltas</div>
       </div>
       <div class="clt-item">
         <div class="clt-value">${cltCalc.sundayHolidayHours}</div>
@@ -563,14 +584,6 @@ export default function Reports() {
       <div class="clt-item">
         <div class="clt-value">${cltCalc.dsrDays} dias</div>
         <div class="clt-label">DSR</div>
-      </div>
-      <div class="clt-item">
-        <div class="clt-value">${cltCalc.averageDailyHours}</div>
-        <div class="clt-label">Média Diária</div>
-      </div>
-      <div class="clt-item">
-        <div class="clt-value">${cltCalc.totalDelayHours}</div>
-        <div class="clt-label">Total Atrasos</div>
       </div>
     </div>
   </div>

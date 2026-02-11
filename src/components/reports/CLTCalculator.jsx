@@ -117,8 +117,9 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
 
     // CALCULAR HORA EXTRA E AUSÊNCIA
     if (!isWeekend) {
+      // ATRASO NÃO ANULA HORA EXTRA
+      // Se trabalhou mais que a jornada, tem hora extra independente de atraso
       if (dayWorkedMinutes > dailyWorkMinutes) {
-        // HORA EXTRA: só se ultrapassar jornada
         const extra = dayWorkedMinutes - dailyWorkMinutes;
         
         // HE 50% (primeiras 2 horas)
@@ -134,6 +135,12 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
       } else if (dayWorkedMinutes === 0) {
         // AUSÊNCIA COMPLETA
         dayAbsence = dailyWorkMinutes;
+      }
+    } else if (isWeekend && dayWorkedMinutes > 0) {
+      // Final de semana trabalhado = hora extra automática
+      dayOT50 = Math.min(dayWorkedMinutes, 120);
+      if (dayWorkedMinutes > 120) {
+        dayOT100 = dayWorkedMinutes - 120;
       }
     }
 
