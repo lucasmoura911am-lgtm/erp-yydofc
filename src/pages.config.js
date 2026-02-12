@@ -76,6 +76,7 @@ import TasksDashboard from './pages/TasksDashboard';
 import Teams from './pages/Teams';
 import TimeRecords from './pages/TimeRecords';
 import UsersManagement from './pages/UsersManagement';
+import ManageTimeRecordsSimple from './pages/ManageTimeRecordsSimple';
 import __Layout from './Layout.jsx';
 
 
@@ -109,6 +110,7 @@ export const PAGES = {
     "Teams": Teams,
     "TimeRecords": TimeRecords,
     "UsersManagement": UsersManagement,
+    "ManageTimeRecordsSimple": ManageTimeRecordsSimple,
 }
 
 export const pagesConfig = {

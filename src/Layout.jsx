@@ -63,7 +63,7 @@ const adminNavigation = [
   },
   {
     title: "Gestão de Pontos",
-    url: createPageUrl("ManageTimeRecords"),
+    url: createPageUrl("ManageTimeRecordsSimple"),
     icon: Edit3,
   },
   {

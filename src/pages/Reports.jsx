@@ -469,6 +469,10 @@ export default function Reports() {
           if (hireDate && day < hireDate) {
             return ''; // Pular dias antes da contratação
           }
+
+          // Verificar se é dia de trabalho conforme escala
+          const dayOfWeek = day.getDay();
+          const isWorkDay = shiftWorkDays.includes(dayOfWeek);
           
           const records = (dayRecords[dayKey] || []).sort((a, b) => 
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()

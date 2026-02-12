@@ -44,7 +44,8 @@ export default function Employees() {
   const [accessForm, setAccessForm] = useState({
     email: "",
     password: "",
-    role: "user"
+    role: "user",
+    newPassword: ""
   });
   const [formData, setFormData] = useState({
     cpf: "",
@@ -695,16 +696,29 @@ export default function Employees() {
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label>Nova Senha (opcional)</Label>
+                <Input
+                  type="password"
+                  value={accessForm.newPassword}
+                  onChange={(e) => setAccessForm({ ...accessForm, newPassword: e.target.value })}
+                  placeholder="Digite para alterar a senha"
+                />
+                <p className="text-xs text-gray-500">
+                  Deixe em branco para manter a senha atual
+                </p>
+              </div>
+
               <div className="pt-4 space-y-2">
                 <Button
                   onClick={handleInviteUser}
                   className="w-full bg-green-600 hover:bg-green-700"
                 >
                   <Mail className="w-4 h-4 mr-2" />
-                  Enviar Convite por Email
+                  {selectedEmployee.user_email ? 'Atualizar Acesso' : 'Enviar Convite por Email'}
                 </Button>
                 <p className="text-xs text-center text-gray-500">
-                  Um email será enviado com instruções para criar a senha
+                  {selectedEmployee.user_email ? 'Atualize o nível de acesso ou senha do usuário' : 'Um email será enviado com instruções para criar a senha'}
                 </p>
               </div>
 
