@@ -27,6 +27,13 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
   const breakMinutes = shift?.break_minutes || 60;
   const toleranceMinutes = shift?.tolerance_minutes || 5;
   const dailyWorkMinutes = shift ? calculateShiftMinutes(shiftStartTime, shiftEndTime, breakMinutes) : 480; // 8h padrão
+  
+  // Dias de trabalho da escala
+  const workDaysMap = {
+    'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4,
+    'friday': 5, 'saturday': 6, 'sunday': 0
+  };
+  const shiftWorkDays = shift?.work_days?.map(d => workDaysMap[d]) || [1, 2, 3, 4, 5];
 
   // Totalizadores
   let totalWorkedMinutes = 0;
@@ -175,6 +182,26 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
     });
   });
 
+  // Calcular dias úteis esperados no período (conforme escala)
+  const allDates = Object.keys(recordsByDay).map(d => new Date(d + 'T12:00:00'));
+  if (allDates.length > 0) {
+    const minDate = new Date(Math.min(...allDates));
+    const maxDate = new Date(Math.max(...allDates));
+    
+    let expectedWorkDays = 0;
+    const current = new Date(minDate);
+    while (current <= maxDate) {
+      const dayOfWeek = getDay(current);
+      if (shiftWorkDays.includes(dayOfWeek)) {
+        expectedWorkDays++;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    var expectedTotalMinutes = expectedWorkDays * dailyWorkMinutes;
+  } else {
+    var expectedTotalMinutes = 0;
+  }
+
   // Cálculos consolidados
   const daysWorked = Object.keys(recordsByDay).length;
   const averageDailyMinutes = daysWorked > 0 ? totalWorkedMinutes / daysWorked : 0;
@@ -190,7 +217,7 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
     nightMinutes,
     sundayHolidayMinutes,
     absenceMinutes,
-    expectedMinutes: dailyWorkMinutes * daysWorked,
+    expectedMinutes: expectedTotalMinutes,
     averageDailyMinutes,
     
     // Formatado
@@ -201,7 +228,7 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
     nightHours: formatMinutesToHours(nightMinutes),
     sundayHolidayHours: formatMinutesToHours(sundayHolidayMinutes),
     absenceHours: formatMinutesToHours(absenceMinutes),
-    expectedHours: formatMinutesToHours(dailyWorkMinutes * daysWorked),
+    expectedHours: formatMinutesToHours(expectedTotalMinutes),
     averageDailyHours: formatMinutesToHours(averageDailyMinutes),
     
     // Outros

@@ -489,12 +489,12 @@ export default function Reports() {
           const dateStr = format(day, 'dd/MM/yy');
           const isWeekend = day.getDay() === 0 || day.getDay() === 6;
           
-          // Jornada prevista (da escala)
-          const shiftStart = employeeShift?.start_time || '08:00';
-          const shiftEnd = employeeShift?.end_time || '18:00';
+          // Jornada prevista (da escala) - só mostrar se for dia de trabalho
+          const shiftStart = isWorkDay ? (employeeShift?.start_time || '08:00') : '';
+          const shiftEnd = isWorkDay ? (employeeShift?.end_time || '18:00') : '';
           const breakTime = employeeShift?.break_minutes || 60;
-          const lunchStart = '12:00';
-          const lunchEnd = '13:00';
+          const lunchStart = isWorkDay ? '12:00' : '';
+          const lunchEnd = isWorkDay ? '13:00' : '';
 
           // Registros reais
           const entrada1 = records.find(r => r.type === 'entrada');
@@ -504,6 +504,7 @@ export default function Reports() {
 
           // CÁLCULO CORRETO: (pausa - entrada) + (saida - retorno)
           let horasTrabalhadas = '--:--';
+          let extrasDeficit = '';
           let obs = '';
           
           if (records.length > 0) {
@@ -524,6 +525,21 @@ export default function Reports() {
               const hours = Math.floor(workedMin / 60);
               const mins = Math.floor(workedMin % 60);
               horasTrabalhadas = hours.toString().padStart(2, '0') + ':' + mins.toString().padStart(2, '0');
+              
+              // Calcular extras ou déficit
+              if (isWorkDay) {
+                const expectedMin = 480; // 8h
+                const diff = workedMin - expectedMin;
+                if (diff > 0) {
+                  const extraH = Math.floor(diff / 60);
+                  const extraM = diff % 60;
+                  extrasDeficit = `+${extraH}:${extraM.toString().padStart(2, '0')}`;
+                } else if (diff < 0) {
+                  const defH = Math.floor(Math.abs(diff) / 60);
+                  const defM = Math.abs(diff) % 60;
+                  extrasDeficit = `-${defH}:${defM.toString().padStart(2, '0')}`;
+                }
+              }
             } else if (entrada1 && saida2) {
               // Fallback: sem pausa registrada
               const totalMin = (new Date(saida2.timestamp) - new Date(entrada1.timestamp)) / 60000;
@@ -532,27 +548,46 @@ export default function Reports() {
               const mins = Math.floor(workedMin % 60);
               horasTrabalhadas = hours.toString().padStart(2, '0') + ':' + mins.toString().padStart(2, '0');
               obs += 'Sem pausa ';
+              
+              // Calcular extras ou déficit
+              if (isWorkDay) {
+                const expectedMin = 480;
+                const diff = workedMin - expectedMin;
+                if (diff > 0) {
+                  const extraH = Math.floor(diff / 60);
+                  const extraM = diff % 60;
+                  extrasDeficit = `+${extraH}:${extraM.toString().padStart(2, '0')}`;
+                } else if (diff < 0) {
+                  const defH = Math.floor(Math.abs(diff) / 60);
+                  const defM = Math.abs(diff) % 60;
+                  extrasDeficit = `-${defH}:${defM.toString().padStart(2, '0')}`;
+                }
+              }
             } else {
               obs += 'Incompleto ';
             }
-          } else if (isWeekend) {
+          } else if (!isWorkDay) {
             obs = '';
           } else {
             obs = 'Ausente';
+            if (isWorkDay) {
+              extrasDeficit = '-8:00';
+            }
           }
 
           return `
             <tr>
               <td class="date-col">${dateStr} ${dayName}</td>
-              <td class="time-cell">${shiftStart}</td>
-              <td class="time-cell">${lunchStart}</td>
-              <td class="time-cell">${lunchEnd}</td>
-              <td class="time-cell">${shiftEnd}</td>
+              <td class="time-cell">${shiftStart || '--:--'}</td>
+              <td class="time-cell">${lunchStart || '--:--'}</td>
+              <td class="time-cell">${lunchEnd || '--:--'}</td>
+              <td class="time-cell">${shiftEnd || '--:--'}</td>
               <td class="time-cell">${entrada1 ? format(new Date(entrada1.timestamp), 'HH:mm') : '--:--'}</td>
               <td class="time-cell">${saida1 ? format(new Date(saida1.timestamp), 'HH:mm') : '--:--'}</td>
               <td class="time-cell">${entrada2 ? format(new Date(entrada2.timestamp), 'HH:mm') : '--:--'}</td>
               <td class="time-cell">${saida2 ? format(new Date(saida2.timestamp), 'HH:mm') : '--:--'}</td>
               <td class="time-cell"><strong>${horasTrabalhadas}</strong></td>
+              <td class="time-cell" style="color: ${extrasDeficit.startsWith('+') ? '#059669' : extrasDeficit.startsWith('-') ? '#dc2626' : '#000'}"><strong>${extrasDeficit || '--:--'}</strong></td>
               <td class="obs-cell">${obs}</td>
             </tr>
           `;
