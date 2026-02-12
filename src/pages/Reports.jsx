@@ -430,7 +430,8 @@ export default function Reports() {
         <th colspan="4">Jornada Prevista</th>
         <th colspan="4">Registros de Ponto</th>
         <th rowspan="2">Trabalhadas</th>
-        <th rowspan="2">Observação</th>
+        <th rowspan="2">Extras/Déf.</th>
+        <th rowspan="2">Obs.</th>
       </tr>
       <tr>
         <th>Ent.</th>
