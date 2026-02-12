@@ -560,7 +560,7 @@ export default function Reports() {
                   extrasDeficit = `+${extraH}:${extraM.toString().padStart(2, '0')}`;
                 } else if (diff < 0) {
                   const defH = Math.floor(Math.abs(diff) / 60);
-                  const defM = Math.abs(diff) % 60;
+                  const defM = Math.floor(Math.abs(diff) % 60);
                   extrasDeficit = `-${defH}:${defM.toString().padStart(2, '0')}`;
                 }
               }
