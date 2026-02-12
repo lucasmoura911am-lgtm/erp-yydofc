@@ -60,8 +60,14 @@ export default function ManageTasks() {
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks', user?.company_id],
-    queryFn: () => user?.company_id ? base44.entities.Task.filter({ company_id: user.company_id }, '-created_date') : [],
+    queryFn: async () => {
+      if (!user?.company_id) return [];
+      const allTasks = await base44.entities.Task.filter({ company_id: user.company_id }, '-created_date');
+      await checkAndCreateRecurringTasks(allTasks);
+      return allTasks;
+    },
     enabled: !!user?.company_id,
+    refetchInterval: 300000, // Recheck every 5 minutes
   });
 
   const { data: allEmployees = [] } = useQuery({
@@ -73,6 +79,59 @@ export default function ManageTasks() {
   const employees = user?.is_supervisor 
     ? allEmployees.filter(emp => emp.supervisor_email === user.email || user.supervised_teams?.some(teamId => emp.team_id === teamId))
     : allEmployees;
+
+  const checkAndCreateRecurringTasks = async (existingTasks) => {
+    const recurringTasks = existingTasks.filter(t => 
+      (t.frequency === 'diaria' || t.frequency === 'semanal') && 
+      t.status !== 'cancelada'
+    );
+
+    for (const task of recurringTasks) {
+      const taskDueDate = new Date(task.due_date);
+      const now = new Date();
+      
+      // Check if task is overdue and should spawn a new instance
+      if (taskDueDate < now) {
+        let nextDueDate = new Date(taskDueDate);
+        
+        if (task.frequency === 'diaria') {
+          // Add days until we get to today or future
+          while (nextDueDate < now) {
+            nextDueDate.setDate(nextDueDate.getDate() + 1);
+          }
+        } else if (task.frequency === 'semanal') {
+          // Add weeks
+          while (nextDueDate < now) {
+            nextDueDate.setDate(nextDueDate.getDate() + 7);
+          }
+        }
+
+        // Check if a task already exists for this new due date
+        const nextDueDateStr = nextDueDate.toISOString().substring(0, 16);
+        const existingNextTask = existingTasks.find(t => 
+          t.employee_id === task.employee_id &&
+          t.title === task.title &&
+          t.due_date.substring(0, 16) === nextDueDateStr
+        );
+
+        if (!existingNextTask) {
+          // Create new recurring task instance
+          await base44.entities.Task.create({
+            title: task.title,
+            description: task.description,
+            employee_id: task.employee_id,
+            company_id: task.company_id,
+            supervisor_email: task.supervisor_email,
+            due_date: nextDueDate.toISOString(),
+            location: task.location,
+            priority: task.priority,
+            frequency: task.frequency,
+            status: 'pendente'
+          });
+        }
+      }
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Task.create(data),
