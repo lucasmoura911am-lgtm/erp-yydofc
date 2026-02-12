@@ -533,11 +533,11 @@ export default function Reports() {
                 const diff = workedMin - expectedMin;
                 if (diff > 0) {
                   const extraH = Math.floor(diff / 60);
-                  const extraM = diff % 60;
+                  const extraM = Math.floor(diff % 60);
                   extrasDeficit = `+${extraH}:${extraM.toString().padStart(2, '0')}`;
                 } else if (diff < 0) {
                   const defH = Math.floor(Math.abs(diff) / 60);
-                  const defM = Math.abs(diff) % 60;
+                  const defM = Math.floor(Math.abs(diff) % 60);
                   extrasDeficit = `-${defH}:${defM.toString().padStart(2, '0')}`;
                 }
               }
