@@ -453,6 +453,13 @@ export default function Reports() {
           dayRecords[day].push(record);
         });
 
+        // Verificar dias de trabalho da escala
+        const workDaysMap = {
+          'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4,
+          'friday': 5, 'saturday': 6, 'sunday': 0
+        };
+        const shiftWorkDays = employeeShift?.work_days?.map(d => workDaysMap[d]) || [1, 2, 3, 4, 5];
+
         // Gerar todas as linhas do mês
         const daysInMonth = [];
         const currentDay = new Date(monthStart);
