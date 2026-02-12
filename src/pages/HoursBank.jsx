@@ -21,6 +21,8 @@ export default function HoursBank() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [periodMonths, setPeriodMonths] = useState(1);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
     loadUser();
@@ -50,13 +52,20 @@ export default function HoursBank() {
   });
 
   const getEmployeeHoursSummary = (employeeId) => {
-    const startDate = startOfMonth(subMonths(new Date(), periodMonths - 1));
-    const endDate = endOfMonth(new Date());
+    let filterStartDate, filterEndDate;
+    
+    if (startDate && endDate) {
+      filterStartDate = new Date(startDate + 'T00:00:00');
+      filterEndDate = new Date(endDate + 'T23:59:59');
+    } else {
+      filterStartDate = startOfMonth(subMonths(new Date(), periodMonths - 1));
+      filterEndDate = endOfMonth(new Date());
+    }
     
     const employeeRecords = hoursBank.filter(h => {
       if (h.employee_id !== employeeId) return false;
       const recordDate = new Date(h.date + 'T00:00:00');
-      return recordDate >= startDate && recordDate <= endDate;
+      return recordDate >= filterStartDate && recordDate <= filterEndDate;
     });
 
     const totalBalance = employeeRecords.reduce((sum, r) => sum + (r.balance_minutes || 0), 0);
@@ -176,40 +185,61 @@ export default function HoursBank() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <Input
-                placeholder="Buscar funcionário..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          <div className="space-y-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Input
+                  placeholder="Buscar funcionário..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  <SelectItem value="deficit">Apenas Déficit</SelectItem>
+                  <SelectItem value="excess">Apenas Excesso</SelectItem>
+                  <SelectItem value="balanced">Equilibrados</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={periodMonths.toString()} onValueChange={(v) => { setPeriodMonths(Number(v)); setStartDate(""); setEndDate(""); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Último mês</SelectItem>
+                  <SelectItem value="3">Últimos 3 meses</SelectItem>
+                  <SelectItem value="6">Últimos 6 meses</SelectItem>
+                  <SelectItem value="12">Último ano</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                <SelectItem value="deficit">Apenas Déficit</SelectItem>
-                <SelectItem value="excess">Apenas Excesso</SelectItem>
-                <SelectItem value="balanced">Equilibrados</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={periodMonths.toString()} onValueChange={(v) => setPeriodMonths(Number(v))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">Último mês</SelectItem>
-                <SelectItem value="3">Últimos 3 meses</SelectItem>
-                <SelectItem value="6">Últimos 6 meses</SelectItem>
-                <SelectItem value="12">Último ano</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid md:grid-cols-2 gap-4 pt-2 border-t">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Período Personalizado - Data Inicial</label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => { setStartDate(e.target.value); setPeriodMonths(0); }}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Data Final</label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => { setEndDate(e.target.value); setPeriodMonths(0); }}
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

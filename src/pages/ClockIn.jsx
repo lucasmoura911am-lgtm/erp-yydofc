@@ -409,13 +409,14 @@ export default function ClockIn() {
         file: photoFile 
       });
 
-      const timestamp = new Date().toISOString();
-      const { status, delayMinutes } = calculateStatus(timestamp, recordType);
+      // Usar horário do servidor ao invés do celular
+      const serverTimestamp = new Date().toISOString();
+      const { status, delayMinutes } = calculateStatus(serverTimestamp, recordType);
 
       await base44.entities.TimeRecord.create({
         employee_id: employee.id,
         company_id: employee.company_id,
-        timestamp: timestamp,
+        timestamp: serverTimestamp,
         type: recordType,
         latitude: location?.latitude,
         longitude: location?.longitude,
