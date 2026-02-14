@@ -180,18 +180,26 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
     });
   });
 
-  // Calcular apenas os dias ÚTEIS TRABALHADOS (não todos os dias do período)
-  // Contar quantos dias de trabalho realmente existem nos registros
+  // Calcular TODAS as horas previstas de jornada (todos os dias úteis do período, trabalhados ou não)
+  const allDates = Object.keys(recordsByDay).map(d => new Date(d + 'T12:00:00'));
   let expectedTotalMinutes = 0;
-  Object.entries(recordsByDay).forEach(([date, records]) => {
-    const dayOfWeek = getDay(new Date(date + 'T12:00:00'));
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  
+  if (allDates.length > 0) {
+    const minDate = new Date(Math.min(...allDates));
+    const maxDate = new Date(Math.max(...allDates));
     
-    // Só contar dias úteis de trabalho (não fins de semana)
-    if (!isWeekend && shiftWorkDays.includes(dayOfWeek)) {
-      expectedTotalMinutes += dailyWorkMinutes;
+    const current = new Date(minDate);
+    while (current <= maxDate) {
+      const dayOfWeek = getDay(current);
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      
+      // Contar TODOS os dias úteis do período (trabalhados ou não)
+      if (!isWeekend && shiftWorkDays.includes(dayOfWeek)) {
+        expectedTotalMinutes += dailyWorkMinutes;
+      }
+      current.setDate(current.getDate() + 1);
     }
-  });
+  }
 
   // Cálculos consolidados
   const daysWorked = Object.keys(recordsByDay).length;

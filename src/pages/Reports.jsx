@@ -509,9 +509,6 @@ export default function Reports() {
           let obs = '';
           
           if (records.length > 0) {
-            const hasManual = records.some(r => r.is_manual);
-            if (hasManual) obs += '* Manual ';
-            
             if (entrada1 && saida1 && entrada2 && saida2) {
               // REGRA CORRETA CLT: soma dos períodos trabalhados
               const toMinutes = (timestamp) => {
