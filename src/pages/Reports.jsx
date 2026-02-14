@@ -626,8 +626,8 @@ export default function Reports() {
         <div class="clt-label">Feriado/Domingo</div>
       </div>
       <div class="clt-item">
-        <div class="clt-value">${cltCalc.dsrDays} dias</div>
-        <div class="clt-label">DSR</div>
+        <div class="clt-value">${cltCalc.dsrReflexHours}</div>
+        <div class="clt-label">Reflexo DSR</div>
       </div>
     </div>
   </div>
@@ -657,8 +657,8 @@ export default function Reports() {
       <div class="totals-box">
         <h4>Adicionais</h4>
         <div class="total-line">
-          <span>DSR:</span>
-          <strong>${cltCalc.dsrDays} dias (${cltCalc.dsrHours}h)</strong>
+          <span>Reflexo DSR sobre HE:</span>
+          <strong>${cltCalc.dsrReflexHours}</strong>
         </div>
         <div class="total-line">
           <span>Adicional Noturno:</span>
