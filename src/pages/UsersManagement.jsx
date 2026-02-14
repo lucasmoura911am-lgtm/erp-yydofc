@@ -4,9 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Shield, Users, Search } from "lucide-react";
+import { Shield, Mail, Key, UserPlus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -15,13 +14,34 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function UsersManagement() {
   const [user, setUser] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [inviteDialog, setInviteDialog] = useState(false);
+  const [changePasswordDialog, setChangePasswordDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("user");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
 
   const queryClient = useQueryClient();
 
@@ -34,174 +54,239 @@ export default function UsersManagement() {
     setUser(userData);
   };
 
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ['allUsers'],
-    queryFn: () => base44.entities.User.list(),
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees', user?.company_id],
+    queryFn: () => user?.company_id ? base44.entities.Employee.filter({ company_id: user.company_id }) : [],
+    enabled: !!user?.company_id,
   });
 
-  const updateUserMutation = useMutation({
-    mutationFn: ({ email, data }) => base44.entities.User.update(email, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['allUsers']);
-      setDialogOpen(false);
-    },
-  });
-
-  const availableModules = [
-    { id: "dashboard", label: "Dashboard Principal", icon: "📊" },
-    { id: "supervisor_dashboard", label: "Dashboard Supervisor", icon: "📈" },
-    { id: "time_records", label: "Registros de Ponto", icon: "🕐" },
-    { id: "manage_records", label: "Gestão de Pontos", icon: "✏️" },
-    { id: "employees", label: "Funcionários", icon: "👥" },
-    { id: "teams", label: "Times", icon: "🏆" },
-    { id: "supervisors", label: "Supervisores", icon: "👔" },
-    { id: "departments", label: "Setores", icon: "🏢" },
-    { id: "positions", label: "Cargos", icon: "💼" },
-    { id: "shifts", label: "Escalas", icon: "📅" },
-    { id: "reports", label: "Relatórios", icon: "📄" },
-    { id: "settings", label: "Configurações", icon: "⚙️" },
-    { id: "users", label: "Gestão de Usuários", icon: "🔐" }
-  ];
-
-  const companyUsers = allUsers.filter(u => u.company_id === user?.company_id);
-
-  const handleEdit = (userData) => {
-    setEditing(userData);
-    setDialogOpen(true);
-  };
-
-  const handleUpdatePermissions = async (e) => {
-    e.preventDefault();
-    const moduleCheckboxes = document.querySelectorAll('input[name="module"]:checked');
-    const selectedModules = Array.from(moduleCheckboxes).map(cb => cb.value);
-
-    await updateUserMutation.mutateAsync({
-      email: editing.email,
-      data: { ...editing, permissions: selectedModules }
-    });
-  };
-
-  const filteredUsers = companyUsers.filter(u =>
-    u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  const uniqueUsers = Array.from(
+    new Map(
+      employees
+        .filter(emp => emp.user_email)
+        .map(emp => [emp.user_email, {
+          email: emp.user_email,
+          full_name: emp.full_name,
+          role: emp.user_email === user?.email ? user?.role : 'user'
+        }])
+    ).values()
   );
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim()) {
+      setError("Digite um e-mail válido");
+      return;
+    }
+
+    try {
+      await base44.users.inviteUser(inviteEmail.trim(), inviteRole);
+      setSuccess("Convite enviado com sucesso!");
+      setInviteDialog(false);
+      setInviteEmail("");
+      setInviteRole("user");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError("Erro ao enviar convite: " + err.message);
+      setTimeout(() => setError(""), 5000);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!newPassword || !confirmPassword) {
+      setError("Preencha todos os campos");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("As senhas não coincidem");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError("A senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+
+    try {
+      // Atualizar senha via API do Base44
+      await base44.auth.updatePassword(selectedUser.email, newPassword);
+      setSuccess("Senha alterada com sucesso!");
+      setChangePasswordDialog(false);
+      setNewPassword("");
+      setConfirmPassword("");
+      setSelectedUser(null);
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError("Erro ao alterar senha: " + err.message);
+      setTimeout(() => setError(""), 5000);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Gestão de Usuários</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Configure permissões e acessos dos usuários
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Usuários e Acessos</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Gerencie usuários e permissões do sistema
+          </p>
+        </div>
+        <Button
+          onClick={() => setInviteDialog(true)}
+          className="bg-gradient-to-r from-purple-600 to-blue-600"
+        >
+          <UserPlus className="w-4 h-4 mr-2" />
+          Convidar Usuário
+        </Button>
       </div>
+
+      {success && (
+        <Alert className="bg-green-50 border-green-200">
+          <AlertDescription className="text-green-800">{success}</AlertDescription>
+        </Alert>
+      )}
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Search className="w-5 h-5 text-gray-400" />
-            <Input
-              placeholder="Buscar usuários..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md"
-            />
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            Usuários do Sistema
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {filteredUsers.map((u) => (
-              <div key={u.email} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-                <div className="flex items-center gap-4 flex-1">
-                  <Avatar>
-                    <AvatarFallback className="bg-gradient-to-br from-purple-600 to-blue-600 text-white">
-                      {u.full_name?.charAt(0) || u.email?.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="font-medium">{u.full_name || u.email}</p>
-                    <p className="text-sm text-gray-500">{u.email}</p>
-                    <div className="flex gap-2 mt-2">
-                      <Badge variant="outline">
-                        {u.role === 'admin' ? '👑 Admin' : '👤 Funcionário'}
-                      </Badge>
-                      {u.is_supervisor && (
-                        <Badge variant="outline" className="bg-purple-100 text-purple-800">
-                          👔 Supervisor
-                        </Badge>
-                      )}
-                      {u.permissions?.length > 0 && (
-                        <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                          🔐 {u.permissions.length} módulos
-                        </Badge>
-                      )}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>E-mail</TableHead>
+                <TableHead>Função</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {uniqueUsers.map((usr) => (
+                <TableRow key={usr.email}>
+                  <TableCell className="font-medium">{usr.full_name}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      {usr.email}
                     </div>
-                  </div>
-                </div>
-
-                <Button variant="outline" size="sm" onClick={() => handleEdit(u)}>
-                  <Edit className="w-4 h-4 mr-1" />
-                  Permissões
-                </Button>
-              </div>
-            ))}
-          </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={usr.role === 'admin' ? 'default' : 'outline'}>
+                      {usr.role === 'admin' ? 'Administrador' : 'Usuário'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedUser(usr);
+                        setChangePasswordDialog(true);
+                      }}
+                    >
+                      <Key className="w-4 h-4 mr-2" />
+                      Alterar Senha
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      {/* Dialog: Convidar Usuário */}
+      <Dialog open={inviteDialog} onOpenChange={setInviteDialog}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Gerenciar Permissões</DialogTitle>
+            <DialogTitle>Convidar Novo Usuário</DialogTitle>
           </DialogHeader>
-          {editing && (
-            <form onSubmit={handleUpdatePermissions} className="space-y-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="font-medium">{editing.full_name || editing.email}</p>
-                <p className="text-sm text-gray-500">{editing.email}</p>
-                <div className="flex gap-2 mt-2">
-                  <Badge variant="outline">
-                    {editing.role === 'admin' ? '👑 Admin' : '👤 Funcionário'}
-                  </Badge>
-                  {editing.is_supervisor && (
-                    <Badge variant="outline" className="bg-purple-100 text-purple-800">
-                      👔 Supervisor
-                    </Badge>
-                  )}
-                </div>
-              </div>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>E-mail</Label>
+              <Input
+                type="email"
+                placeholder="usuario@exemplo.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Função</Label>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">Usuário</SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInviteDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleInvite} className="bg-gradient-to-r from-purple-600 to-blue-600">
+              Enviar Convite
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-              <div className="space-y-2">
-                <Label className="text-base font-semibold">Módulos Permitidos</Label>
-                <p className="text-sm text-gray-500">Selecione quais módulos este usuário pode acessar</p>
-                
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  {availableModules.map((module) => (
-                    <div key={module.id} className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <Checkbox
-                        id={module.id}
-                        name="module"
-                        value={module.id}
-                        defaultChecked={(editing.permissions || []).includes(module.id)}
-                      />
-                      <Label htmlFor={module.id} className="cursor-pointer">
-                        <span className="mr-2">{module.icon}</span>
-                        {module.label}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-gradient-to-r from-purple-600 to-blue-600">
-                  Salvar Permissões
-                </Button>
-              </DialogFooter>
-            </form>
-          )}
+      {/* Dialog: Alterar Senha */}
+      <Dialog open={changePasswordDialog} onOpenChange={setChangePasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterar Senha de {selectedUser?.full_name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nova Senha</Label>
+              <Input
+                type="password"
+                placeholder="Digite a nova senha"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirmar Senha</Label>
+              <Input
+                type="password"
+                placeholder="Confirme a nova senha"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+            <p className="text-sm text-gray-500">
+              A senha deve ter no mínimo 6 caracteres
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setChangePasswordDialog(false);
+              setNewPassword("");
+              setConfirmPassword("");
+              setSelectedUser(null);
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={handleChangePassword} className="bg-gradient-to-r from-purple-600 to-blue-600">
+              <Key className="w-4 h-4 mr-2" />
+              Alterar Senha
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -102,6 +102,11 @@ const adminNavigation = [
     icon: FileText,
   },
   {
+    title: "Relatório de Humor",
+    url: createPageUrl("MoodReport"),
+    icon: FileText,
+  },
+  {
     title: "Plano de Trabalho",
     url: createPageUrl("TasksDashboard"),
     icon: ListTodo,

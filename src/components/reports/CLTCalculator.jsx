@@ -92,10 +92,8 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
       
       const delayRaw = differenceInMinutes(entradaTime, shiftStart);
       
-      // Aplicar tolerância (5 min, máximo 10 min/dia)
-      if (delayRaw > toleranceMinutes && delayRaw <= 10) {
-        dayDelayMinutes = delayRaw - toleranceMinutes;
-      } else if (delayRaw > 10) {
+      // Aplicar tolerância da escala
+      if (delayRaw > toleranceMinutes) {
         dayDelayMinutes = delayRaw;
       }
 
@@ -182,25 +180,18 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
     });
   });
 
-  // Calcular dias úteis esperados no período (conforme escala)
-  const allDates = Object.keys(recordsByDay).map(d => new Date(d + 'T12:00:00'));
-  if (allDates.length > 0) {
-    const minDate = new Date(Math.min(...allDates));
-    const maxDate = new Date(Math.max(...allDates));
+  // Calcular apenas os dias ÚTEIS TRABALHADOS (não todos os dias do período)
+  // Contar quantos dias de trabalho realmente existem nos registros
+  let expectedTotalMinutes = 0;
+  Object.entries(recordsByDay).forEach(([date, records]) => {
+    const dayOfWeek = getDay(new Date(date + 'T12:00:00'));
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     
-    let expectedWorkDays = 0;
-    const current = new Date(minDate);
-    while (current <= maxDate) {
-      const dayOfWeek = getDay(current);
-      if (shiftWorkDays.includes(dayOfWeek)) {
-        expectedWorkDays++;
-      }
-      current.setDate(current.getDate() + 1);
+    // Só contar dias úteis de trabalho (não fins de semana)
+    if (!isWeekend && shiftWorkDays.includes(dayOfWeek)) {
+      expectedTotalMinutes += dailyWorkMinutes;
     }
-    var expectedTotalMinutes = expectedWorkDays * dailyWorkMinutes;
-  } else {
-    var expectedTotalMinutes = 0;
-  }
+  });
 
   // Cálculos consolidados
   const daysWorked = Object.keys(recordsByDay).length;

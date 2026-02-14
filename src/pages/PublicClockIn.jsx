@@ -350,13 +350,18 @@ export default function PublicClockIn() {
         file: photoFile 
       });
 
-      const timestamp = new Date().toISOString();
-      const { status, delayMinutes } = calculateStatus(timestamp, recordType);
+      // Obter horário do servidor (não do dispositivo)
+      const serverTime = await fetch('https://worldtimeapi.org/api/timezone/America/Sao_Paulo')
+        .then(res => res.json())
+        .then(data => data.datetime)
+        .catch(() => new Date().toISOString()); // Fallback
+      
+      const { status, delayMinutes } = calculateStatus(serverTime, recordType);
 
       await base44.entities.TimeRecord.create({
         employee_id: employee.id,
         company_id: employee.company_id,
-        timestamp: timestamp,
+        timestamp: serverTime,
         type: recordType,
         latitude: location?.latitude,
         longitude: location?.longitude,
@@ -522,14 +527,13 @@ export default function PublicClockIn() {
                       onClick={() => {
                         cleanup();
                         setShowCamera(false);
-                        setStep("matricula");
                         resetForm();
                       }}
                       variant="outline"
                       size="lg"
                     >
                       <X className="w-5 h-5 mr-2" />
-                      Cancelar
+                      Voltar
                     </Button>
                     <Button
                       onClick={captureImage}
@@ -638,13 +642,23 @@ export default function PublicClockIn() {
                   Tipo: <Badge className="bg-green-600">{recordType}</Badge>
                 </p>
               </div>
-              <Button
-                onClick={resetForm}
-                variant="outline"
-                className="mt-4"
-              >
-                Registrar Outro Ponto
-              </Button>
+              <div className="space-y-3">
+                <Button
+                  onClick={resetForm}
+                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600"
+                  size="lg"
+                >
+                  Registrar Outro Ponto
+                </Button>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                >
+                  Voltar ao Início
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

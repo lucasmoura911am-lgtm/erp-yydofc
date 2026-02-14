@@ -409,14 +409,18 @@ export default function ClockIn() {
         file: photoFile 
       });
 
-      // Usar horário do servidor ao invés do celular
-      const serverTimestamp = new Date().toISOString();
-      const { status, delayMinutes } = calculateStatus(serverTimestamp, recordType);
+      // Obter horário do servidor (não do dispositivo)
+      const serverTime = await fetch('https://worldtimeapi.org/api/timezone/America/Sao_Paulo')
+        .then(res => res.json())
+        .then(data => data.datetime)
+        .catch(() => new Date().toISOString()); // Fallback
+      
+      const { status, delayMinutes } = calculateStatus(serverTime, recordType);
 
       await base44.entities.TimeRecord.create({
         employee_id: employee.id,
         company_id: employee.company_id,
-        timestamp: serverTimestamp,
+        timestamp: serverTime,
         type: recordType,
         latitude: location?.latitude,
         longitude: location?.longitude,
