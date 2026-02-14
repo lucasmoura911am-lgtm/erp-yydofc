@@ -207,15 +207,48 @@ export default function Employees() {
     setAccessDialogOpen(true);
   };
 
-  const handleInviteUser = () => {
+  const handleInviteUser = async () => {
     if (!accessForm.email) {
       alert('Digite o email do usuário');
       return;
     }
-    inviteUserMutation.mutate({
-      email: accessForm.email,
-      role: accessForm.role
-    });
+
+    try {
+      // Se tem nova senha, alterar senha
+      if (accessForm.newPassword && accessForm.newPassword.length >= 6) {
+        await base44.auth.updatePassword(accessForm.email, accessForm.newPassword);
+        alert('Senha alterada com sucesso!');
+      }
+
+      // Se não tem acesso ainda, enviar convite
+      if (!selectedEmployee.user_email) {
+        await base44.users.inviteUser(accessForm.email, accessForm.role);
+        
+        // Atualizar employee com o email
+        await base44.entities.Employee.update(selectedEmployee.id, {
+          user_email: accessForm.email
+        });
+        
+        alert('Convite enviado com sucesso!');
+        queryClient.invalidateQueries(['employees']);
+      } else {
+        // Já tem acesso, apenas atualizar se necessário
+        if (accessForm.email !== selectedEmployee.user_email) {
+          await base44.entities.Employee.update(selectedEmployee.id, {
+            user_email: accessForm.email
+          });
+          queryClient.invalidateQueries(['employees']);
+        }
+        if (!accessForm.newPassword) {
+          alert('Acesso atualizado com sucesso!');
+        }
+      }
+      
+      setAccessDialogOpen(false);
+      setAccessForm({ email: "", password: "", role: "user", newPassword: "" });
+    } catch (error) {
+      alert('Erro: ' + error.message);
+    }
   };
 
   const resetForm = () => {
