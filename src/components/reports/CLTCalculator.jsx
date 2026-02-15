@@ -1,10 +1,10 @@
-import { parseISO, differenceInMinutes, getDay, getHours, getWeek, getYear } from "date-fns";
+import { parseISO, differenceInMinutes, getDay, getHours, getWeek, getYear, getISOWeek } from "date-fns";
 
 /**
- * Calcula horas CLT conforme legislação brasileira
- * CLT Art. 58, 59, 67, 71 | Lei 605/49 | CF Art. 7º XVI
+ * CÁLCULO CLT COMPLETO CONFORME LEGISLAÇÃO BRASILEIRA
+ * CLT Art. 58, 59, 67, 71, 73 | Lei 605/49 | CF Art. 7º XIII, XVI
  */
-export function calculateCLTHours(timeRecords, shift, holidays = []) {
+export function calculateCLTHours(timeRecords, shift, holidays = [], monthlySalary = 0) {
   const recordsByDay = {};
   
   timeRecords.forEach(record => {
@@ -19,7 +19,7 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
   const shiftEndTime = shift?.end_time || '17:00';
   const breakMinutes = shift?.break_minutes || 60;
   const toleranceMinutes = shift?.tolerance_minutes || 5;
-  const dailyWorkMinutes = shift ? calculateShiftMinutes(shiftStartTime, shiftEndTime, breakMinutes) : 480;
+  const dailyWorkMinutes = shift ? calculateShiftMinutes(shiftStartTime, shiftEndTime, breakMinutes) : 480; // 8h
   
   const workDaysMap = {
     'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4,
@@ -27,7 +27,7 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
   };
   const shiftWorkDays = shift?.work_days?.map(d => workDaysMap[d]) || [1, 2, 3, 4, 5];
 
-  // Totalizadores
+  // Totalizadores (todos em minutos para evitar arredondamento)
   let totalWorkedMinutes = 0;
   let totalDelayMinutes = 0;
   let overtime50Minutes = 0;
@@ -36,15 +36,17 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
   let sundayHolidayMinutes = 0;
   let absenceMinutes = 0;
   let dsrReflexMinutes = 0;
+  let intervalPenaltyMinutes = 0;
+  let weeklyOvertimeMinutes = 0;
 
-  // Agrupar por semana para calcular DSR
+  // Agrupar por semana (ISO Week)
   const weekData = {};
   const dailyData = [];
 
   Object.entries(recordsByDay).forEach(([date, records]) => {
     const dateObj = new Date(date + 'T12:00:00');
     const dayOfWeek = getDay(dateObj);
-    const weekKey = `${getYear(dateObj)}-W${getWeek(dateObj)}`;
+    const weekKey = `${getYear(dateObj)}-W${String(getISOWeek(dateObj)).padStart(2, '0')}`;
     const isSunday = dayOfWeek === 0;
     const isHoliday = holidays.includes(date);
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -54,8 +56,10 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
       weekData[weekKey] = {
         heMinutes: 0,
         workDaysCount: 0,
+        workedDays: 0,
         sundaysCount: 0,
-        hasFault: false
+        hasFault: false,
+        totalWorkedMinutes: 0
       };
     }
 
@@ -76,7 +80,7 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
     let dayNight = 0;
     let intervalPenalty = 0;
 
-    // CÁLCULO DE HORAS TRABALHADAS
+    // ============ CÁLCULO DE HORAS TRABALHADAS ============
     if (entrada && pausa && retorno && saida) {
       const entradaTime = parseISO(entrada.timestamp);
       const pausaTime = parseISO(pausa.timestamp);
@@ -89,9 +93,10 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
       
       dayWorkedMinutes = Math.max(0, morning) + Math.max(0, afternoon);
 
-      // CLT Art. 71 §4º: Se trabalhou mais de 6h e intervalo < 1h, gerar 1h extra
+      // CLT Art. 71 §4º: Se trabalhou > 6h e intervalo < 1h, pagar 1h inteira como HE 50%
       if (dayWorkedMinutes > 360 && intervalMin < 60) {
         intervalPenalty = 60;
+        intervalPenaltyMinutes += 60;
         dayOT50 += 60;
       }
 
@@ -105,11 +110,13 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
         dayDelayMinutes = delayRaw;
       }
 
-      // Adicional noturno (22h às 5h)
+      // Adicional noturno (22h às 5h) - CLT Art. 73
       sortedRecords.forEach(record => {
-        const hour = getHours(parseISO(record.timestamp));
+        const recordTime = parseISO(record.timestamp);
+        const hour = getHours(recordTime);
         if (hour >= 22 || hour < 5) {
-          dayNight += 60;
+          // Hora noturna reduzida: 52min30s = 1h noturna
+          dayNight += 52.5; // minutos
         }
       });
 
@@ -119,10 +126,10 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
       
       let worked = differenceInMinutes(saidaTime, entradaTime);
       
-      // CLT Art. 71: Se > 6h, deduzir intervalo
+      // CLT Art. 71: Se > 6h sem pausa, gerar penalidade de 1h HE 50%
       if (worked > 360) {
-        // Se trabalhou mais de 6h sem pausa registrada, gerar penalidade
         intervalPenalty = 60;
+        intervalPenaltyMinutes += 60;
         dayOT50 += 60;
         worked -= breakMinutes;
       } else if (worked > 240) {
@@ -132,9 +139,9 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
       dayWorkedMinutes = Math.max(0, worked);
     }
 
-    // HORA EXTRA E FALTAS
+    // ============ HORA EXTRA E FALTAS ============
     if (isSunday || isHoliday) {
-      // Domingo/feriado = 100% adicional (CF Art. 7º XVI)
+      // Domingo/feriado = 100% adicional (CF Art. 7º XVI + Lei 605/49)
       if (dayWorkedMinutes > 0) {
         dayOT100 += dayWorkedMinutes;
         sundayHolidayMinutes += dayWorkedMinutes;
@@ -148,25 +155,28 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
       weekData[weekKey].workDaysCount++;
       
       if (dayWorkedMinutes === 0) {
-        // FALTA INJUSTIFICADA
+        // FALTA INJUSTIFICADA - CLT Art. 58
         dayAbsence = dailyWorkMinutes;
-        weekData[weekKey].hasFault = true;
+        weekData[weekKey].hasFault = true; // Perde DSR da semana (Lei 605/49)
       } else if (dayWorkedMinutes < dailyWorkMinutes) {
         // FALTA PARCIAL
         dayAbsence = dailyWorkMinutes - dayWorkedMinutes;
       } else if (dayWorkedMinutes > dailyWorkMinutes) {
-        // HORA EXTRA DIÁRIA (50% nas primeiras 2h, 100% após)
-        const extra = dayWorkedMinutes - dailyWorkMinutes;
+        // HORA EXTRA DIÁRIA (CLT Art. 59: max 2h/dia)
+        const extra = Math.min(dayWorkedMinutes - dailyWorkMinutes, 120); // Limitar a 2h
         
+        // HE 50% nas primeiras 2h (CF Art. 7º XVI)
         if (extra <= 120) {
           dayOT50 += extra;
-        } else {
-          dayOT50 += 120;
-          dayOT100 += (extra - 120);
         }
         
         weekData[weekKey].heMinutes += extra;
       }
+      
+      if (dayWorkedMinutes > 0) {
+        weekData[weekKey].workedDays++;
+      }
+      weekData[weekKey].totalWorkedMinutes += dayWorkedMinutes;
     }
 
     // Totalizar
@@ -190,16 +200,29 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
     });
   });
 
-  // CALCULAR DSR (reflexo de HE sobre domingo/feriado) - Lei 605/49
+  // ============ CÁLCULO SEMANAL DE HE (CLT Art. 7º XIII: 44h/semana) ============
   Object.values(weekData).forEach(week => {
-    if (!week.hasFault && week.workDaysCount > 0 && week.sundaysCount > 0 && week.heMinutes > 0) {
+    const weeklyLimit = 44 * 60; // 44h em minutos
+    if (week.totalWorkedMinutes > weeklyLimit) {
+      const weeklyExtra = week.totalWorkedMinutes - weeklyLimit;
+      // Se HE semanal > HE diária, usar a mais benéfica ao trabalhador
+      if (weeklyExtra > week.heMinutes) {
+        weeklyOvertimeMinutes += (weeklyExtra - week.heMinutes);
+        overtime50Minutes += (weeklyExtra - week.heMinutes);
+      }
+    }
+  });
+
+  // ============ CALCULAR DSR (reflexo de HE sobre domingo/feriado) - Lei 605/49 ============
+  Object.values(weekData).forEach(week => {
+    if (!week.hasFault && week.workedDays > 0 && week.sundaysCount > 0 && week.heMinutes > 0) {
       // DSR = (HE da semana ÷ dias úteis trabalhados) × domingos/feriados
-      const dsrWeek = Math.round((week.heMinutes / week.workDaysCount) * week.sundaysCount);
+      const dsrWeek = Math.round((week.heMinutes / week.workedDays) * week.sundaysCount);
       dsrReflexMinutes += dsrWeek;
     }
   });
 
-  // JORNADA PREVISTA (todos os dias úteis do período)
+  // ============ JORNADA PREVISTA (todos os dias úteis do período) ============
   const allDates = Object.keys(recordsByDay).map(d => new Date(d + 'T12:00:00'));
   let expectedTotalMinutes = 0;
   
@@ -219,12 +242,21 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
     }
   }
 
+  // ============ CÁLCULO DE VALORES (CLT: valorHora = salárioMensal ÷ 220) ============
+  const hourlyRate = monthlySalary > 0 ? monthlySalary / 220 : 0;
+  const he50Value = (overtime50Minutes / 60) * hourlyRate * 1.5;
+  const he100Value = (overtime100Minutes / 60) * hourlyRate * 2.0;
+  const nightValue = (nightMinutes / 60) * hourlyRate * 0.2; // 20% adicional noturno
+  const dsrValue = (dsrReflexMinutes / 60) * hourlyRate * 1.5; // DSR sobre HE = HE 50%
+  const sundayValue = (sundayHolidayMinutes / 60) * hourlyRate * 2.0;
+
   const daysWorked = Object.keys(recordsByDay).length;
   const averageDailyMinutes = daysWorked > 0 ? totalWorkedMinutes / daysWorked : 0;
-  const maxDailyMinutes = 600;
+  const maxDailyMinutes = 600; // 10h (CLT Art. 59: 2h extras + 8h normais)
   const exceedsMaxJourney = averageDailyMinutes > maxDailyMinutes;
 
   return {
+    // Minutos
     totalWorkedMinutes,
     totalDelayMinutes,
     overtime50Minutes,
@@ -235,7 +267,10 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
     expectedMinutes: expectedTotalMinutes,
     averageDailyMinutes,
     dsrReflexMinutes,
+    intervalPenaltyMinutes,
+    weeklyOvertimeMinutes,
     
+    // Formatado
     totalWorkedHours: formatMinutesToHours(totalWorkedMinutes),
     totalDelayHours: formatMinutesToHours(totalDelayMinutes),
     overtime50Hours: formatMinutesToHours(overtime50Minutes),
@@ -246,13 +281,25 @@ export function calculateCLTHours(timeRecords, shift, holidays = []) {
     expectedHours: formatMinutesToHours(expectedTotalMinutes),
     averageDailyHours: formatMinutesToHours(averageDailyMinutes),
     dsrReflexHours: formatMinutesToHours(dsrReflexMinutes),
+    intervalPenaltyHours: formatMinutesToHours(intervalPenaltyMinutes),
     
+    // Valores monetários
+    he50Value,
+    he100Value,
+    nightValue,
+    dsrValue,
+    sundayValue,
+    totalAdditionalsValue: he50Value + he100Value + nightValue + dsrValue + sundayValue,
+    
+    // Outros
     dsrDays: Math.round(dsrReflexMinutes / 480),
     dsrHours: Math.round(dsrReflexMinutes / 60),
     daysWorked,
     maxDailyMinutes,
     exceedsMaxJourney,
+    hourlyRate,
     
+    // Dados diários
     dailyData,
   };
 }
@@ -270,7 +317,8 @@ function calculateShiftMinutes(startTime, endTime, breakMinutes) {
 function formatMinutesToHours(minutes) {
   const hours = Math.floor(Math.abs(minutes) / 60);
   const mins = Math.abs(minutes) % 60;
-  return `${hours}h ${mins.toString().padStart(2, '0')}min`;
+  const sign = minutes < 0 ? '-' : '';
+  return `${sign}${hours}h ${mins.toString().padStart(2, '0')}min`;
 }
 
 export function formatCurrency(value) {

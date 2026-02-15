@@ -148,15 +148,9 @@ export default function Reports() {
     // Buscar escala do funcionário
     const employeeShift = shifts.find(s => s.id === employee.shift_id);
 
-    // Calcular horas CLT
-    const cltCalc = calculateCLTHours(monthRecords, employeeShift, []);
-    
-    // Valor base por hora (exemplo, ajustar conforme salário real)
-    const hourlyRate = 20; // R$ 20/hora base
-    const he50Value = (cltCalc.overtime50Minutes / 60) * hourlyRate * 1.5;
-    const he100Value = (cltCalc.overtime100Minutes / 60) * hourlyRate * 2;
-    const nightValue = (cltCalc.nightMinutes / 60) * hourlyRate * 0.2; // 20% adicional
-    const sundayValue = (cltCalc.sundayHolidayMinutes / 60) * hourlyRate * 2;
+    // Calcular horas CLT com salário mensal (se disponível)
+    const monthlySalary = 2000; // Ajustar conforme salário real do funcionário
+    const cltCalc = calculateCLTHours(monthRecords, employeeShift, [], monthlySalary);
 
     const reportHTML = `
 <!DOCTYPE html>
@@ -595,11 +589,11 @@ export default function Reports() {
   </table>
 
   <div class="clt-summary">
-    <h4>CÁLCULOS CLT - CONSOLIDADO MENSAL</h4>
-    <div class="clt-grid">
+    <h4>CÁLCULOS CLT - CONSOLIDADO MENSAL (Art. 58, 59, 67, 71, 73 CLT | Lei 605/49)</h4>
+    <div class="clt-grid" style="grid-template-columns: repeat(5, 1fr);">
       <div class="clt-item">
         <div class="clt-value">${cltCalc.expectedHours}</div>
-        <div class="clt-label">Jornada Prevista</div>
+        <div class="clt-label">Jornada Prevista<br/>(8h/dia, 44h/sem)</div>
       </div>
       <div class="clt-item">
         <div class="clt-value">${cltCalc.totalWorkedHours}</div>
@@ -607,27 +601,35 @@ export default function Reports() {
       </div>
       <div class="clt-item">
         <div class="clt-value" style="color: ${cltCalc.overtime50Minutes > 0 ? '#d97706' : '#666'}">${cltCalc.overtime50Hours}</div>
-        <div class="clt-label">HE 50%</div>
+        <div class="clt-label">HE 50% (dias úteis)<br/>${formatCurrency(cltCalc.he50Value)}</div>
       </div>
       <div class="clt-item">
         <div class="clt-value" style="color: ${cltCalc.overtime100Minutes > 0 ? '#dc2626' : '#666'}">${cltCalc.overtime100Hours}</div>
-        <div class="clt-label">HE 100%</div>
+        <div class="clt-label">HE 100% (dom/fer)<br/>${formatCurrency(cltCalc.he100Value)}</div>
+      </div>
+      <div class="clt-item">
+        <div class="clt-value" style="color: #059669">${cltCalc.dsrReflexHours}</div>
+        <div class="clt-label">Reflexo DSR (605/49)<br/>${formatCurrency(cltCalc.dsrValue)}</div>
+      </div>
+      <div class="clt-item">
+        <div class="clt-value">${cltCalc.nightHours}</div>
+        <div class="clt-label">Adicional Noturno<br/>(22h-5h) ${formatCurrency(cltCalc.nightValue)}</div>
       </div>
       <div class="clt-item">
         <div class="clt-value">${cltCalc.totalDelayHours}</div>
         <div class="clt-label">Total Atrasos</div>
       </div>
       <div class="clt-item">
-        <div class="clt-value">${cltCalc.absenceHours}</div>
-        <div class="clt-label">Faltas</div>
+        <div class="clt-value" style="color: ${cltCalc.absenceMinutes > 0 ? '#dc2626' : '#666'}">${cltCalc.absenceHours}</div>
+        <div class="clt-label">Faltas/Ausências</div>
       </div>
       <div class="clt-item">
-        <div class="clt-value">${cltCalc.sundayHolidayHours}</div>
-        <div class="clt-label">Feriado/Domingo</div>
+        <div class="clt-value">${cltCalc.intervalPenaltyHours}</div>
+        <div class="clt-label">Intervalo Suprimido<br/>(Art. 71 §4º)</div>
       </div>
       <div class="clt-item">
-        <div class="clt-value">${cltCalc.dsrReflexHours}</div>
-        <div class="clt-label">Reflexo DSR</div>
+        <div class="clt-value" style="color: #2563eb; font-size: 13pt;">${formatCurrency(cltCalc.totalAdditionalsValue)}</div>
+        <div class="clt-label"><strong>TOTAL ADICIONAIS</strong></div>
       </div>
     </div>
   </div>
@@ -655,18 +657,22 @@ export default function Reports() {
         </div>
       </div>
       <div class="totals-box">
-        <h4>Adicionais</h4>
+        <h4>Adicionais e Valores</h4>
         <div class="total-line">
-          <span>Reflexo DSR sobre HE:</span>
-          <strong>${cltCalc.dsrReflexHours}</strong>
+          <span>Reflexo DSR (Lei 605/49):</span>
+          <strong>${cltCalc.dsrReflexHours} (${formatCurrency(cltCalc.dsrValue)})</strong>
         </div>
         <div class="total-line">
-          <span>Adicional Noturno:</span>
-          <strong>${cltCalc.nightHours}</strong>
+          <span>Adicional Noturno (Art. 73):</span>
+          <strong>${cltCalc.nightHours} (${formatCurrency(cltCalc.nightValue)})</strong>
         </div>
         <div class="total-line">
-          <span>Feriado/Domingo:</span>
-          <strong>${cltCalc.sundayHolidayHours}</strong>
+          <span>Intervalo Suprimido (Art. 71):</span>
+          <strong>${cltCalc.intervalPenaltyHours}</strong>
+        </div>
+        <div class="total-line">
+          <span>Feriado/Domingo Trab.:</span>
+          <strong>${cltCalc.sundayHolidayHours} (${formatCurrency(cltCalc.sundayValue)})</strong>
         </div>
         <div class="total-line">
           <span>Atrasos:</span>
@@ -675,6 +681,10 @@ export default function Reports() {
         <div class="total-line">
           <span>Faltas/Ausências:</span>
           <strong>${cltCalc.absenceHours}</strong>
+        </div>
+        <div class="total-line" style="border-top: 2px solid #000; padding-top: 6px; margin-top: 6px;">
+          <span><strong>TOTAL ADICIONAIS:</strong></span>
+          <strong style="color: #059669; font-size: 11pt;">${formatCurrency(cltCalc.totalAdditionalsValue)}</strong>
         </div>
       </div>
     </div>

@@ -62,6 +62,7 @@ import ManageTasks from './pages/ManageTasks';
 import ManageTimeRecords from './pages/ManageTimeRecords';
 import ManageTimeRecordsSimple from './pages/ManageTimeRecordsSimple';
 import ManageVacations from './pages/ManageVacations';
+import MoodReport from './pages/MoodReport';
 import MyPayslips from './pages/MyPayslips';
 import MyTasks from './pages/MyTasks';
 import MyTimeRecords from './pages/MyTimeRecords';
@@ -77,7 +78,6 @@ import TasksDashboard from './pages/TasksDashboard';
 import Teams from './pages/Teams';
 import TimeRecords from './pages/TimeRecords';
 import UsersManagement from './pages/UsersManagement';
-import MoodReport from './pages/MoodReport';
 import __Layout from './Layout.jsx';
 
 
@@ -97,6 +97,7 @@ export const PAGES = {
     "ManageTimeRecords": ManageTimeRecords,
     "ManageTimeRecordsSimple": ManageTimeRecordsSimple,
     "ManageVacations": ManageVacations,
+    "MoodReport": MoodReport,
     "MyPayslips": MyPayslips,
     "MyTasks": MyTasks,
     "MyTimeRecords": MyTimeRecords,
@@ -112,7 +113,6 @@ export const PAGES = {
     "Teams": Teams,
     "TimeRecords": TimeRecords,
     "UsersManagement": UsersManagement,
-    "MoodReport": MoodReport,
 }
 
 export const pagesConfig = {
