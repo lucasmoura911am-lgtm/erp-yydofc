@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Edit, Trash2, User, Key, Mail, Shield, UserPlus, Upload } from "lucide-react";
+import { Plus, Search, Edit, Trash2, User, Key, Mail, Shield, UserPlus, Upload, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -31,6 +31,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import EmployeeForm from "../components/employees/EmployeeForm";
+import DocumentsManager from "../components/employees/DocumentsManager";
 
 export default function Employees() {
   const [user, setUser] = useState(null);
@@ -48,16 +50,70 @@ export default function Employees() {
     newPassword: ""
   });
   const [formData, setFormData] = useState({
-    cpf: "",
     full_name: "",
+    employee_number: "",
+    category: "",
+    race: "",
+    gender: "",
+    marital_status: "",
+    nationality_country: "Brasil",
+    birth_place: "",
+    birth_date: "",
+    education_level: "",
     phone: "",
-    hire_date: "",
+    home_phone: "",
+    has_disability: false,
+    disability_type: "",
+    father_name: "",
+    mother_name: "",
+    cpf: "",
+    rg: "",
+    rg_issue_date: "",
+    rg_issuer: "",
+    rg_issuer_state: "",
+    ctps_number: "",
+    ctps_series: "",
+    ctps_state: "",
+    ctps_issue_date: "",
+    voter_registration: "",
+    voter_zone: "",
+    voter_section: "",
+    military_document: "",
+    cnh: "",
+    professional_registration: "",
+    address_street: "",
+    address_number: "",
+    address_complement: "",
+    address_neighborhood: "",
+    address_city: "",
+    address_state: "",
+    address_zipcode: "",
+    pis_number: "",
+    pis_registration_date: "",
+    bank_name: "",
+    bank_branch: "",
+    bank_account: "",
     position_id: "",
+    job_function: "",
+    cbo: "",
+    hire_date: "",
+    salary: 0,
+    salary_type: "mensal",
+    work_schedule: "",
+    break_schedule: "",
+    fgts_option_date: "",
+    fgts_account: "",
+    fgts_rectification_date: "",
+    union_contribution: "",
+    termination_type: "",
+    termination_date: "",
+    notice_date: "",
+    projection_date: "",
+    observations: "",
     department_id: "",
     shift_id: "",
     team_id: "",
     supervisor_email: "",
-    employee_number: "",
     status: "active",
     user_email: ""
   });
@@ -253,16 +309,70 @@ export default function Employees() {
 
   const resetForm = () => {
     setFormData({
-      cpf: "",
       full_name: "",
+      employee_number: "",
+      category: "",
+      race: "",
+      gender: "",
+      marital_status: "",
+      nationality_country: "Brasil",
+      birth_place: "",
+      birth_date: "",
+      education_level: "",
       phone: "",
-      hire_date: "",
+      home_phone: "",
+      has_disability: false,
+      disability_type: "",
+      father_name: "",
+      mother_name: "",
+      cpf: "",
+      rg: "",
+      rg_issue_date: "",
+      rg_issuer: "",
+      rg_issuer_state: "",
+      ctps_number: "",
+      ctps_series: "",
+      ctps_state: "",
+      ctps_issue_date: "",
+      voter_registration: "",
+      voter_zone: "",
+      voter_section: "",
+      military_document: "",
+      cnh: "",
+      professional_registration: "",
+      address_street: "",
+      address_number: "",
+      address_complement: "",
+      address_neighborhood: "",
+      address_city: "",
+      address_state: "",
+      address_zipcode: "",
+      pis_number: "",
+      pis_registration_date: "",
+      bank_name: "",
+      bank_branch: "",
+      bank_account: "",
       position_id: "",
+      job_function: "",
+      cbo: "",
+      hire_date: "",
+      salary: 0,
+      salary_type: "mensal",
+      work_schedule: "",
+      break_schedule: "",
+      fgts_option_date: "",
+      fgts_account: "",
+      fgts_rectification_date: "",
+      union_contribution: "",
+      termination_type: "",
+      termination_date: "",
+      notice_date: "",
+      projection_date: "",
+      observations: "",
       department_id: "",
       shift_id: "",
       team_id: "",
       supervisor_email: "",
-      employee_number: "",
       status: "active",
       user_email: ""
     });
@@ -287,16 +397,70 @@ export default function Employees() {
   const handleEdit = (employee) => {
     setEditingEmployee(employee);
     setFormData({
-      cpf: employee.cpf || "",
       full_name: employee.full_name || "",
+      employee_number: employee.employee_number || "",
+      category: employee.category || "",
+      race: employee.race || "",
+      gender: employee.gender || "",
+      marital_status: employee.marital_status || "",
+      nationality_country: employee.nationality_country || "Brasil",
+      birth_place: employee.birth_place || "",
+      birth_date: employee.birth_date || "",
+      education_level: employee.education_level || "",
       phone: employee.phone || "",
-      hire_date: employee.hire_date || "",
+      home_phone: employee.home_phone || "",
+      has_disability: employee.has_disability || false,
+      disability_type: employee.disability_type || "",
+      father_name: employee.father_name || "",
+      mother_name: employee.mother_name || "",
+      cpf: employee.cpf || "",
+      rg: employee.rg || "",
+      rg_issue_date: employee.rg_issue_date || "",
+      rg_issuer: employee.rg_issuer || "",
+      rg_issuer_state: employee.rg_issuer_state || "",
+      ctps_number: employee.ctps_number || "",
+      ctps_series: employee.ctps_series || "",
+      ctps_state: employee.ctps_state || "",
+      ctps_issue_date: employee.ctps_issue_date || "",
+      voter_registration: employee.voter_registration || "",
+      voter_zone: employee.voter_zone || "",
+      voter_section: employee.voter_section || "",
+      military_document: employee.military_document || "",
+      cnh: employee.cnh || "",
+      professional_registration: employee.professional_registration || "",
+      address_street: employee.address_street || "",
+      address_number: employee.address_number || "",
+      address_complement: employee.address_complement || "",
+      address_neighborhood: employee.address_neighborhood || "",
+      address_city: employee.address_city || "",
+      address_state: employee.address_state || "",
+      address_zipcode: employee.address_zipcode || "",
+      pis_number: employee.pis_number || "",
+      pis_registration_date: employee.pis_registration_date || "",
+      bank_name: employee.bank_name || "",
+      bank_branch: employee.bank_branch || "",
+      bank_account: employee.bank_account || "",
       position_id: employee.position_id || "",
+      job_function: employee.job_function || "",
+      cbo: employee.cbo || "",
+      hire_date: employee.hire_date || "",
+      salary: employee.salary || 0,
+      salary_type: employee.salary_type || "mensal",
+      work_schedule: employee.work_schedule || "",
+      break_schedule: employee.break_schedule || "",
+      fgts_option_date: employee.fgts_option_date || "",
+      fgts_account: employee.fgts_account || "",
+      fgts_rectification_date: employee.fgts_rectification_date || "",
+      union_contribution: employee.union_contribution || "",
+      termination_type: employee.termination_type || "",
+      termination_date: employee.termination_date || "",
+      notice_date: employee.notice_date || "",
+      projection_date: employee.projection_date || "",
+      observations: employee.observations || "",
       department_id: employee.department_id || "",
       shift_id: employee.shift_id || "",
       team_id: employee.team_id || "",
       supervisor_email: employee.supervisor_email || "",
-      employee_number: employee.employee_number || "",
       status: employee.status || "active",
       user_email: employee.user_email || ""
     });
@@ -483,172 +647,35 @@ export default function Employees() {
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-xl">
               {editingEmployee ? "Editar Funcionário" : "Novo Funcionário"}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nome Completo *</Label>
-                <Input
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>CPF *</Label>
-                <Input
-                  value={formData.cpf}
-                  onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email do Usuário</Label>
-                <Input
-                  type="email"
-                  value={formData.user_email}
-                  onChange={(e) => setFormData({ ...formData, user_email: e.target.value })}
-                  placeholder="email@exemplo.com"
-                />
-                <p className="text-xs text-gray-500">
-                  Email usado para fazer login no sistema
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label>Telefone</Label>
-                <Input
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Matrícula</Label>
-                <Input
-                  value={formData.employee_number}
-                  onChange={(e) => setFormData({ ...formData, employee_number: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Data de Contratação</Label>
-                <Input
-                  type="date"
-                  value={formData.hire_date}
-                  onChange={(e) => setFormData({ ...formData, hire_date: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Cargo</Label>
-                <Select
-                  value={formData.position_id}
-                  onValueChange={(value) => setFormData({ ...formData, position_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {positions.map((pos) => (
-                      <SelectItem key={pos.id} value={pos.id}>
-                        {pos.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Setor</Label>
-                <Select
-                  value={formData.department_id}
-                  onValueChange={(value) => setFormData({ ...formData, department_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Escala de Trabalho</Label>
-                <Select
-                  value={formData.shift_id}
-                  onValueChange={(value) => setFormData({ ...formData, shift_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {shifts.map((shift) => (
-                      <SelectItem key={shift.id} value={shift.id}>
-                        {shift.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Time/Equipe</Label>
-                <Select
-                  value={formData.team_id}
-                  onValueChange={(value) => setFormData({ ...formData, team_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Supervisor</Label>
-                <Select
-                  value={formData.supervisor_email}
-                  onValueChange={(value) => setFormData({ ...formData, supervisor_email: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {supervisors.map((sup) => (
-                      <SelectItem key={sup.email} value={sup.email}>
-                        {sup.full_name} ({sup.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="inactive">Inativo</SelectItem>
-                    <SelectItem value="on_leave">Afastado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto px-1">
+              <EmployeeForm 
+                formData={formData} 
+                setFormData={setFormData}
+                positions={positions}
+                departments={departments}
+                shifts={shifts}
+                teams={teams}
+                supervisors={supervisors}
+              />
             </div>
-            <DialogFooter>
+            
+            {editingEmployee && (
+              <div className="mt-4 pt-4 border-t">
+                <DocumentsManager 
+                  employeeId={editingEmployee.id} 
+                  companyId={user?.company_id}
+                />
+              </div>
+            )}
+            
+            <DialogFooter className="mt-4 pt-4 border-t">
               <Button
                 type="button"
                 variant="outline"
@@ -660,7 +687,7 @@ export default function Employees() {
                 type="submit"
                 className="bg-gradient-to-r from-purple-600 to-blue-600"
               >
-                {editingEmployee ? "Salvar" : "Criar"}
+                {editingEmployee ? "Salvar Alterações" : "Cadastrar Funcionário"}
               </Button>
             </DialogFooter>
           </form>
