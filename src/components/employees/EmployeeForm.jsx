@@ -1,14 +1,32 @@
 import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, FileText, Home, Briefcase, DollarSign, Calendar } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { User, FileText, Home, Briefcase, DollarSign, Calendar, Camera, Loader2 } from "lucide-react";
 
 export default function EmployeeForm({ formData, setFormData, positions, departments, shifts, teams, supervisors }) {
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const brazilianStates = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPhoto(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setFormData({ ...formData, photo_url: file_url });
+    } catch (error) {
+      alert('Erro ao enviar foto: ' + error.message);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   return (
     <Tabs defaultValue="personal" className="w-full">
@@ -23,6 +41,45 @@ export default function EmployeeForm({ formData, setFormData, positions, departm
 
       {/* Dados Pessoais */}
       <TabsContent value="personal" className="space-y-4 max-h-96 overflow-y-auto p-4">
+        {/* Photo Upload Section */}
+        <div className="flex items-center gap-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+          <div className="relative">
+            <Avatar className="w-24 h-24 ring-2 ring-gray-200 dark:ring-gray-700">
+              <AvatarImage src={formData.photo_url} />
+              <AvatarFallback className="bg-gradient-to-br from-purple-600 to-blue-600 text-white text-2xl">
+                {formData.full_name?.charAt(0) || "?"}
+              </AvatarFallback>
+            </Avatar>
+            <label
+              htmlFor="photo-upload"
+              className="absolute bottom-0 right-0 bg-white dark:bg-gray-800 rounded-full p-2 shadow-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 transition-colors"
+            >
+              {uploadingPhoto ? (
+                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              ) : (
+                <Camera className="w-4 h-4 text-blue-600" />
+              )}
+            </label>
+            <input
+              id="photo-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoUpload}
+              disabled={uploadingPhoto}
+            />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Foto do Funcionário</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Clique no ícone da câmera para fazer upload da foto
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Formatos aceitos: JPG, PNG (máx. 5MB)
+            </p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>Nome Completo *</Label>

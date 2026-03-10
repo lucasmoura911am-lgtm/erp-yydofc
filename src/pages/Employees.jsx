@@ -115,7 +115,8 @@ export default function Employees() {
     team_id: "",
     supervisor_email: "",
     status: "active",
-    user_email: ""
+    user_email: "",
+    photo_url: ""
   });
 
   const queryClient = useQueryClient();
@@ -374,7 +375,8 @@ export default function Employees() {
       team_id: "",
       supervisor_email: "",
       status: "active",
-      user_email: ""
+      user_email: "",
+      photo_url: ""
     });
     setEditingEmployee(null);
   };
@@ -462,7 +464,8 @@ export default function Employees() {
       team_id: employee.team_id || "",
       supervisor_email: employee.supervisor_email || "",
       status: employee.status || "active",
-      user_email: employee.user_email || ""
+      user_email: employee.user_email || "",
+      photo_url: employee.photo_url || ""
     });
     setDialogOpen(true);
   };
