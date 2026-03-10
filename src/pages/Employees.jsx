@@ -647,27 +647,25 @@ export default function Employees() {
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl">
               {editingEmployee ? "Editar Funcionário" : "Novo Funcionário"}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto px-1">
-              <EmployeeForm 
-                formData={formData} 
-                setFormData={setFormData}
-                positions={positions}
-                departments={departments}
-                shifts={shifts}
-                teams={teams}
-                supervisors={supervisors}
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <EmployeeForm 
+              formData={formData} 
+              setFormData={setFormData}
+              positions={positions}
+              departments={departments}
+              shifts={shifts}
+              teams={teams}
+              supervisors={supervisors}
+            />
             
             {editingEmployee && (
-              <div className="mt-4 pt-4 border-t">
+              <div className="pt-6 border-t">
                 <DocumentsManager 
                   employeeId={editingEmployee.id} 
                   companyId={user?.company_id}
@@ -675,7 +673,7 @@ export default function Employees() {
               </div>
             )}
             
-            <DialogFooter className="mt-4 pt-4 border-t">
+            <DialogFooter className="pt-6 border-t sticky bottom-0 bg-white dark:bg-gray-950 pb-2">
               <Button
                 type="button"
                 variant="outline"

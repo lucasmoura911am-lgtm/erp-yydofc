@@ -168,8 +168,8 @@ export default function DocumentsManager({ employeeId, companyId }) {
         </div>
       </CardContent>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+        <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Adicionar Documento</DialogTitle>
           </DialogHeader>
@@ -199,8 +199,8 @@ export default function DocumentsManager({ employeeId, companyId }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleFileUpload} disabled={uploading} className="bg-gradient-to-r from-purple-600 to-blue-600">
+            <Button variant="outline" onClick={() => setDialogOpen(false)} type="button">Cancelar</Button>
+            <Button onClick={handleFileUpload} disabled={uploading} className="bg-gradient-to-r from-purple-600 to-blue-600" type="button">
               {uploading ? 'Enviando...' : 'Salvar'}
             </Button>
           </DialogFooter>
