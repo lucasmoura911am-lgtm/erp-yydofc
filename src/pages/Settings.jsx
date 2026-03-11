@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export default function Settings() {
   const [user, setUser] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     cnpj: "",
@@ -18,7 +19,8 @@ export default function Settings() {
     work_start_time: "08:00",
     work_end_time: "17:00",
     tolerance_minutes: 15,
-    break_minutes: 60
+    break_minutes: 60,
+    logo_url: ""
   });
 
   const queryClient = useQueryClient();
@@ -48,7 +50,8 @@ export default function Settings() {
         work_start_time: company.work_start_time || "08:00",
         work_end_time: company.work_end_time || "17:00",
         tolerance_minutes: company.tolerance_minutes || 15,
-        break_minutes: company.break_minutes || 60
+        break_minutes: company.break_minutes || 60,
+        logo_url: company.logo_url || ""
       });
     }
   }, [companies]);
@@ -61,6 +64,22 @@ export default function Settings() {
       setTimeout(() => setSuccess(false), 3000);
     },
   });
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setFormData({ ...formData, logo_url: file_url });
+    } catch (error) {
+      console.error("Erro ao fazer upload:", error);
+      alert("Erro ao fazer upload do logo");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -118,6 +137,28 @@ export default function Settings() {
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Logo da Empresa</Label>
+              <div className="flex items-center gap-4">
+                {formData.logo_url && (
+                  <img 
+                    src={formData.logo_url} 
+                    alt="Logo da empresa" 
+                    className="w-24 h-24 object-contain border rounded-lg"
+                  />
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  disabled={uploading}
+                />
+              </div>
+              {uploading && (
+                <p className="text-xs text-gray-500">Fazendo upload...</p>
+              )}
             </div>
 
             <div className="pt-4 border-t">

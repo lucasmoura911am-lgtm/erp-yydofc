@@ -186,10 +186,21 @@ export default function Reports() {
       color: #000;
     }
     .page-header {
-      text-align: center;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
       margin-bottom: 15px;
       border-bottom: 2px solid #000;
       padding-bottom: 10px;
+    }
+    .page-header .header-logo {
+      max-width: 120px;
+      max-height: 50px;
+      object-fit: contain;
+    }
+    .page-header .header-center {
+      flex: 1;
+      text-align: center;
     }
     .page-header h1 {
       font-size: 14pt;
@@ -226,6 +237,18 @@ export default function Reports() {
       padding: 10px;
       margin-bottom: 10px;
       background: #fff;
+      display: flex;
+      gap: 15px;
+    }
+    .employee-photo {
+      max-width: 80px;
+      max-height: 100px;
+      object-fit: cover;
+      border: 1px solid #666;
+      border-radius: 4px;
+    }
+    .employee-info {
+      flex: 1;
     }
     .employee-section h3 {
       font-size: 10pt;
@@ -377,11 +400,15 @@ export default function Reports() {
 </head>
 <body>
   <div class="page-header">
-    <h1>RELATÓRIO DE CARTÃO PONTO INDIVIDUAL</h1>
-    <div class="period-info">
-      Período de ${format(monthStart, "dd/MM/yyyy")} à ${format(monthEnd, "dd/MM/yyyy")} - 
-      Data Emissão: ${format(new Date(), "dd/MM/yyyy")} - Pág.: 1
+    ${company?.logo_url ? `<img src="${company.logo_url}" alt="Logo" class="header-logo" />` : '<div style="width: 120px;"></div>'}
+    <div class="header-center">
+      <h1>RELATÓRIO DE CARTÃO PONTO INDIVIDUAL</h1>
+      <div class="period-info">
+        Período de ${format(monthStart, "dd/MM/yyyy")} à ${format(monthEnd, "dd/MM/yyyy")} - 
+        Data Emissão: ${format(new Date(), "dd/MM/yyyy")} - Pág.: 1
+      </div>
     </div>
+    <div style="width: 120px;"></div>
   </div>
 
   <div class="company-section">
@@ -403,11 +430,13 @@ export default function Reports() {
   </div>
 
   <div class="employee-section">
-    <h3>DADOS DO FUNCIONÁRIO</h3>
-    <div class="info-row">
-      <strong>Nome:</strong>
-      <span>${employee.full_name}</span>
-    </div>
+    ${employee.photo_url ? `<img src="${employee.photo_url}" alt="Foto" class="employee-photo" />` : ''}
+    <div class="employee-info">
+      <h3>DADOS DO FUNCIONÁRIO</h3>
+      <div class="info-row">
+        <strong>Nome:</strong>
+        <span>${employee.full_name}</span>
+      </div>
     <div class="info-row">
       <strong>CPF:</strong>
       <span>${employee.cpf || 'N/A'}</span>
@@ -436,6 +465,7 @@ export default function Reports() {
     <div class="info-row">
       <strong>Função:</strong>
       <span>${employee.job_function || (positions.find(p => p.id === employee.position_id)?.name) || 'N/A'}</span>
+    </div>
     </div>
   </div>
 
@@ -916,10 +946,21 @@ export default function Reports() {
       color: #000;
     }
     .page-header {
-      text-align: center;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
       margin-bottom: 15px;
       border-bottom: 2px solid #000;
       padding-bottom: 10px;
+    }
+    .page-header .header-logo {
+      max-width: 120px;
+      max-height: 50px;
+      object-fit: contain;
+    }
+    .page-header .header-center {
+      flex: 1;
+      text-align: center;
     }
     .page-header h1 {
       font-size: 16pt;
@@ -1034,11 +1075,15 @@ export default function Reports() {
 </head>
 <body>
   <div class="page-header">
-    <h1>RELATÓRIO GERENCIAL MENSAL</h1>
-    <div class="period-info">
-      Período: ${format(monthStart, "dd/MM/yyyy")} à ${format(monthEnd, "dd/MM/yyyy")} - 
-      Data Emissão: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} - Pág.: 1
+    ${company?.logo_url ? `<img src="${company.logo_url}" alt="Logo" class="header-logo" />` : '<div style="width: 120px;"></div>'}
+    <div class="header-center">
+      <h1>RELATÓRIO GERENCIAL MENSAL</h1>
+      <div class="period-info">
+        Período: ${format(monthStart, "dd/MM/yyyy")} à ${format(monthEnd, "dd/MM/yyyy")} - 
+        Data Emissão: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} - Pág.: 1
+      </div>
     </div>
+    <div style="width: 120px;"></div>
   </div>
 
   <div class="company-section">
