@@ -58,6 +58,18 @@ export default function Reports() {
     enabled: !!user?.company_id,
   });
 
+  const { data: departments = [] } = useQuery({
+    queryKey: ['departments', user?.company_id],
+    queryFn: () => user?.company_id ? base44.entities.Department.filter({ company_id: user.company_id }) : [],
+    enabled: !!user?.company_id,
+  });
+
+  const { data: positions = [] } = useQuery({
+    queryKey: ['positions', user?.company_id],
+    queryFn: () => user?.company_id ? base44.entities.Position.filter({ company_id: user.company_id }) : [],
+    enabled: !!user?.company_id,
+  });
+
   const getMoodEmoji = (mood) => {
     const moods = {
       muito_feliz: "😄",
