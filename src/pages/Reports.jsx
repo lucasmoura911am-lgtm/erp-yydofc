@@ -20,6 +20,7 @@ export default function Reports() {
   const [user, setUser] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [managerReportMonth, setManagerReportMonth] = useState(format(new Date(), 'yyyy-MM'));
 
   useEffect(() => {
     loadUser();
@@ -759,6 +760,141 @@ export default function Reports() {
     printWindow.document.close();
   };
 
+  const generateManagerReport = () => {
+    if (!managerReportMonth) {
+      alert('Selecione um mês');
+      return;
+    }
+
+    const [year, month] = managerReportMonth.split('-');
+    const monthStart = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+    const monthEnd = endOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+
+    // Filtrar registros do mês
+    const monthRecords = timeRecords.filter(record => {
+      const recordDate = parseISO(record.timestamp);
+      return recordDate >= monthStart && recordDate <= monthEnd;
+    });
+
+    // Calcular dados para cada funcionário
+    const employeeStats = employees.map(employee => {
+      const empRecords = monthRecords.filter(r => r.employee_id === employee.id);
+      
+      // Verificar data de contratação
+      const hireDate = employee.hire_date ? new Date(employee.hire_date + 'T00:00:00') : null;
+      
+      // Agrupar por dia
+      const dayRecords = {};
+      empRecords.forEach(record => {
+        const recordDate = parseISO(record.timestamp);
+        const isAfterHire = !hireDate || recordDate >= hireDate;
+        if (!isAfterHire) return;
+        
+        const day = format(recordDate, 'yyyy-MM-dd');
+        if (!dayRecords[day]) dayRecords[day] = [];
+        dayRecords[day].push(record);
+      });
+
+      // Calcular horas trabalhadas, extras e déficit
+      let totalWorkedMinutes = 0;
+      let totalOvertimeMinutes = 0;
+      let totalDeficitMinutes = 0;
+      let daysWorked = 0;
+
+      Object.keys(dayRecords).forEach(day => {
+        const records = dayRecords[day].sort((a, b) => 
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+
+        const entrada1 = records.find(r => r.type === 'entrada');
+        const saida1 = records.find(r => r.type === 'pausa');
+        const entrada2 = records.find(r => r.type === 'retorno');
+        const saida2 = records.find(r => r.type === 'saida');
+
+        if (entrada1 && saida1 && entrada2 && saida2) {
+          daysWorked++;
+          const toMinutes = (timestamp) => {
+            const d = new Date(timestamp);
+            return d.getHours() * 60 + d.getMinutes();
+          };
+          
+          const morning = toMinutes(saida1.timestamp) - toMinutes(entrada1.timestamp);
+          const afternoon = toMinutes(saida2.timestamp) - toMinutes(entrada2.timestamp);
+          const workedMin = Math.max(0, morning) + Math.max(0, afternoon);
+          
+          totalWorkedMinutes += workedMin;
+          
+          const expectedMin = 480; // 8h padrão
+          const diff = workedMin - expectedMin;
+          if (diff > 0) {
+            totalOvertimeMinutes += diff;
+          } else if (diff < 0) {
+            totalDeficitMinutes += Math.abs(diff);
+          }
+        } else if (entrada1 && saida2) {
+          daysWorked++;
+          const totalMin = (new Date(saida2.timestamp) - new Date(entrada1.timestamp)) / 60000;
+          const breakTime = 60;
+          const workedMin = totalMin > 240 ? Math.max(0, totalMin - breakTime) : totalMin;
+          totalWorkedMinutes += workedMin;
+          
+          const expectedMin = 480;
+          const diff = workedMin - expectedMin;
+          if (diff > 0) {
+            totalOvertimeMinutes += diff;
+          } else if (diff < 0) {
+            totalDeficitMinutes += Math.abs(diff);
+          }
+        }
+      });
+
+      // Calcular faltas
+      const employeeShift = shifts.find(s => s.id === employee.shift_id);
+      const workDaysMap = {
+        'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4,
+        'friday': 5, 'saturday': 6, 'sunday': 0
+      };
+      const shiftWorkDays = employeeShift?.work_days?.map(d => workDaysMap[d]) || [1, 2, 3, 4, 5];
+      
+      let expectedWorkDays = 0;
+      const currentDay = new Date(monthStart);
+      while (currentDay <= monthEnd) {
+        const isAfterHire = !hireDate || currentDay >= hireDate;
+        const dayOfWeek = currentDay.getDay();
+        const isWorkDay = shiftWorkDays.includes(dayOfWeek);
+        
+        if (isWorkDay && isAfterHire) {
+          expectedWorkDays++;
+        }
+        
+        currentDay.setDate(currentDay.getDate() + 1);
+      }
+
+      const absences = expectedWorkDays - daysWorked;
+
+      return {
+        name: employee.full_name,
+        workedHours: `${Math.floor(totalWorkedMinutes / 60)}:${(totalWorkedMinutes % 60).toString().padStart(2, '0')}`,
+        overtimeHours: `${Math.floor(totalOvertimeMinutes / 60)}:${(totalOvertimeMinutes % 60).toString().padStart(2, '0')}`,
+        deficitHours: `${Math.floor(totalDeficitMinutes / 60)}:${(totalDeficitMinutes % 60).toString().padStart(2, '0')}`,
+        daysWorked,
+        absences: Math.max(0, absences)
+      };
+    });
+
+    // Gerar CSV
+    let csv = 'Nome do Funcionário,Horas Trabalhadas,Horas Extras,Horas Déficit,Dias Trabalhados,Faltas\n';
+    employeeStats.forEach(stat => {
+      csv += `${stat.name},${stat.workedHours},${stat.overtimeHours},${stat.deficitHours},${stat.daysWorked},${stat.absences}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `relatorio_gerencial_${managerReportMonth}.csv`;
+    link.click();
+  };
+
   if (!user) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -780,6 +916,58 @@ export default function Reports() {
           </p>
         </div>
       </div>
+
+      {/* Relatório Gerencial Mensal */}
+      <Card className="shadow-xl border-2 border-green-200 dark:border-green-800">
+        <CardHeader>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 bg-gradient-to-br from-green-600 to-teal-600 rounded-lg">
+              <FileText className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Relatório Gerencial Mensal</CardTitle>
+              <CardDescription>Consolidado de todos os funcionários por mês</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Gera um relatório CSV com horas trabalhadas, extras, déficit, dias trabalhados e faltas de todos os funcionários no mês selecionado.
+          </p>
+
+          <div className="space-y-2">
+            <Label>Mês de Referência</Label>
+            <Select value={managerReportMonth} onValueChange={setManagerReportMonth}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 12 }, (_, i) => {
+                  const date = new Date();
+                  date.setMonth(date.getMonth() - i);
+                  const value = format(date, 'yyyy-MM');
+                  const label = format(date, "MMMM 'de' yyyy", { locale: ptBR });
+                  return (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button 
+            onClick={generateManagerReport}
+            disabled={!managerReportMonth}
+            className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700"
+            size="lg"
+          >
+            <Download className="w-5 h-5 mr-2" />
+            Gerar Relatório Gerencial
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Relatório Completo */}
