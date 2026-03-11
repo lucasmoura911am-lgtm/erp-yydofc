@@ -374,7 +374,7 @@ export default function Reports() {
   <div class="company-section">
     <h3>DADOS DA EMPRESA</h3>
     <div class="info-row">
-      <strong>Empresa:</strong>
+      <strong>Nome Empresa:</strong>
       <span>${company?.name || 'N/A'}</span>
     </div>
     <div class="info-row">
@@ -390,22 +390,39 @@ export default function Reports() {
   </div>
 
   <div class="employee-section">
-    <h3>FUNCIONÁRIO</h3>
+    <h3>DADOS DO FUNCIONÁRIO</h3>
     <div class="info-row">
       <strong>Nome:</strong>
       <span>${employee.full_name}</span>
+    </div>
+    <div class="info-row">
+      <strong>CPF:</strong>
+      <span>${employee.cpf || 'N/A'}</span>
+    </div>
+    <div class="info-row">
+      <strong>PIS:</strong>
+      <span>${employee.pis_number || 'N/A'}</span>
     </div>
     <div class="info-row">
       <strong>Matrícula:</strong>
       <span>${employee.employee_number || 'N/A'}</span>
     </div>
     <div class="info-row">
-      <strong>CPF:</strong>
-      <span>${employee.cpf}</span>
-    </div>
-    <div class="info-row">
       <strong>Data Admissão:</strong>
       <span>${employee.hire_date ? format(new Date(employee.hire_date), 'dd/MM/yyyy') : 'N/A'}</span>
+    </div>
+    ${(() => {
+      const dept = departments.find(d => d.id === employee.department_id);
+      return dept ? `
+      <div class="info-row">
+        <strong>Departamento:</strong>
+        <span>${dept.name}</span>
+      </div>
+      ` : '';
+    })()}
+    <div class="info-row">
+      <strong>Função:</strong>
+      <span>${employee.job_function || (positions.find(p => p.id === employee.position_id)?.name) || 'N/A'}</span>
     </div>
   </div>
 
@@ -601,19 +618,19 @@ export default function Reports() {
       </div>
       <div class="clt-item">
         <div class="clt-value" style="color: ${cltCalc.overtime50Minutes > 0 ? '#d97706' : '#666'}">${cltCalc.overtime50Hours}</div>
-        <div class="clt-label">HE 50% (dias úteis)<br/>${formatCurrency(cltCalc.he50Value)}</div>
+        <div class="clt-label">HE 50% (dias úteis)</div>
       </div>
       <div class="clt-item">
         <div class="clt-value" style="color: ${cltCalc.overtime100Minutes > 0 ? '#dc2626' : '#666'}">${cltCalc.overtime100Hours}</div>
-        <div class="clt-label">HE 100% (dom/fer)<br/>${formatCurrency(cltCalc.he100Value)}</div>
+        <div class="clt-label">HE 100% (dom/fer)</div>
       </div>
       <div class="clt-item">
         <div class="clt-value" style="color: #059669">${cltCalc.dsrReflexHours}</div>
-        <div class="clt-label">Reflexo DSR (605/49)<br/>${formatCurrency(cltCalc.dsrValue)}</div>
+        <div class="clt-label">Reflexo DSR (605/49)</div>
       </div>
       <div class="clt-item">
         <div class="clt-value">${cltCalc.nightHours}</div>
-        <div class="clt-label">Adicional Noturno<br/>(22h-5h) ${formatCurrency(cltCalc.nightValue)}</div>
+        <div class="clt-label">Adicional Noturno (22h-5h)</div>
       </div>
       <div class="clt-item">
         <div class="clt-value">${cltCalc.totalDelayHours}</div>
@@ -628,8 +645,8 @@ export default function Reports() {
         <div class="clt-label">Intervalo Suprimido<br/>(Art. 71 §4º)</div>
       </div>
       <div class="clt-item">
-        <div class="clt-value" style="color: #2563eb; font-size: 13pt;">${formatCurrency(cltCalc.totalAdditionalsValue)}</div>
-        <div class="clt-label"><strong>TOTAL ADICIONAIS</strong></div>
+        <div class="clt-value" style="color: #2563eb; font-size: 13pt;">${cltCalc.totalWorkedHours}</div>
+        <div class="clt-label"><strong>TOTAL EFETIVO</strong></div>
       </div>
     </div>
   </div>
@@ -660,11 +677,11 @@ export default function Reports() {
         <h4>Adicionais e Valores</h4>
         <div class="total-line">
           <span>Reflexo DSR (Lei 605/49):</span>
-          <strong>${cltCalc.dsrReflexHours} (${formatCurrency(cltCalc.dsrValue)})</strong>
+          <strong>${cltCalc.dsrReflexHours}</strong>
         </div>
         <div class="total-line">
           <span>Adicional Noturno (Art. 73):</span>
-          <strong>${cltCalc.nightHours} (${formatCurrency(cltCalc.nightValue)})</strong>
+          <strong>${cltCalc.nightHours}</strong>
         </div>
         <div class="total-line">
           <span>Intervalo Suprimido (Art. 71):</span>
@@ -672,19 +689,15 @@ export default function Reports() {
         </div>
         <div class="total-line">
           <span>Feriado/Domingo Trab.:</span>
-          <strong>${cltCalc.sundayHolidayHours} (${formatCurrency(cltCalc.sundayValue)})</strong>
+          <strong>${cltCalc.sundayHolidayHours}</strong>
         </div>
         <div class="total-line">
           <span>Atrasos:</span>
           <strong>${cltCalc.totalDelayHours}</strong>
         </div>
         <div class="total-line">
-          <span>Faltas/Ausências:</span>
+          <span>Faltas/Ausências:</strong>
           <strong>${cltCalc.absenceHours}</strong>
-        </div>
-        <div class="total-line" style="border-top: 2px solid #000; padding-top: 6px; margin-top: 6px;">
-          <span><strong>TOTAL ADICIONAIS:</strong></span>
-          <strong style="color: #059669; font-size: 11pt;">${formatCurrency(cltCalc.totalAdditionalsValue)}</strong>
         </div>
       </div>
     </div>
