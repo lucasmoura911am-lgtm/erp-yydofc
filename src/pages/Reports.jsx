@@ -878,21 +878,262 @@ export default function Reports() {
         overtimeHours: `${Math.floor(totalOvertimeMinutes / 60)}:${(totalOvertimeMinutes % 60).toString().padStart(2, '0')}`,
         deficitHours: `${Math.floor(totalDeficitMinutes / 60)}:${(totalDeficitMinutes % 60).toString().padStart(2, '0')}`,
         daysWorked,
-        absences: Math.max(0, absences)
+        absences: Math.max(0, absences),
+        totalWorkedMinutes,
+        totalOvertimeMinutes,
+        totalDeficitMinutes
       };
     });
 
-    // Gerar CSV
-    let csv = 'Nome do Funcionário,Horas Trabalhadas,Horas Extras,Horas Déficit,Dias Trabalhados,Faltas\n';
-    employeeStats.forEach(stat => {
-      csv += `${stat.name},${stat.workedHours},${stat.overtimeHours},${stat.deficitHours},${stat.daysWorked},${stat.absences}\n`;
-    });
+    // Calcular totais gerais
+    const totals = employeeStats.reduce((acc, stat) => ({
+      totalWorked: acc.totalWorked + stat.totalWorkedMinutes,
+      totalOvertime: acc.totalOvertime + stat.totalOvertimeMinutes,
+      totalDeficit: acc.totalDeficit + stat.totalDeficitMinutes,
+      totalDaysWorked: acc.totalDaysWorked + stat.daysWorked,
+      totalAbsences: acc.totalAbsences + stat.absences
+    }), { totalWorked: 0, totalOvertime: 0, totalDeficit: 0, totalDaysWorked: 0, totalAbsences: 0 });
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `relatorio_gerencial_${managerReportMonth}.csv`;
-    link.click();
+    // Gerar HTML para PDF
+    const reportHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório Gerencial Mensal - ${format(monthStart, "MMMM 'de' yyyy", { locale: ptBR })}</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+      padding: 20px;
+      max-width: 100%;
+      margin: 0 auto;
+      color: #000;
+    }
+    .page-header {
+      text-align: center;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 10px;
+    }
+    .page-header h1 {
+      font-size: 16pt;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .period-info {
+      font-size: 10pt;
+      margin-bottom: 3px;
+    }
+    .company-section {
+      border: 1px solid #000;
+      padding: 10px;
+      margin-bottom: 15px;
+      background: #f9f9f9;
+    }
+    .company-section h3 {
+      font-size: 11pt;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #666;
+      padding-bottom: 4px;
+    }
+    .info-row {
+      display: flex;
+      margin-bottom: 4px;
+      font-size: 9pt;
+    }
+    .info-row strong {
+      min-width: 100px;
+      font-weight: bold;
+    }
+    table.report-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+      font-size: 9pt;
+    }
+    table.report-table th {
+      background-color: #333;
+      color: white;
+      padding: 8px 6px;
+      text-align: center;
+      border: 1px solid #000;
+      font-weight: bold;
+      font-size: 9pt;
+    }
+    table.report-table td {
+      padding: 6px;
+      text-align: center;
+      border: 1px solid #666;
+    }
+    table.report-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    table.report-table .name-col {
+      text-align: left;
+      padding-left: 8px;
+      font-weight: 500;
+    }
+    table.report-table .hours-cell {
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+    }
+    table.report-table .total-row {
+      background-color: #e8f5e9 !important;
+      font-weight: bold;
+      font-size: 10pt;
+    }
+    table.report-table .total-row td {
+      border-top: 2px solid #000;
+    }
+    .summary-section {
+      border: 2px solid #000;
+      padding: 15px;
+      margin-bottom: 15px;
+      background: #e3f2fd;
+    }
+    .summary-section h3 {
+      font-size: 12pt;
+      margin-bottom: 10px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .summary-box {
+      text-align: center;
+      padding: 10px;
+      background: white;
+      border: 1px solid #666;
+      border-radius: 4px;
+    }
+    .summary-value {
+      font-size: 14pt;
+      font-weight: bold;
+      color: #1976d2;
+      margin-bottom: 4px;
+    }
+    .summary-label {
+      font-size: 8pt;
+      color: #666;
+    }
+    @media print {
+      body { padding: 10px; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>RELATÓRIO GERENCIAL MENSAL</h1>
+    <div class="period-info">
+      Período: ${format(monthStart, "dd/MM/yyyy")} à ${format(monthEnd, "dd/MM/yyyy")} - 
+      Data Emissão: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} - Pág.: 1
+    </div>
+  </div>
+
+  <div class="company-section">
+    <h3>DADOS DA EMPRESA</h3>
+    <div class="info-row">
+      <strong>Nome Empresa:</strong>
+      <span>${company?.name || 'N/A'}</span>
+    </div>
+    <div class="info-row">
+      <strong>CNPJ:</strong>
+      <span>${company?.cnpj || 'N/A'}</span>
+    </div>
+    ${company?.address ? `
+    <div class="info-row">
+      <strong>Endereço:</strong>
+      <span>${company.address}</span>
+    </div>
+    ` : ''}
+  </div>
+
+  <div class="summary-section">
+    <h3>RESUMO CONSOLIDADO DO PERÍODO</h3>
+    <div class="summary-grid">
+      <div class="summary-box">
+        <div class="summary-value">${Math.floor(totals.totalWorked / 60)}:${(totals.totalWorked % 60).toString().padStart(2, '0')}</div>
+        <div class="summary-label">Horas Trabalhadas<br/>Total Geral</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-value" style="color: #2e7d32">${Math.floor(totals.totalOvertime / 60)}:${(totals.totalOvertime % 60).toString().padStart(2, '0')}</div>
+        <div class="summary-label">Horas Extras<br/>Total Geral</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-value" style="color: #d32f2f">${Math.floor(totals.totalDeficit / 60)}:${(totals.totalDeficit % 60).toString().padStart(2, '0')}</div>
+        <div class="summary-label">Horas Déficit<br/>Total Geral</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-value">${totals.totalDaysWorked}</div>
+        <div class="summary-label">Dias Trabalhados<br/>Total Geral</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-value" style="color: #d32f2f">${totals.totalAbsences}</div>
+        <div class="summary-label">Faltas<br/>Total Geral</div>
+      </div>
+    </div>
+  </div>
+
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th style="width: 30%">Nome do Funcionário</th>
+        <th style="width: 14%">Horas Trabalhadas</th>
+        <th style="width: 14%">Horas Extras</th>
+        <th style="width: 14%">Horas Déficit</th>
+        <th style="width: 14%">Dias Trabalhados</th>
+        <th style="width: 14%">Faltas</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${employeeStats.map(stat => `
+        <tr>
+          <td class="name-col">${stat.name}</td>
+          <td class="hours-cell">${stat.workedHours}</td>
+          <td class="hours-cell" style="color: ${stat.totalOvertimeMinutes > 0 ? '#2e7d32' : '#666'}">${stat.overtimeHours}</td>
+          <td class="hours-cell" style="color: ${stat.totalDeficitMinutes > 0 ? '#d32f2f' : '#666'}">${stat.deficitHours}</td>
+          <td>${stat.daysWorked}</td>
+          <td style="color: ${stat.absences > 0 ? '#d32f2f' : '#666'}">${stat.absences}</td>
+        </tr>
+      `).join('')}
+      <tr class="total-row">
+        <td class="name-col">TOTAIS GERAIS</td>
+        <td class="hours-cell">${Math.floor(totals.totalWorked / 60)}:${(totals.totalWorked % 60).toString().padStart(2, '0')}</td>
+        <td class="hours-cell" style="color: #2e7d32">${Math.floor(totals.totalOvertime / 60)}:${(totals.totalOvertime % 60).toString().padStart(2, '0')}</td>
+        <td class="hours-cell" style="color: #d32f2f">${Math.floor(totals.totalDeficit / 60)}:${(totals.totalDeficit % 60).toString().padStart(2, '0')}</td>
+        <td>${totals.totalDaysWorked}</td>
+        <td style="color: #d32f2f">${totals.totalAbsences}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top: 30px; text-align: center; font-size: 8pt; color: #666; border-top: 1px solid #ccc; padding-top: 10px;">
+    Documento gerado automaticamente pelo sistema PontoFlex em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+  </div>
+
+  <div class="no-print" style="position: fixed; bottom: 20px; right: 20px;">
+    <button onclick="window.print()" style="background: #6366f1; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+      🖨️ Imprimir / Salvar PDF
+    </button>
+  </div>
+</body>
+</html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(reportHTML);
+    printWindow.document.close();
   };
 
   if (!user) {
