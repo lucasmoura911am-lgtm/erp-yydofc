@@ -14,6 +14,7 @@ import MySignedTimeReports from './pages/MySignedTimeReports';
 import Clients from './pages/Clients';
 import Contracts from './pages/Contracts';
 import Allocations from './pages/Allocations';
+import AllocationReports from './pages/AllocationReports';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -88,6 +89,11 @@ const AuthenticatedApp = () => {
       <Route path="/Allocations" element={
         <LayoutWrapper currentPageName="Allocations">
           <Allocations />
+        </LayoutWrapper>
+      } />
+      <Route path="/AllocationReports" element={
+        <LayoutWrapper currentPageName="AllocationReports">
+          <AllocationReports />
         </LayoutWrapper>
       } />
       <Route path="*" element={<PageNotFound />} />

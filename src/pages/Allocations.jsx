@@ -21,6 +21,8 @@ export default function Allocations() {
   const [editingAllocation, setEditingAllocation] = useState(null);
   const [formData, setFormData] = useState({
     employee_id: "",
+    backup_employee_1_id: "",
+    backup_employee_2_id: "",
     client_id: "",
     contract_id: "",
     post_name: "",
@@ -105,6 +107,8 @@ export default function Allocations() {
   const resetForm = () => {
     setFormData({
       employee_id: "",
+      backup_employee_1_id: "",
+      backup_employee_2_id: "",
       client_id: "",
       contract_id: "",
       post_name: "",
@@ -124,6 +128,8 @@ export default function Allocations() {
     setEditingAllocation(allocation);
     setFormData({
       employee_id: allocation.employee_id,
+      backup_employee_1_id: allocation.backup_employee_1_id || "",
+      backup_employee_2_id: allocation.backup_employee_2_id || "",
       client_id: allocation.client_id,
       contract_id: allocation.contract_id || "",
       post_name: allocation.post_name,
@@ -204,7 +210,9 @@ export default function Allocations() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Funcionário</TableHead>
+                <TableHead>Titular</TableHead>
+                <TableHead>Cobertura 1</TableHead>
+                <TableHead>Cobertura 2</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Posto</TableHead>
                 <TableHead>Local</TableHead>
@@ -217,6 +225,12 @@ export default function Allocations() {
               {filteredAllocations.map((allocation) => (
                 <TableRow key={allocation.id}>
                   <TableCell className="font-medium">{getEmployeeName(allocation.employee_id)}</TableCell>
+                  <TableCell className="text-sm text-gray-600">
+                    {allocation.backup_employee_1_id ? getEmployeeName(allocation.backup_employee_1_id) : "-"}
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-600">
+                    {allocation.backup_employee_2_id ? getEmployeeName(allocation.backup_employee_2_id) : "-"}
+                  </TableCell>
                   <TableCell>{getClientName(allocation.client_id)}</TableCell>
                   <TableCell>{allocation.post_name}</TableCell>
                   <TableCell>{allocation.post_location || "-"}</TableCell>
@@ -260,33 +274,63 @@ export default function Allocations() {
             <DialogTitle>{editingAllocation ? "Editar Lotação" : "Nova Lotação"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label>Funcionário Titular *</Label>
+              <Select required value={formData.employee_id} onValueChange={(value) => setFormData({ ...formData, employee_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o funcionário titular" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Funcionário *</Label>
-                <Select required value={formData.employee_id} onValueChange={(value) => setFormData({ ...formData, employee_id: value })}>
+                <Label>Cobertura 1</Label>
+                <Select value={formData.backup_employee_1_id} onValueChange={(value) => setFormData({ ...formData, backup_employee_1_id: value })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o funcionário" />
+                    <SelectValue placeholder="Selecione cobertura 1" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees.map(emp => (
+                    <SelectItem value={null}>Nenhum</SelectItem>
+                    {employees.filter(e => e.id !== formData.employee_id).map(emp => (
                       <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Cliente *</Label>
-                <Select required value={formData.client_id} onValueChange={(value) => setFormData({ ...formData, client_id: value, contract_id: "" })}>
+                <Label>Cobertura 2</Label>
+                <Select value={formData.backup_employee_2_id} onValueChange={(value) => setFormData({ ...formData, backup_employee_2_id: value })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o cliente" />
+                    <SelectValue placeholder="Selecione cobertura 2" />
                   </SelectTrigger>
                   <SelectContent>
-                    {clients.map(client => (
-                      <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    <SelectItem value={null}>Nenhum</SelectItem>
+                    {employees.filter(e => e.id !== formData.employee_id && e.id !== formData.backup_employee_1_id).map(emp => (
+                      <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div>
+              <Label>Cliente *</Label>
+              <Select required value={formData.client_id} onValueChange={(value) => setFormData({ ...formData, client_id: value, contract_id: "" })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map(client => (
+                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

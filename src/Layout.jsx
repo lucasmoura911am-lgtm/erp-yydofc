@@ -152,6 +152,11 @@ const adminNavigation = [
     url: createPageUrl("Allocations"),
     icon: MapPin,
   },
+  {
+    title: "Relatório de Alocações",
+    url: createPageUrl("AllocationReports"),
+    icon: FileText,
+  },
 ];
 
 const superAdminNavigation = [
