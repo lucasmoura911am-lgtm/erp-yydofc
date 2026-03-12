@@ -176,15 +176,57 @@ export default function ManageSignedTimeReports() {
                 </div>
 
                 <div>
-                  <Label>Competência (MM/AAAA)</Label>
-                  <Input
-                    placeholder="Ex: 01/2024"
-                    value={formData.competence}
-                    onChange={(e) =>
-                      setFormData({ ...formData, competence: e.target.value })
-                    }
-                    pattern="^(0[1-9]|1[0-2])\/[0-9]{4}$"
-                  />
+                  <Label>Mês</Label>
+                  <Select
+                    value={formData.competence.split('/')[0] || ""}
+                    onValueChange={(month) => {
+                      const year = formData.competence.split('/')[1] || new Date().getFullYear();
+                      setFormData({ ...formData, competence: `${month}/${year}` });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o mês" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="01">Janeiro</SelectItem>
+                      <SelectItem value="02">Fevereiro</SelectItem>
+                      <SelectItem value="03">Março</SelectItem>
+                      <SelectItem value="04">Abril</SelectItem>
+                      <SelectItem value="05">Maio</SelectItem>
+                      <SelectItem value="06">Junho</SelectItem>
+                      <SelectItem value="07">Julho</SelectItem>
+                      <SelectItem value="08">Agosto</SelectItem>
+                      <SelectItem value="09">Setembro</SelectItem>
+                      <SelectItem value="10">Outubro</SelectItem>
+                      <SelectItem value="11">Novembro</SelectItem>
+                      <SelectItem value="12">Dezembro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Ano</Label>
+                  <Select
+                    value={formData.competence.split('/')[1] || ""}
+                    onValueChange={(year) => {
+                      const month = formData.competence.split('/')[0] || "01";
+                      setFormData({ ...formData, competence: `${month}/${year}` });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o ano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 5 }, (_, i) => {
+                        const year = new Date().getFullYear() - i;
+                        return (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
