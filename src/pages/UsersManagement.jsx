@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Mail, Key, UserPlus, Trash2 } from "lucide-react";
+import { Shield, Mail, Key, UserPlus, Trash2, Database } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -30,16 +30,36 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+
+const AVAILABLE_ENTITIES = [
+  { name: "Employee", label: "Funcionários" },
+  { name: "Company", label: "Empresas" },
+  { name: "Department", label: "Setores" },
+  { name: "Position", label: "Cargos" },
+  { name: "Shift", label: "Escalas" },
+  { name: "Team", label: "Times" },
+  { name: "TimeRecord", label: "Registros de Ponto" },
+  { name: "Task", label: "Tarefas" },
+  { name: "VacationRequest", label: "Solicitações de Férias" },
+  { name: "Payslip", label: "Holerites" },
+  { name: "SignedTimeReport", label: "Relatórios de Ponto Assinados" },
+  { name: "EmployeeDocument", label: "Documentos de Funcionários" },
+  { name: "HoursBank", label: "Banco de Horas" },
+  { name: "Announcement", label: "Avisos" }
+];
 
 export default function UsersManagement() {
   const [user, setUser] = useState(null);
   const [inviteDialog, setInviteDialog] = useState(false);
   const [changePasswordDialog, setChangePasswordDialog] = useState(false);
+  const [permissionsDialog, setPermissionsDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("user");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [selectedEntities, setSelectedEntities] = useState([]);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
@@ -60,15 +80,25 @@ export default function UsersManagement() {
     enabled: !!user?.company_id,
   });
 
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => base44.entities.User.list(),
+    enabled: !!user,
+  });
+
   const uniqueUsers = Array.from(
     new Map(
       employees
         .filter(emp => emp.user_email)
-        .map(emp => [emp.user_email, {
-          email: emp.user_email,
-          full_name: emp.full_name,
-          role: emp.user_email === user?.email ? user?.role : 'user'
-        }])
+        .map(emp => {
+          const userRecord = allUsers.find(u => u.email === emp.user_email);
+          return [emp.user_email, {
+            email: emp.user_email,
+            full_name: emp.full_name,
+            role: emp.user_email === user?.email ? user?.role : 'user',
+            allowed_entities: userRecord?.allowed_entities || []
+          }];
+        })
     ).values()
   );
 
@@ -122,6 +152,45 @@ export default function UsersManagement() {
     }
   };
 
+  const handleOpenPermissions = (usr) => {
+    setSelectedUser(usr);
+    setSelectedEntities(usr.allowed_entities || []);
+    setPermissionsDialog(true);
+  };
+
+  const handleSavePermissions = async () => {
+    try {
+      const userRecord = allUsers.find(u => u.email === selectedUser.email);
+      
+      if (userRecord) {
+        await base44.entities.User.update(userRecord.id, {
+          allowed_entities: selectedEntities
+        });
+      } else {
+        setError("Usuário não encontrado no sistema");
+        return;
+      }
+      
+      setSuccess("Permissões atualizadas com sucesso!");
+      setPermissionsDialog(false);
+      setSelectedUser(null);
+      setSelectedEntities([]);
+      queryClient.invalidateQueries(['users']);
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError("Erro ao salvar permissões: " + err.message);
+      setTimeout(() => setError(""), 5000);
+    }
+  };
+
+  const toggleEntity = (entityName) => {
+    setSelectedEntities(prev => 
+      prev.includes(entityName)
+        ? prev.filter(e => e !== entityName)
+        : [...prev, entityName]
+    );
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -166,6 +235,7 @@ export default function UsersManagement() {
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Função</TableHead>
+                <TableHead>Entidades Permitidas</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -184,18 +254,35 @@ export default function UsersManagement() {
                       {usr.role === 'admin' ? 'Administrador' : 'Usuário'}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-gray-600">
+                      {usr.allowed_entities?.length > 0 
+                        ? `${usr.allowed_entities.length} entidade(s)` 
+                        : 'Nenhuma restrição'}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedUser(usr);
-                        setChangePasswordDialog(true);
-                      }}
-                    >
-                      <Key className="w-4 h-4 mr-2" />
-                      Alterar Senha
-                    </Button>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenPermissions(usr)}
+                      >
+                        <Database className="w-4 h-4 mr-2" />
+                        Permissões
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser(usr);
+                          setChangePasswordDialog(true);
+                        }}
+                      >
+                        <Key className="w-4 h-4 mr-2" />
+                        Senha
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -285,6 +372,71 @@ export default function UsersManagement() {
             <Button onClick={handleChangePassword} className="bg-gradient-to-r from-purple-600 to-blue-600">
               <Key className="w-4 h-4 mr-2" />
               Alterar Senha
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Gerenciar Permissões de Entidades */}
+      <Dialog open={permissionsDialog} onOpenChange={setPermissionsDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Permissões de Entidades - {selectedUser?.full_name}</DialogTitle>
+            <p className="text-sm text-gray-500 mt-2">
+              Selecione quais entidades este usuário pode acessar. 
+              {selectedEntities.length === 0 && " Se nenhuma for selecionada, o usuário terá acesso a todas."}
+            </p>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <div className="flex items-center justify-between mb-4 pb-4 border-b">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedEntities(AVAILABLE_ENTITIES.map(e => e.name))}
+              >
+                Selecionar Todas
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedEntities([])}
+              >
+                Desmarcar Todas
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              {AVAILABLE_ENTITIES.map((entity) => (
+                <div
+                  key={entity.name}
+                  className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50"
+                >
+                  <Checkbox
+                    id={entity.name}
+                    checked={selectedEntities.includes(entity.name)}
+                    onCheckedChange={() => toggleEntity(entity.name)}
+                  />
+                  <label
+                    htmlFor={entity.name}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                  >
+                    {entity.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setPermissionsDialog(false);
+              setSelectedUser(null);
+              setSelectedEntities([]);
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSavePermissions} className="bg-gradient-to-r from-purple-600 to-blue-600">
+              <Database className="w-4 h-4 mr-2" />
+              Salvar Permissões
             </Button>
           </DialogFooter>
         </DialogContent>
