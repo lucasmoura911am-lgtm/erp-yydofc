@@ -58,7 +58,7 @@ export default function ManageSignedTimeReports() {
       if (!user?.company_id) return [];
       return await base44.entities.SignedTimeReport.filter({
         company_id: user.company_id,
-      }, "-created_date");
+      }, "-competence");
     },
     enabled: !!user?.company_id,
   });
@@ -74,6 +74,47 @@ export default function ManageSignedTimeReports() {
     },
     enabled: !!user?.company_id,
   });
+
+  // Gerar registros automáticos todo dia 1 do mês
+  React.useEffect(() => {
+    const generateMonthlyReports = async () => {
+      if (!user?.company_id || employees.length === 0) return;
+
+      const today = new Date();
+      const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
+      const currentYear = today.getFullYear();
+      const lastMonth = today.getMonth() === 0 ? 12 : today.getMonth();
+      const lastMonthYear = today.getMonth() === 0 ? currentYear - 1 : currentYear;
+      const competence = `${String(lastMonth).padStart(2, '0')}/${lastMonthYear}`;
+
+      // Verificar se já existem registros para esta competência
+      const existingReports = reports.filter(r => r.competence === competence);
+      const existingEmployeeIds = new Set(existingReports.map(r => r.employee_id));
+
+      // Criar registros para funcionários que ainda não têm
+      const newReports = employees
+        .filter(emp => !existingEmployeeIds.has(emp.id))
+        .map(emp => ({
+          employee_id: emp.id,
+          company_id: user.company_id,
+          competence,
+          file_url: "",
+          status: "pendente",
+          uploaded_by: user.email,
+        }));
+
+      if (newReports.length > 0) {
+        try {
+          await base44.entities.SignedTimeReport.bulkCreate(newReports);
+          queryClient.invalidateQueries(["signedTimeReports"]);
+        } catch (error) {
+          console.error("Erro ao gerar relatórios automáticos:", error);
+        }
+      }
+    };
+
+    generateMonthlyReports();
+  }, [user, employees, reports]);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.SignedTimeReport.delete(id),
@@ -104,23 +145,58 @@ export default function ManageSignedTimeReports() {
         file: formData.file,
       });
 
-      await base44.entities.SignedTimeReport.create({
-        employee_id: formData.employee_id,
-        company_id: user.company_id,
-        competence: formData.competence,
-        file_url,
-        status: "pendente",
-        uploaded_by: user.email,
-      });
+      // Verificar se já existe um registro para esse funcionário e competência
+      const existingReport = reports.find(
+        r => r.employee_id === formData.employee_id && r.competence === formData.competence
+      );
+
+      if (existingReport) {
+        // Atualizar o registro existente
+        await base44.entities.SignedTimeReport.update(existingReport.id, {
+          file_url,
+          status: "assinado",
+          signed_at: new Date().toISOString(),
+          uploaded_by: user.email,
+        });
+      } else {
+        // Criar novo registro
+        await base44.entities.SignedTimeReport.create({
+          employee_id: formData.employee_id,
+          company_id: user.company_id,
+          competence: formData.competence,
+          file_url,
+          status: "assinado",
+          signed_at: new Date().toISOString(),
+          uploaded_by: user.email,
+        });
+      }
 
       queryClient.invalidateQueries(["signedTimeReports"]);
-      toast.success("Relatório enviado com sucesso");
+      toast.success("Relatório assinado com sucesso");
       setOpen(false);
       setFormData({ employee_id: "", competence: "", file: null });
     } catch (error) {
       toast.error("Erro ao enviar relatório");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleUploadForReport = async (report, file) => {
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      
+      await base44.entities.SignedTimeReport.update(report.id, {
+        file_url,
+        status: "assinado",
+        signed_at: new Date().toISOString(),
+        uploaded_by: user.email,
+      });
+
+      queryClient.invalidateQueries(["signedTimeReports"]);
+      toast.success("Relatório assinado com sucesso");
+    } catch (error) {
+      toast.error("Erro ao fazer upload");
     }
   };
 
@@ -308,19 +384,38 @@ export default function ManageSignedTimeReports() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            asChild
-                          >
-                            <a
-                              href={report.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                          {report.status === "pendente" && !report.file_url ? (
+                            <div className="relative">
+                              <Input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                className="absolute inset-0 opacity-0 cursor-pointer w-24"
+                                onChange={(e) => {
+                                  const file = e.target.files[0];
+                                  if (file) handleUploadForReport(report, file);
+                                }}
+                              />
+                              <Button size="sm" className="pointer-events-none">
+                                <Upload className="w-4 h-4 mr-1" />
+                                Upload
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              asChild
+                              disabled={!report.file_url}
                             >
-                              <Eye className="w-4 h-4" />
-                            </a>
-                          </Button>
+                              <a
+                                href={report.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </a>
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
