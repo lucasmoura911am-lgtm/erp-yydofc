@@ -9,6 +9,8 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import ManageSignedTimeReports from './pages/ManageSignedTimeReports';
+import MySignedTimeReports from './pages/MySignedTimeReports';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -60,6 +62,16 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
+      <Route path="/ManageSignedTimeReports" element={
+        <LayoutWrapper currentPageName="ManageSignedTimeReports">
+          <ManageSignedTimeReports />
+        </LayoutWrapper>
+      } />
+      <Route path="/MySignedTimeReports" element={
+        <LayoutWrapper currentPageName="MySignedTimeReports">
+          <MySignedTimeReports />
+        </LayoutWrapper>
+      } />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
