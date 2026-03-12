@@ -127,6 +127,11 @@ const adminNavigation = [
     icon: FileText,
   },
   {
+    title: "Gestão de Ponto Assinada",
+    url: createPageUrl("ManageSignedTimeReports"),
+    icon: FileText,
+  },
+  {
     title: "Avisos",
     url: createPageUrl("Announcements"),
     icon: LayoutDashboard,
@@ -170,6 +175,11 @@ const employeeNavigation = [
   {
     title: "Meus Holerites",
     url: createPageUrl("MyPayslips"),
+    icon: FileText,
+  },
+  {
+    title: "Meus Relatórios de Ponto",
+    url: createPageUrl("MySignedTimeReports"),
     icon: FileText,
   },
 ];
