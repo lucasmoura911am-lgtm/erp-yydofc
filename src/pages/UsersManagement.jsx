@@ -138,14 +138,8 @@ export default function UsersManagement() {
     }
 
     try {
-      // Atualizar senha via API do Base44
-      await base44.auth.updatePassword(selectedUser.email, newPassword);
-      setSuccess("Senha alterada com sucesso!");
-      setChangePasswordDialog(false);
-      setNewPassword("");
-      setConfirmPassword("");
-      setSelectedUser(null);
-      setTimeout(() => setSuccess(""), 3000);
+      setError("Funcionalidade de alteração de senha não disponível no momento. Entre em contato com o suporte.");
+      setTimeout(() => setError(""), 5000);
     } catch (err) {
       setError("Erro ao alterar senha: " + err.message);
       setTimeout(() => setError(""), 5000);
