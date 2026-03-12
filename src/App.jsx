@@ -11,6 +11,9 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ManageSignedTimeReports from './pages/ManageSignedTimeReports';
 import MySignedTimeReports from './pages/MySignedTimeReports';
+import Clients from './pages/Clients';
+import Contracts from './pages/Contracts';
+import Allocations from './pages/Allocations';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -70,6 +73,21 @@ const AuthenticatedApp = () => {
       <Route path="/MySignedTimeReports" element={
         <LayoutWrapper currentPageName="MySignedTimeReports">
           <MySignedTimeReports />
+        </LayoutWrapper>
+      } />
+      <Route path="/Clients" element={
+        <LayoutWrapper currentPageName="Clients">
+          <Clients />
+        </LayoutWrapper>
+      } />
+      <Route path="/Contracts" element={
+        <LayoutWrapper currentPageName="Contracts">
+          <Contracts />
+        </LayoutWrapper>
+      } />
+      <Route path="/Allocations" element={
+        <LayoutWrapper currentPageName="Allocations">
+          <Allocations />
         </LayoutWrapper>
       } />
       <Route path="*" element={<PageNotFound />} />
