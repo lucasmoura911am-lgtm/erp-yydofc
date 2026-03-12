@@ -21,7 +21,8 @@ import {
   Building,
   Edit3,
   Shield,
-  ListTodo
+  ListTodo,
+  MapPin
 } from "lucide-react";
 import {
   Sidebar,
@@ -135,6 +136,21 @@ const adminNavigation = [
     title: "Avisos",
     url: createPageUrl("Announcements"),
     icon: LayoutDashboard,
+  },
+  {
+    title: "Clientes",
+    url: createPageUrl("Clients"),
+    icon: Building2,
+  },
+  {
+    title: "Contratos",
+    url: createPageUrl("Contracts"),
+    icon: FileText,
+  },
+  {
+    title: "Lotações",
+    url: createPageUrl("Allocations"),
+    icon: MapPin,
   },
 ];
 
