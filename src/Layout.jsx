@@ -138,6 +138,14 @@ export default function Layout({ children }) {
         ]
       },
       {
+        id: "benefits",
+        title: "Benefícios",
+        items: [
+          { title: "Configurar Benefícios", url: "/BenefitConfigs", icon: Settings },
+          { title: "Gestão de Benefícios", url: "/EmployeeBenefits", icon: DollarSign },
+        ]
+      },
+      {
         id: "clients",
         title: "Clientes e Contratos",
         items: [

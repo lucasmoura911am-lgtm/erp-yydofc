@@ -17,6 +17,8 @@ import Allocations from './pages/Allocations';
 import AllocationReports from './pages/AllocationReports';
 import MyAbsenceJustifications from './pages/MyAbsenceJustifications';
 import ManageAbsenceJustifications from './pages/ManageAbsenceJustifications';
+import BenefitConfigs from './pages/BenefitConfigs';
+import EmployeeBenefits from './pages/EmployeeBenefits';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -106,6 +108,16 @@ const AuthenticatedApp = () => {
       <Route path="/ManageAbsenceJustifications" element={
         <LayoutWrapper currentPageName="ManageAbsenceJustifications">
           <ManageAbsenceJustifications />
+        </LayoutWrapper>
+      } />
+      <Route path="/BenefitConfigs" element={
+        <LayoutWrapper currentPageName="BenefitConfigs">
+          <BenefitConfigs />
+        </LayoutWrapper>
+      } />
+      <Route path="/EmployeeBenefits" element={
+        <LayoutWrapper currentPageName="EmployeeBenefits">
+          <EmployeeBenefits />
         </LayoutWrapper>
       } />
       <Route path="*" element={<PageNotFound />} />
