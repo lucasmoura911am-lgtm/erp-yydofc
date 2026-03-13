@@ -432,7 +432,7 @@ export default function ClockIn() {
       });
 
       if (recordType === 'saida') {
-        await updateHoursBank(employee.id, employee.company_id, timestamp);
+        await updateHoursBank(employee.id, employee.company_id, serverTime);
       }
 
       setSuccess(true);
