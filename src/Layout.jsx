@@ -11,7 +11,7 @@ import {
   ChevronDown,
   ChevronRight
 } from "lucide-react";
-import { getNavigationForUser } from "@/components/NavigationConfig";
+import { getNavigationForUser } from "../components/NavigationConfig";
 import {
   Sidebar,
   SidebarContent,
