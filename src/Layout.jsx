@@ -3,27 +3,15 @@ import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import {
-  LayoutDashboard,
-  Clock,
-  Users,
-  Building2,
-  Briefcase,
-  Calendar,
-  Settings,
   LogOut,
   Menu,
   X,
   Moon,
   Sun,
-  Timer,
-  BarChart3,
-  FileText,
-  Building,
-  Edit3,
-  Shield,
-  ListTodo,
-  MapPin
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
+import { getNavigationForUser } from "@/lib/navigationConfig";
 import {
   Sidebar,
   SidebarContent,
@@ -40,170 +28,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-
-const adminNavigation = [
-  {
-    title: "Dashboard",
-    url: createPageUrl("Dashboard"),
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Dashboard Supervisor",
-    url: createPageUrl("SupervisorDashboard"),
-    icon: BarChart3,
-  },
-  {
-    title: "Banco de Horas",
-    url: createPageUrl("HoursBank"),
-    icon: Clock,
-  },
-  {
-    title: "Registros de Ponto",
-    url: createPageUrl("TimeRecords"),
-    icon: Clock,
-  },
-  {
-    title: "Gestão de Pontos",
-    url: createPageUrl("ManageTimeRecordsSimple"),
-    icon: Edit3,
-  },
-  {
-    title: "Funcionários",
-    url: createPageUrl("Employees"),
-    icon: Users,
-  },
-  {
-    title: "Times",
-    url: createPageUrl("Teams"),
-    icon: Users,
-  },
-  {
-    title: "Supervisores",
-    url: createPageUrl("Supervisors"),
-    icon: Shield,
-  },
-  {
-    title: "Setores",
-    url: createPageUrl("Departments"),
-    icon: Building2,
-  },
-  {
-    title: "Cargos",
-    url: createPageUrl("Positions"),
-    icon: Briefcase,
-  },
-  {
-    title: "Escalas",
-    url: createPageUrl("Shifts"),
-    icon: Calendar,
-  },
-  {
-    title: "Relatórios",
-    url: createPageUrl("Reports"),
-    icon: FileText,
-  },
-  {
-    title: "Relatório de Humor",
-    url: createPageUrl("MoodReport"),
-    icon: FileText,
-  },
-  {
-    title: "Plano de Trabalho",
-    url: createPageUrl("TasksDashboard"),
-    icon: ListTodo,
-  },
-  {
-    title: "Gestão de Tarefas",
-    url: createPageUrl("ManageTasks"),
-    icon: Edit3,
-  },
-  {
-    title: "Gestão de Férias",
-    url: createPageUrl("ManageVacations"),
-    icon: Calendar,
-  },
-  {
-    title: "Gestão de Holerites",
-    url: createPageUrl("ManagePayslips"),
-    icon: FileText,
-  },
-  {
-    title: "Gestão de Ponto Assinada",
-    url: createPageUrl("ManageSignedTimeReports"),
-    icon: FileText,
-  },
-  {
-    title: "Avisos",
-    url: createPageUrl("Announcements"),
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Clientes",
-    url: createPageUrl("Clients"),
-    icon: Building2,
-  },
-  {
-    title: "Contratos",
-    url: createPageUrl("Contracts"),
-    icon: FileText,
-  },
-  {
-    title: "Lotações",
-    url: createPageUrl("Allocations"),
-    icon: MapPin,
-  },
-  {
-    title: "Relatório de Alocações",
-    url: createPageUrl("AllocationReports"),
-    icon: FileText,
-  },
-];
-
-const superAdminNavigation = [
-  {
-    title: "Empresas",
-    url: createPageUrl("Companies"),
-    icon: Building,
-  },
-];
-
-const employeeNavigation = [
-  {
-    title: "Meu Dashboard",
-    url: createPageUrl("EmployeeDashboard"),
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Bater Ponto",
-    url: createPageUrl("ClockIn"),
-    icon: Timer,
-  },
-  {
-    title: "Meus Registros",
-    url: createPageUrl("MyTimeRecords"),
-    icon: BarChart3,
-  },
-  {
-    title: "Minhas Tarefas",
-    url: createPageUrl("MyTasks"),
-    icon: ListTodo,
-  },
-  {
-    title: "Minhas Férias",
-    url: createPageUrl("MyVacations"),
-    icon: Calendar,
-  },
-  {
-    title: "Meus Holerites",
-    url: createPageUrl("MyPayslips"),
-    icon: FileText,
-  },
-  {
-    title: "Meus Relatórios de Ponto",
-    url: createPageUrl("MySignedTimeReports"),
-    icon: FileText,
-  },
-];
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 export default function Layout({ children }) {
   const location = useLocation();
@@ -211,6 +40,7 @@ export default function Layout({ children }) {
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [company, setCompany] = useState(null);
+  const [expandedModules, setExpandedModules] = useState({});
 
   useEffect(() => {
     loadUser();
@@ -245,16 +75,16 @@ export default function Layout({ children }) {
   };
 
   const isAdmin = user?.role === 'admin';
-  const isSuperAdmin = user?.email === 'admin@pontoflex.com'; // Super admin global
+  const isSuperAdmin = user?.email === 'admin@pontoflex.com';
   
-  let navigation = [];
-  if (isSuperAdmin) {
-    navigation = [...superAdminNavigation, ...adminNavigation];
-  } else if (isAdmin) {
-    navigation = adminNavigation;
-  } else {
-    navigation = employeeNavigation;
-  }
+  const navigationModules = getNavigationForUser(isSuperAdmin, isAdmin);
+
+  const toggleModule = (moduleId) => {
+    setExpandedModules(prev => ({
+      ...prev,
+      [moduleId]: !prev[moduleId]
+    }));
+  };
 
   return (
     <div className={darkMode ? 'dark' : ''}>
@@ -316,63 +146,42 @@ export default function Layout({ children }) {
             </SidebarHeader>
             
             <SidebarContent className="p-4 overflow-y-auto">
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 py-2 mb-1">
-                  {isSuperAdmin ? 'Administração Global' : isAdmin ? 'Administração' : 'Menu'}
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {navigation.map((item) => {
+              {navigationModules.map((module) => (
+                <Collapsible
+                  key={module.id}
+                  open={expandedModules[module.id] !== false}
+                  onOpenChange={() => toggleModule(module.id)}
+                  className="mb-4"
+                >
+                  <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                    <span>{module.title}</span>
+                    {expandedModules[module.id] !== false ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 space-y-1">
+                    {module.items.map((item) => {
                       const isActive = location.pathname === item.url;
                       return (
-                        <SidebarMenuItem key={item.title}>
-                          <SidebarMenuButton 
-                            asChild 
-                            className={`mb-1 transition-all duration-200 ${
-                              isActive 
-                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700' 
-                                : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
-                            }`}
-                          >
-                            <Link to={item.url} className="flex items-center gap-3 px-3 py-2.5 rounded-lg">
-                              <item.icon className="w-5 h-5" />
-                              <span className="font-medium">{item.title}</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        <Link
+                          key={item.title}
+                          to={item.url}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                            isActive
+                              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          <item.icon className="w-5 h-5" />
+                          <span className="font-medium">{item.title}</span>
+                        </Link>
                       );
                     })}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-
-              {isAdmin && !isSuperAdmin && (
-                <SidebarGroup className="mt-6">
-                  <SidebarGroupLabel className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 py-2 mb-1">
-                    Configurações
-                  </SidebarGroupLabel>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild className="hover:bg-gray-100 dark:hover:bg-gray-800">
-                          <Link to={createPageUrl("Settings")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300">
-                            <Settings className="w-5 h-5" />
-                            <span className="font-medium">Configurações</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild className="hover:bg-gray-100 dark:hover:bg-gray-800">
-                          <Link to={createPageUrl("UsersManagement")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300">
-                            <Shield className="w-5 h-5" />
-                            <span className="font-medium">Usuários e Acessos</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              )}
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
             </SidebarContent>
 
             <SidebarFooter className="border-t border-gray-200 dark:border-gray-800 p-4">
@@ -453,35 +262,34 @@ export default function Layout({ children }) {
 
               {/* Mobile Menu */}
               {mobileMenuOpen && (
-                <div className="mt-4 pb-4 space-y-2">
-                  {navigation.map((item) => {
-                    const isActive = location.pathname === item.url;
-                    return (
-                      <Link
-                        key={item.title}
-                        to={item.url}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                          isActive
-                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                        }`}
-                      >
-                        <item.icon className="w-5 h-5" />
-                        <span className="font-medium">{item.title}</span>
-                      </Link>
-                    );
-                  })}
-                  {isAdmin && !isSuperAdmin && (
-                    <Link
-                      to={createPageUrl("Settings")}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
-                      <Settings className="w-5 h-5" />
-                      <span className="font-medium">Configurações</span>
-                    </Link>
-                  )}
+                <div className="mt-4 pb-4 space-y-4">
+                  {navigationModules.map((module) => (
+                    <div key={module.id}>
+                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 py-2">
+                        {module.title}
+                      </div>
+                      <div className="space-y-1">
+                        {module.items.map((item) => {
+                          const isActive = location.pathname === item.url;
+                          return (
+                            <Link
+                              key={item.title}
+                              to={item.url}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                                isActive
+                                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                              }`}
+                            >
+                              <item.icon className="w-5 h-5" />
+                              <span className="font-medium">{item.title}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </header>
