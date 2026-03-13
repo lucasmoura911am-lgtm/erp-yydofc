@@ -29,26 +29,16 @@ import {
   UserCog
 } from "lucide-react";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarProvider,
-} from "@/components/ui/sidebar";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 
 export default function Layout({ children }) {
   const location = useLocation();
@@ -56,7 +46,6 @@ export default function Layout({ children }) {
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [company, setCompany] = useState(null);
-  const [expandedModules, setExpandedModules] = useState({});
 
   useEffect(() => {
     loadUser();
@@ -227,228 +216,161 @@ export default function Layout({ children }) {
 
   const navigationModules = getNavigationModules();
 
-  const toggleModule = (moduleId) => {
-    setExpandedModules(prev => ({
-      ...prev,
-      [moduleId]: !prev[moduleId]
-    }));
-  };
-
   return (
     <div className={darkMode ? 'dark' : ''}>
-      <style>{`
-        :root {
-          --primary: 262 83% 58%;
-          --primary-foreground: 0 0% 100%;
-          --secondary: 220 14% 96%;
-          --secondary-foreground: 220 9% 46%;
-          --background: 0 0% 100%;
-          --foreground: 222 47% 11%;
-          --muted: 220 14% 96%;
-          --muted-foreground: 220 9% 46%;
-          --accent: 220 14% 96%;
-          --accent-foreground: 222 47% 11%;
-          --border: 220 13% 91%;
-          --card: 0 0% 100%;
-          --card-foreground: 222 47% 11%;
-        }
-        
-        .dark {
-          --primary: 262 83% 58%;
-          --primary-foreground: 0 0% 100%;
-          --secondary: 217 33% 17%;
-          --secondary-foreground: 210 40% 98%;
-          --background: 224 71% 4%;
-          --foreground: 213 31% 91%;
-          --muted: 223 47% 11%;
-          --muted-foreground: 215 16% 57%;
-          --accent: 216 34% 17%;
-          --accent-foreground: 210 40% 98%;
-          --border: 216 34% 17%;
-          --card: 224 71% 4%;
-          --card-foreground: 213 31% 91%;
-        }
-      `}</style>
-      
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-gray-50 dark:bg-gray-950 transition-colors">
-          {/* Sidebar Desktop */}
-          <Sidebar className="hidden md:flex border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex-shrink-0">
-            <SidebarHeader className="border-b border-gray-200 dark:border-gray-800 p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Clock className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-lg text-gray-900 dark:text-gray-100">PontoFlex</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Controle de Ponto</p>
-                </div>
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
+        {/* Top Navigation Bar */}
+        <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+          <div className="px-4 h-16 flex items-center justify-between">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+                <Clock className="w-5 h-5 text-white" />
               </div>
-              {company && (
-                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <Badge variant="outline" className="text-xs">
-                    {company.name}
-                  </Badge>
-                </div>
-              )}
-            </SidebarHeader>
-            
-            <SidebarContent className="p-4 overflow-y-auto">
+              <div className="hidden sm:block">
+                <h1 className="font-bold text-lg text-gray-900 dark:text-gray-100">PontoFlex</h1>
+                {company && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{company.name}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Desktop Navigation */}
+            <nav className="hidden lg:flex items-center gap-1 flex-1 max-w-4xl mx-8">
               {navigationModules.map((module) => (
-                <Collapsible
-                  key={module.id}
-                  open={expandedModules[module.id] !== false}
-                  onOpenChange={() => toggleModule(module.id)}
-                  className="mb-4"
-                >
-                  <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                    <span>{module.title}</span>
-                    {expandedModules[module.id] !== false ? (
+                <DropdownMenu key={module.id}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="gap-1 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+                      {module.title}
                       <ChevronDown className="w-4 h-4" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4" />
-                    )}
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2 space-y-1">
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuLabel className="text-xs text-gray-500 uppercase">{module.title}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
                     {module.items.map((item) => {
                       const isActive = location.pathname === item.url;
                       return (
-                        <Link
-                          key={item.title}
-                          to={item.url}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                            isActive
-                              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
-                          }`}
-                        >
-                          <item.icon className="w-5 h-5" />
-                          <span className="font-medium">{item.title}</span>
-                        </Link>
+                        <DropdownMenuItem key={item.title} asChild>
+                          <Link
+                            to={item.url}
+                            className={`flex items-center gap-2 cursor-pointer ${
+                              isActive ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : ''
+                            }`}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            {item.title}
+                          </Link>
+                        </DropdownMenuItem>
                       );
                     })}
-                  </CollapsibleContent>
-                </Collapsible>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ))}
-            </SidebarContent>
+            </nav>
 
-            <SidebarFooter className="border-t border-gray-200 dark:border-gray-800 p-4">
-              <div className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start gap-2"
-                  onClick={() => setDarkMode(!darkMode)}
-                >
-                  {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                  {darkMode ? 'Modo Claro' : 'Modo Escuro'}
-                </Button>
-                
-                {user && (
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                    <Avatar>
-                      <AvatarImage src={user.photo_url} />
-                      <AvatarFallback className="bg-gradient-to-br from-purple-600 to-blue-600 text-white">
-                        {user.full_name?.charAt(0) || user.email?.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
+            {/* Right Side Actions */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setDarkMode(!darkMode)}
+                className="hidden sm:flex"
+              >
+                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </Button>
+
+              {/* User Menu */}
+              {user && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="gap-2 px-2">
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={user.photo_url} />
+                        <AvatarFallback className="bg-gradient-to-br from-purple-600 to-blue-600 text-white text-sm">
+                          {user.full_name?.charAt(0) || user.email?.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="hidden md:block font-medium text-sm text-gray-900 dark:text-gray-100">
                         {user.full_name || user.email}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Administrador' : 'Funcionário'}
-                      </p>
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      <div>
+                        <p className="font-medium">{user.full_name || user.email}</p>
+                        <p className="text-xs text-gray-500">
+                          {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Administrador' : 'Funcionário'}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setDarkMode(!darkMode)} className="sm:hidden">
+                      {darkMode ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+                      {darkMode ? 'Modo Claro' : 'Modo Escuro'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sair do Sistema
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              {/* Mobile Menu Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile Navigation */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 max-h-[calc(100vh-4rem)] overflow-y-auto">
+              <div className="p-4 space-y-4">
+                {navigationModules.map((module) => (
+                  <div key={module.id}>
+                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 py-2">
+                      {module.title}
+                    </div>
+                    <div className="space-y-1">
+                      {module.items.map((item) => {
+                        const isActive = location.pathname === item.url;
+                        return (
+                          <Link
+                            key={item.title}
+                            to={item.url}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                              isActive
+                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                            }`}
+                          >
+                            <item.icon className="w-5 h-5" />
+                            <span className="font-medium">{item.title}</span>
+                          </Link>
+                        );
+                      })}
                     </div>
                   </div>
-                )}
-
-                <Button
-                  variant="outline"
-                  className="w-full justify-start gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sair do Sistema
-                </Button>
+                ))}
               </div>
-            </SidebarFooter>
-          </Sidebar>
-
-          {/* Main Content */}
-          <main className="flex-1 flex flex-col overflow-hidden">
-            {/* Mobile Header */}
-            <header className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  >
-                    {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                  </Button>
-                  <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">PontoFlex</h1>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDarkMode(!darkMode)}
-                  >
-                    {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleLogout}
-                    className="text-red-600"
-                  >
-                    <LogOut className="w-5 h-5" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Mobile Menu */}
-              {mobileMenuOpen && (
-                <div className="mt-4 pb-4 space-y-4">
-                  {navigationModules.map((module) => (
-                    <div key={module.id}>
-                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 py-2">
-                        {module.title}
-                      </div>
-                      <div className="space-y-1">
-                        {module.items.map((item) => {
-                          const isActive = location.pathname === item.url;
-                          return (
-                            <Link
-                              key={item.title}
-                              to={item.url}
-                              onClick={() => setMobileMenuOpen(false)}
-                              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                                isActive
-                                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                              }`}
-                            >
-                              <item.icon className="w-5 h-5" />
-                              <span className="font-medium">{item.title}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </header>
-
-            {/* Page Content */}
-            <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
-              {children}
             </div>
-          </main>
-        </div>
-      </SidebarProvider>
+          )}
+        </header>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
