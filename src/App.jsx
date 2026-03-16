@@ -123,6 +123,21 @@ const AuthenticatedApp = () => {
           <EmployeeBenefits />
         </LayoutWrapper>
       } />
+      <Route path="/DocumentTemplates" element={
+        <LayoutWrapper currentPageName="DocumentTemplates">
+          <DocumentTemplates />
+        </LayoutWrapper>
+      } />
+      <Route path="/GenerateDocument" element={
+        <LayoutWrapper currentPageName="GenerateDocument">
+          <GenerateDocument />
+        </LayoutWrapper>
+      } />
+      <Route path="/GeneratedDocuments" element={
+        <LayoutWrapper currentPageName="GeneratedDocuments">
+          <GeneratedDocuments />
+        </LayoutWrapper>
+      } />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
