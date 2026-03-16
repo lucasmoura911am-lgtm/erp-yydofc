@@ -61,7 +61,7 @@ export default function ProductivityAgenda() {
   const save = useMutation({
     mutationFn: (data) => editing
       ? base44.entities.Appointment.update(editing.id, data)
-      : base44.entities.Appointment.create({ ...data, company_id: cid, employee_email: user.email, employee_name: user.full_name }),
+      : base44.entities.Appointment.create({ ...data, company_id: cid || "unknown", employee_email: user.email, employee_name: user.full_name }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["pa_list"] }); qc.invalidateQueries({ queryKey: ["ph_apt"] }); setOpen(false); setEditing(null); setForm(EMPTY); toast.success(editing ? "Compromisso atualizado!" : "Compromisso criado!"); },
   });
 
