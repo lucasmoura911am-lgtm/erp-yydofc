@@ -130,11 +130,9 @@ export default function CRMLeads() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Leads</h1>
           <p className="text-gray-500 text-sm">{leads.length} leads · {leads.filter(l=>l.status==="novo").length} novos</p>
         </div>
-        <DialogTrigger asChild onClick={() => { setEditing(null); setFormData(emptyForm); setDialogOpen(true); }}>
-          <Button className="bg-gradient-to-r from-indigo-600 to-purple-600">
-            <Plus className="w-4 h-4 mr-2" /> Novo Lead
-          </Button>
-        </DialogTrigger>
+        <Button onClick={() => { setEditing(null); setFormData(emptyForm); setDialogOpen(true); }} className="bg-gradient-to-r from-indigo-600 to-purple-600">
+          <Plus className="w-4 h-4 mr-2" /> Novo Lead
+        </Button>
       </div>
       <FormDialog />
 
