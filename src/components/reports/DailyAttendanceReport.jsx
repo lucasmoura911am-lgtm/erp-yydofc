@@ -3,14 +3,13 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { Users, Download } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export default function DailyAttendanceReport({ companyId }) {
+export default function DailyAttendanceReport({ companyId, company }) {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
   const { data: employees = [] } = useQuery({
@@ -20,19 +19,14 @@ export default function DailyAttendanceReport({ companyId }) {
   });
 
   const { data: timeRecords = [], isLoading } = useQuery({
-    queryKey: ["timeRecords-daily", companyId, selectedDate],
+    queryKey: ["timeRecords-daily", companyId],
     queryFn: () => base44.entities.TimeRecord.filter({ company_id: companyId }),
     enabled: !!companyId,
   });
 
-  // Filtrar registros do dia selecionado
-  const dayRecords = timeRecords.filter((r) => {
-    if (!r.timestamp) return false;
-    return r.timestamp.startsWith(selectedDate);
-  });
+  const dayRecords = timeRecords.filter((r) => r.timestamp?.startsWith(selectedDate));
 
-  // Montar mapa de registros por funcionário
-  const employeeMap = employees.map((emp) => {
+  const employeeRows = employees.map((emp) => {
     const empRecords = dayRecords
       .filter((r) => r.employee_id === emp.id)
       .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -41,37 +35,105 @@ export default function DailyAttendanceReport({ companyId }) {
     const pausa = empRecords.find((r) => r.type === "pausa");
     const retorno = empRecords.find((r) => r.type === "retorno");
     const saida = empRecords.find((r) => r.type === "saida");
-
     const bateuPonto = empRecords.length > 0;
 
-    return {
-      ...emp,
-      empRecords,
-      entrada,
-      pausa,
-      retorno,
-      saida,
-      bateuPonto,
-    };
+    return { ...emp, entrada, pausa, retorno, saida, bateuPonto };
   });
 
-  const bateram = employeeMap.filter((e) => e.bateuPonto);
-  const naoBateram = employeeMap.filter((e) => !e.bateuPonto);
+  const presentCount = employeeRows.filter((e) => e.bateuPonto).length;
+  const absentCount = employeeRows.filter((e) => !e.bateuPonto).length;
 
-  const getStatusBadge = (record) => {
-    if (!record) return null;
-    const statusMap = {
-      pontual: <Badge className="bg-green-500 text-white text-xs">Pontual</Badge>,
-      atrasado: <Badge className="bg-orange-500 text-white text-xs">Atraso {record.delay_minutes}min</Badge>,
-      adiantado: <Badge className="bg-blue-500 text-white text-xs">Adiantado</Badge>,
-      hora_extra: <Badge className="bg-purple-500 text-white text-xs">Hora Extra</Badge>,
-    };
-    return statusMap[record.status] || null;
+  const fmt = (record) => (record ? format(new Date(record.timestamp), "HH:mm") : "--:--");
+
+  const getStatusText = (emp) => {
+    if (!emp.bateuPonto) return { text: "Ausente", color: "#dc2626" };
+    if (!emp.saida && emp.entrada) return { text: "Em serviço", color: "#2563eb" };
+    if (emp.entrada?.status === "atrasado") return { text: `Atraso ${emp.entrada.delay_minutes}min`, color: "#d97706" };
+    return { text: "Presente", color: "#16a34a" };
   };
 
-  const formatTime = (record) => {
-    if (!record) return "--:--";
-    return format(new Date(record.timestamp), "HH:mm");
+  const generateReport = () => {
+    const dateLabel = format(parseISO(selectedDate), "dd/MM/yyyy", { locale: ptBR });
+
+    const rows = employeeRows.map((emp) => {
+      const status = getStatusText(emp);
+      const rowBg = !emp.bateuPonto ? "#fff5f5" : "";
+      return `
+        <tr style="background:${rowBg}">
+          <td style="padding:6px 8px;border:1px solid #ccc;text-align:left;font-weight:500">${emp.full_name}</td>
+          <td style="padding:6px;border:1px solid #ccc;text-align:center;font-family:monospace">${fmt(emp.entrada)}</td>
+          <td style="padding:6px;border:1px solid #ccc;text-align:center;font-family:monospace">${fmt(emp.pausa)}</td>
+          <td style="padding:6px;border:1px solid #ccc;text-align:center;font-family:monospace">${fmt(emp.retorno)}</td>
+          <td style="padding:6px;border:1px solid #ccc;text-align:center;font-family:monospace">${fmt(emp.saida)}</td>
+          <td style="padding:6px;border:1px solid #ccc;text-align:center;color:${status.color};font-weight:bold">${status.text}</td>
+        </tr>`;
+    }).join("");
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Relatório Diário - ${dateLabel}</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size:10pt; padding:20px; color:#000; }
+      .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:15px; border-bottom:2px solid #000; padding-bottom:10px; }
+      .header-center { flex:1; text-align:center; }
+      h1 { font-size:15pt; font-weight:bold; margin-bottom:5px; }
+      .summary { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:15px 0; }
+      .summary-box { text-align:center; padding:10px; background:#f0f4ff; border:1px solid #ccc; border-radius:4px; }
+      .summary-val { font-size:20pt; font-weight:bold; color:#1d4ed8; }
+      .summary-label { font-size:8pt; color:#555; }
+      table { width:100%; border-collapse:collapse; font-size:9pt; }
+      th { background:#333; color:#fff; padding:7px 6px; text-align:center; border:1px solid #000; font-size:9pt; }
+      th.name { text-align:left; padding-left:8px; }
+      tr:nth-child(even) { background:#f9f9f9; }
+      .footer { margin-top:20px; text-align:center; font-size:8pt; color:#888; border-top:1px solid #ccc; padding-top:8px; }
+      @media print { .no-print { display:none; } }
+    </style></head><body>
+    <div class="page-header">
+      ${company?.logo_url ? `<img src="${company.logo_url}" style="max-width:120px;max-height:50px;object-fit:contain" />` : '<div style="width:120px"></div>'}
+      <div class="header-center">
+        <h1>RELATÓRIO DIÁRIO DE PRESENÇA</h1>
+        <div style="font-size:10pt">Data: ${dateLabel} &nbsp;|&nbsp; Emissão: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}</div>
+      </div>
+      <div style="width:120px"></div>
+    </div>
+
+    <div style="border:1px solid #ccc;padding:8px;margin-bottom:12px;background:#f9f9f9;">
+      <strong>Empresa:</strong> ${company?.name || "N/A"} &nbsp;&nbsp; <strong>CNPJ:</strong> ${company?.cnpj || "N/A"}
+    </div>
+
+    <div class="summary">
+      <div class="summary-box"><div class="summary-val">${employeeRows.length}</div><div class="summary-label">Total de Funcionários</div></div>
+      <div class="summary-box"><div class="summary-val" style="color:#16a34a">${presentCount}</div><div class="summary-label">Bateram Ponto</div></div>
+      <div class="summary-box"><div class="summary-val" style="color:#dc2626">${absentCount}</div><div class="summary-label">Sem Registro</div></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th class="name" style="width:30%">Funcionário</th>
+          <th style="width:13%">Entrada</th>
+          <th style="width:13%">Pausa</th>
+          <th style="width:13%">Retorno</th>
+          <th style="width:13%">Saída</th>
+          <th style="width:18%">Status</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <div class="footer">
+      Documento gerado automaticamente pelo sistema PontoFlex em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+    </div>
+
+    <div class="no-print" style="position:fixed;bottom:20px;right:20px;">
+      <button onclick="window.print()" style="background:#6366f1;color:#fff;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:16px;">
+        🖨️ Imprimir / Salvar PDF
+      </button>
+    </div>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    w.document.write(html);
+    w.document.close();
   };
 
   return (
@@ -83,19 +145,25 @@ export default function DailyAttendanceReport({ companyId }) {
           </div>
           <div>
             <CardTitle className="text-xl">Relatório Diário de Presença</CardTitle>
-            <CardDescription>Visualize quem bateu ou não bateu ponto em um dia específico</CardDescription>
+            <CardDescription>Todos os funcionários e seus pontos do dia selecionado</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="space-y-2">
-          <Label>Selecione o Dia</Label>
-          <Input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="max-w-xs"
-          />
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="space-y-2">
+            <Label>Selecione o Dia</Label>
+            <Input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-48"
+            />
+          </div>
+          <Button onClick={generateReport} className="bg-gradient-to-r from-blue-600 to-indigo-600">
+            <Download className="w-4 h-4 mr-2" />
+            Gerar Relatório PDF
+          </Button>
         </div>
 
         {isLoading ? (
@@ -105,123 +173,81 @@ export default function DailyAttendanceReport({ companyId }) {
             {/* Resumo */}
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border">
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{employees.length}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{employeeRows.length}</p>
                 <p className="text-sm text-gray-500 mt-1">Total Funcionários</p>
               </div>
-              <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
-                <p className="text-3xl font-bold text-green-600">{bateram.length}</p>
+              <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200">
+                <p className="text-3xl font-bold text-green-600">{presentCount}</p>
                 <p className="text-sm text-green-600 mt-1">Bateram Ponto</p>
               </div>
-              <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
-                <p className="text-3xl font-bold text-red-600">{naoBateram.length}</p>
+              <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200">
+                <p className="text-3xl font-bold text-red-600">{absentCount}</p>
                 <p className="text-sm text-red-600 mt-1">Sem Registro</p>
               </div>
             </div>
 
-            {/* Funcionários que bateram ponto */}
-            {bateram.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                    Registros de Ponto — {format(parseISO(selectedDate), "dd/MM/yyyy", { locale: ptBR })}
-                  </h3>
-                </div>
-                <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-100 dark:bg-gray-800">
-                        <th className="text-left px-4 py-2 font-semibold">Funcionário</th>
-                        <th className="text-center px-3 py-2 font-semibold">Entrada</th>
-                        <th className="text-center px-3 py-2 font-semibold">Pausa</th>
-                        <th className="text-center px-3 py-2 font-semibold">Retorno</th>
-                        <th className="text-center px-3 py-2 font-semibold">Saída</th>
-                        <th className="text-center px-3 py-2 font-semibold">Status</th>
+            {/* Tabela unificada */}
+            <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-800 text-white">
+                    <th className="text-left px-4 py-3 font-semibold">Funcionário</th>
+                    <th className="text-center px-4 py-3 font-semibold">Entrada</th>
+                    <th className="text-center px-4 py-3 font-semibold">Pausa</th>
+                    <th className="text-center px-4 py-3 font-semibold">Retorno</th>
+                    <th className="text-center px-4 py-3 font-semibold">Saída</th>
+                    <th className="text-center px-4 py-3 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employeeRows.map((emp, i) => {
+                    const status = getStatusText(emp);
+                    return (
+                      <tr
+                        key={emp.id}
+                        className={`border-t border-gray-100 dark:border-gray-700 ${
+                          !emp.bateuPonto
+                            ? "bg-red-50 dark:bg-red-900/10"
+                            : i % 2 === 0
+                            ? "bg-white dark:bg-gray-900"
+                            : "bg-gray-50 dark:bg-gray-800/50"
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{emp.full_name}</p>
+                          {emp.employee_number && (
+                            <p className="text-xs text-gray-400">Mat.: {emp.employee_number}</p>
+                          )}
+                        </td>
+                        <td className="text-center px-4 py-3 font-mono font-semibold text-green-600">
+                          {fmt(emp.entrada)}
+                          {emp.entrada?.status === "atrasado" && (
+                            <div className="text-xs text-orange-500 font-sans">+{emp.entrada.delay_minutes}min</div>
+                          )}
+                        </td>
+                        <td className="text-center px-4 py-3 font-mono text-gray-600 dark:text-gray-400">
+                          {fmt(emp.pausa)}
+                        </td>
+                        <td className="text-center px-4 py-3 font-mono text-gray-600 dark:text-gray-400">
+                          {fmt(emp.retorno)}
+                        </td>
+                        <td className="text-center px-4 py-3 font-mono font-semibold text-red-600">
+                          {fmt(emp.saida)}
+                        </td>
+                        <td className="text-center px-4 py-3">
+                          <span className="font-semibold text-sm" style={{ color: status.color }}>
+                            {status.text}
+                          </span>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {bateram.map((emp) => (
-                        <tr key={emp.id} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                          <td className="px-4 py-3">
-                            <p className="font-medium text-gray-900 dark:text-gray-100">{emp.full_name}</p>
-                            {emp.employee_number && (
-                              <p className="text-xs text-gray-400">Matrícula: {emp.employee_number}</p>
-                            )}
-                          </td>
-                          <td className="text-center px-3 py-3">
-                            <span className={`font-mono font-semibold ${emp.entrada ? "text-green-600" : "text-gray-400"}`}>
-                              {formatTime(emp.entrada)}
-                            </span>
-                            {emp.entrada && emp.entrada.status === "atrasado" && (
-                              <div className="text-xs text-orange-500 mt-1">+{emp.entrada.delay_minutes}min</div>
-                            )}
-                          </td>
-                          <td className="text-center px-3 py-3">
-                            <span className={`font-mono ${emp.pausa ? "text-gray-700 dark:text-gray-300" : "text-gray-300"}`}>
-                              {formatTime(emp.pausa)}
-                            </span>
-                          </td>
-                          <td className="text-center px-3 py-3">
-                            <span className={`font-mono ${emp.retorno ? "text-gray-700 dark:text-gray-300" : "text-gray-300"}`}>
-                              {formatTime(emp.retorno)}
-                            </span>
-                          </td>
-                          <td className="text-center px-3 py-3">
-                            <span className={`font-mono font-semibold ${emp.saida ? "text-red-600" : "text-gray-300"}`}>
-                              {formatTime(emp.saida)}
-                            </span>
-                          </td>
-                          <td className="text-center px-3 py-3">
-                            <div className="flex flex-col items-center gap-1">
-                              {getStatusBadge(emp.entrada)}
-                              {!emp.saida && emp.entrada && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  Em serviço
-                                </Badge>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-            {/* Funcionários sem ponto */}
-            {naoBateram.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <XCircle className="w-5 h-5 text-red-500" />
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                    Sem Registro de Ponto
-                  </h3>
-                </div>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {naoBateram.map((emp) => (
-                    <div
-                      key={emp.id}
-                      className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg"
-                    >
-                      <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-                      <div>
-                        <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{emp.full_name}</p>
-                        {emp.employee_number && (
-                          <p className="text-xs text-gray-400">Mat.: {emp.employee_number}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {employees.length === 0 && (
-              <div className="text-center py-6 text-gray-500">
-                Nenhum funcionário ativo encontrado.
-              </div>
+            {employeeRows.length === 0 && (
+              <div className="text-center py-6 text-gray-500">Nenhum funcionário ativo encontrado.</div>
             )}
           </>
         )}
