@@ -215,6 +215,22 @@ export default function Layout({ children }) {
         ]
       },
       {
+        id: "crm",
+        title: "CRM Comercial",
+        icon: TrendingUp,
+        items: [
+          { title: "Dashboard Comercial", url: "/CRMDashboard", icon: LayoutDashboard },
+          { title: "Pipeline (Kanban)", url: "/CRMKanban", icon: Briefcase },
+          { title: "Oportunidades", url: "/CRMOpportunities", icon: TrendingUp },
+          { title: "Leads", url: "/CRMLeads", icon: UserCog },
+          { title: "Empresas (Contas)", url: "/CRMAccounts", icon: Building2 },
+          { title: "Contatos", url: "/CRMContacts", icon: Users },
+          { title: "Propostas", url: "/CRMProposals", icon: FileText },
+          { title: "Atividades", url: "/CRMActivities", icon: CalendarCheck },
+          { title: "Metas Comerciais", url: "/CRMGoals", icon: Target },
+        ]
+      },
+      {
         id: "financial",
         title: "Financeiro",
         icon: DollarSign,

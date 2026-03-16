@@ -52,6 +52,15 @@ import MyTimeRecords from './pages/MyTimeRecords';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import ClockIn from './pages/ClockIn';
 import SuppliersPage from './pages/SuppliersPage';
+import CRMDashboard from './pages/CRMDashboard';
+import CRMKanban from './pages/CRMKanban';
+import CRMLeads from './pages/CRMLeads';
+import CRMAccounts from './pages/CRMAccounts';
+import CRMContacts from './pages/CRMContacts';
+import CRMOpportunities from './pages/CRMOpportunities';
+import CRMProposals from './pages/CRMProposals';
+import CRMActivities from './pages/CRMActivities';
+import CRMGoals from './pages/CRMGoals';
 import FinancialDashboard from './pages/FinancialDashboard';
 import AccountsPayablePage from './pages/AccountsPayablePage';
 import AccountsReceivablePage from './pages/AccountsReceivablePage';
@@ -163,6 +172,15 @@ const AuthenticatedApp = () => {
       <Route path="/EmployeeDashboard" element={<LayoutWrapper currentPageName="EmployeeDashboard"><EmployeeDashboard /></LayoutWrapper>} />
       <Route path="/ClockIn" element={<LayoutWrapper currentPageName="ClockIn"><ClockIn /></LayoutWrapper>} />
       <Route path="/SuppliersPage" element={<LayoutWrapper currentPageName="SuppliersPage"><SuppliersPage /></LayoutWrapper>} />
+      <Route path="/CRMDashboard" element={<LayoutWrapper currentPageName="CRMDashboard"><CRMDashboard /></LayoutWrapper>} />
+      <Route path="/CRMKanban" element={<LayoutWrapper currentPageName="CRMKanban"><CRMKanban /></LayoutWrapper>} />
+      <Route path="/CRMLeads" element={<LayoutWrapper currentPageName="CRMLeads"><CRMLeads /></LayoutWrapper>} />
+      <Route path="/CRMAccounts" element={<LayoutWrapper currentPageName="CRMAccounts"><CRMAccounts /></LayoutWrapper>} />
+      <Route path="/CRMContacts" element={<LayoutWrapper currentPageName="CRMContacts"><CRMContacts /></LayoutWrapper>} />
+      <Route path="/CRMOpportunities" element={<LayoutWrapper currentPageName="CRMOpportunities"><CRMOpportunities /></LayoutWrapper>} />
+      <Route path="/CRMProposals" element={<LayoutWrapper currentPageName="CRMProposals"><CRMProposals /></LayoutWrapper>} />
+      <Route path="/CRMActivities" element={<LayoutWrapper currentPageName="CRMActivities"><CRMActivities /></LayoutWrapper>} />
+      <Route path="/CRMGoals" element={<LayoutWrapper currentPageName="CRMGoals"><CRMGoals /></LayoutWrapper>} />
       <Route path="/FinancialDashboard" element={<LayoutWrapper currentPageName="FinancialDashboard"><FinancialDashboard /></LayoutWrapper>} />
       <Route path="/AccountsPayablePage" element={<LayoutWrapper currentPageName="AccountsPayablePage"><AccountsPayablePage /></LayoutWrapper>} />
       <Route path="/AccountsReceivablePage" element={<LayoutWrapper currentPageName="AccountsReceivablePage"><AccountsReceivablePage /></LayoutWrapper>} />
