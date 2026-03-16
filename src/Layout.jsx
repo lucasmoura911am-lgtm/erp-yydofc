@@ -33,6 +33,7 @@ import {
   Folder,
   Activity,
   TrendingUp,
+  TrendingDown,
   ShieldCheck,
   AlertTriangle,
   PanelLeftClose,
