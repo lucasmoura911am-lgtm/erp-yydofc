@@ -117,6 +117,7 @@ export default function Layout({ children }) {
         title: "Dashboard",
         icon: LayoutDashboard,
         items: [
+          { title: "Overview 360°", url: "/Overview360", icon: Zap },
           { title: "Visão Geral", url: "/Dashboard", icon: LayoutDashboard },
           { title: "Dashboard Supervisor", url: "/SupervisorDashboard", icon: BarChart3 },
         ]
