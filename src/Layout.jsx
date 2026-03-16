@@ -158,6 +158,19 @@ export default function Layout({ children }) {
         ]
       },
       {
+        id: "productivity",
+        title: "Central de Produtividade",
+        icon: Zap,
+        items: [
+          { title: "Dashboard", url: "/ProductivityHub", icon: Zap },
+          { title: "Diário de Atividades", url: "/WorkActivities", icon: ClipboardList },
+          { title: "Kanban de Tarefas", url: "/ProductivityKanban", icon: CheckSquare },
+          { title: "Agenda de Compromissos", url: "/ProductivityAgenda", icon: CalendarCheck },
+          { title: "Avisos & Lembretes", url: "/ProductivityNotices", icon: Bell },
+          { title: "Visão do Gestor", url: "/ProductivityManager", icon: BarChart3 },
+        ]
+      },
+      {
         id: "tasks",
         title: "Plano de Trabalho",
         icon: ListTodo,
