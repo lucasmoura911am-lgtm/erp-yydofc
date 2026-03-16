@@ -314,7 +314,7 @@ export default function DocumentTemplates() {
           </div>
 
           <DialogFooter className="px-5 py-3 border-t shrink-0 bg-white dark:bg-gray-900 flex items-center justify-between">
-            <p className="text-xs text-gray-400">Use {{"{{"}}company.logo{"}}"}}, {{"{{"}}employee.full_name{"}}"}} etc. no HTML</p>
+            <p className="text-xs text-gray-400">Use {`{{company.logo}}`}, {`{{employee.full_name}}`} etc. no HTML</p>
             <div className="flex gap-2">
               <Button variant="outline" onClick={closeEditor}>Cancelar</Button>
               <Button
