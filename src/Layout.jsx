@@ -211,6 +211,18 @@ export default function Layout({ children }) {
         ]
       },
       {
+        id: "recruitment",
+        title: "Recrutamento & Seleção",
+        icon: UserCog,
+        items: [
+          { title: "Visão Geral", url: "/RecruitmentOverview", icon: LayoutDashboard },
+          { title: "Vagas em Aberto", url: "/JobPositions", icon: Briefcase },
+          { title: "Banco de Currículos", url: "/CandidatePool", icon: Users },
+          { title: "Kanban de Seleção", url: "/RecruitmentKanban", icon: ListTodo },
+          { title: "Entrevistas", url: "/Interviews", icon: CalendarCheck },
+        ]
+      },
+      {
         id: "clients",
         title: "Clientes e Contratos",
         icon: Building2,

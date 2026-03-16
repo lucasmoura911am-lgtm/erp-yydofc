@@ -51,6 +51,11 @@ import Teams from './pages/Teams';
 import MyTimeRecords from './pages/MyTimeRecords';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import ClockIn from './pages/ClockIn';
+import RecruitmentOverview from './pages/RecruitmentOverview';
+import JobPositions from './pages/JobPositions';
+import CandidatePool from './pages/CandidatePool';
+import RecruitmentKanban from './pages/RecruitmentKanban';
+import Interviews from './pages/Interviews';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -147,6 +152,11 @@ const AuthenticatedApp = () => {
       <Route path="/MyTimeRecords" element={<LayoutWrapper currentPageName="MyTimeRecords"><MyTimeRecords /></LayoutWrapper>} />
       <Route path="/EmployeeDashboard" element={<LayoutWrapper currentPageName="EmployeeDashboard"><EmployeeDashboard /></LayoutWrapper>} />
       <Route path="/ClockIn" element={<LayoutWrapper currentPageName="ClockIn"><ClockIn /></LayoutWrapper>} />
+      <Route path="/RecruitmentOverview" element={<LayoutWrapper currentPageName="RecruitmentOverview"><RecruitmentOverview /></LayoutWrapper>} />
+      <Route path="/JobPositions" element={<LayoutWrapper currentPageName="JobPositions"><JobPositions /></LayoutWrapper>} />
+      <Route path="/CandidatePool" element={<LayoutWrapper currentPageName="CandidatePool"><CandidatePool /></LayoutWrapper>} />
+      <Route path="/RecruitmentKanban" element={<LayoutWrapper currentPageName="RecruitmentKanban"><RecruitmentKanban /></LayoutWrapper>} />
+      <Route path="/Interviews" element={<LayoutWrapper currentPageName="Interviews"><Interviews /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
