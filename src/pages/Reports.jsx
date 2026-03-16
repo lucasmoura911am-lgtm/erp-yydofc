@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import DailyAttendanceReport from "../components/reports/DailyAttendanceReport";
 
 export default function Reports() {
   const [user, setUser] = useState(null);
@@ -1202,6 +1203,9 @@ export default function Reports() {
           </p>
         </div>
       </div>
+
+      {/* Relatório Diário de Presença */}
+      <DailyAttendanceReport companyId={user?.company_id} />
 
       {/* Relatório Gerencial Mensal */}
       <Card className="shadow-xl border-2 border-green-200 dark:border-green-800">
