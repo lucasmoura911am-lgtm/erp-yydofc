@@ -40,7 +40,8 @@ import {
   AlertTriangle,
   PanelLeftClose,
   PanelLeftOpen,
-  CalendarCheck
+  CalendarCheck,
+  Zap
 } from "lucide-react";
 import {
   DropdownMenu,
