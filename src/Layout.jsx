@@ -342,6 +342,18 @@ export default function Layout({ children }) {
         ]
       },
       {
+        id: "employee_productivity",
+        title: "Central de Produtividade",
+        icon: Zap,
+        items: [
+          { title: "Dashboard", url: "/ProductivityHub", icon: Zap },
+          { title: "Diário de Atividades", url: "/WorkActivities", icon: ClipboardList },
+          { title: "Kanban de Tarefas", url: "/ProductivityKanban", icon: CheckSquare },
+          { title: "Agenda de Compromissos", url: "/ProductivityAgenda", icon: CalendarCheck },
+          { title: "Avisos & Lembretes", url: "/ProductivityNotices", icon: Bell },
+        ]
+      },
+      {
         id: "employee_docs",
         title: "Meus Documentos",
         icon: Folder,
