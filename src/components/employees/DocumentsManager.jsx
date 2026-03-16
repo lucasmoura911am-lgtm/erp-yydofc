@@ -4,208 +4,272 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { FileText, Upload, Trash2, Download, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Upload, Trash2, Eye, Plus, FileText, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 
-export default function DocumentsManager({ employeeId, companyId }) {
-  const [dialogOpen, setDialogOpen] = useState(false);
+const DOC_TYPES = {
+  contrato: { label: "Contrato", color: "bg-blue-100 text-blue-700" },
+  atestado: { label: "Atestado", color: "bg-yellow-100 text-yellow-700" },
+  exame: { label: "Exame", color: "bg-purple-100 text-purple-700" },
+  documento_pessoal: { label: "Doc. Pessoal", color: "bg-gray-100 text-gray-700" },
+  ferias: { label: "Férias", color: "bg-green-100 text-green-700" },
+  alteracao_salarial: { label: "Alt. Salarial", color: "bg-orange-100 text-orange-700" },
+  alteracao_cargo: { label: "Alt. Cargo", color: "bg-indigo-100 text-indigo-700" },
+  acidente_trabalho: { label: "Acidente", color: "bg-red-100 text-red-700" },
+  outros: { label: "Outros", color: "bg-slate-100 text-slate-700" },
+};
+
+const EMPTY_FORM = { document_name: "", document_type: "outros", notes: "" };
+
+export default function DocumentsManager({ employeeId, companyId, currentUserEmail, readOnly = false }) {
+  const [showDialog, setShowDialog] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [formData, setFormData] = useState({
-    document_name: "",
-    document_type: "outros",
-    notes: ""
-  });
-  const [selectedFile, setSelectedFile] = useState(null);
+  const qc = useQueryClient();
+  const { toast } = useToast();
 
-  const queryClient = useQueryClient();
-
-  const { data: documents = [] } = useQuery({
-    queryKey: ['employeeDocuments', employeeId],
-    queryFn: () => base44.entities.EmployeeDocument.filter({ employee_id: employeeId }, '-upload_date'),
+  const { data: documents = [], isLoading } = useQuery({
+    queryKey: ["employee-docs", employeeId],
+    queryFn: () => base44.entities.EmployeeDocument.filter({ employee_id: employeeId }),
     enabled: !!employeeId,
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.EmployeeDocument.create(data),
+  const createMut = useMutation({
+    mutationFn: async (payload) => base44.entities.EmployeeDocument.create(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries(['employeeDocuments']);
-      setDialogOpen(false);
-      resetForm();
+      qc.invalidateQueries(["employee-docs", employeeId]);
+      setShowDialog(false);
+      setForm(EMPTY_FORM);
+      setFile(null);
+      toast({ title: "Documento adicionado com sucesso!" });
     },
   });
 
-  const deleteMutation = useMutation({
+  const deleteMut = useMutation({
     mutationFn: (id) => base44.entities.EmployeeDocument.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['employeeDocuments']);
+      qc.invalidateQueries(["employee-docs", employeeId]);
+      toast({ title: "Documento excluído" });
     },
   });
 
-  const resetForm = () => {
-    setFormData({ document_name: "", document_type: "outros", notes: "" });
-    setSelectedFile(null);
-  };
-
-  const handleFileUpload = async () => {
-    if (!selectedFile || !formData.document_name) {
-      alert('Preencha o nome do documento e selecione um arquivo');
-      return;
+  const handleSubmit = async () => {
+    if (!form.document_name.trim()) {
+      return toast({ title: "Informe o nome do documento", variant: "destructive" });
+    }
+    if (!file) {
+      return toast({ title: "Selecione um arquivo", variant: "destructive" });
     }
 
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: selectedFile });
-      
-      const user = await base44.auth.me();
-      
-      await createMutation.mutateAsync({
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      await createMut.mutateAsync({
+        ...form,
         employee_id: employeeId,
         company_id: companyId,
-        document_name: formData.document_name,
-        document_type: formData.document_type,
         file_url,
-        upload_date: new Date().toISOString().split('T')[0],
-        uploaded_by: user.email,
-        notes: formData.notes
+        upload_date: format(new Date(), "yyyy-MM-dd"),
+        uploaded_by: currentUserEmail || "",
       });
-
-      alert('Documento enviado com sucesso!');
-    } catch (error) {
-      alert('Erro ao enviar documento: ' + error.message);
     } finally {
       setUploading(false);
     }
   };
 
-  const handleDelete = (id) => {
-    if (confirm('Tem certeza que deseja excluir este documento?')) {
-      deleteMutation.mutate(id);
-    }
+  const closeDialog = () => {
+    setShowDialog(false);
+    setForm(EMPTY_FORM);
+    setFile(null);
   };
 
-  const documentTypeLabels = {
-    contrato: "Contrato",
-    atestado: "Atestado",
-    exame: "Exame",
-    documento_pessoal: "Documento Pessoal",
-    ferias: "Férias",
-    alteracao_salarial: "Alteração Salarial",
-    alteracao_cargo: "Alteração de Cargo",
-    acidente_trabalho: "Acidente de Trabalho",
-    outros: "Outros"
-  };
-
-  const documentTypeColors = {
-    contrato: "bg-blue-100 text-blue-800",
-    atestado: "bg-yellow-100 text-yellow-800",
-    exame: "bg-green-100 text-green-800",
-    documento_pessoal: "bg-purple-100 text-purple-800",
-    ferias: "bg-pink-100 text-pink-800",
-    alteracao_salarial: "bg-orange-100 text-orange-800",
-    alteracao_cargo: "bg-indigo-100 text-indigo-800",
-    acidente_trabalho: "bg-red-100 text-red-800",
-    outros: "bg-gray-100 text-gray-800"
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8 text-gray-400">
+        <Loader2 className="w-5 h-5 animate-spin mr-2" /> Carregando documentos...
+      </div>
+    );
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Pasta do Colaborador ({documents.length})
-          </CardTitle>
-          <Button onClick={() => setDialogOpen(true)} size="sm" className="bg-gradient-to-r from-purple-600 to-blue-600">
-            <Upload className="w-4 h-4 mr-2" />
-            Adicionar Documento
-          </Button>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FileText className="w-5 h-5 text-blue-600" />
+          <span className="font-semibold text-gray-800 dark:text-gray-200">
+            Pasta do Colaborador
+          </span>
+          <Badge variant="outline">{documents.length} doc{documents.length !== 1 ? "s" : ""}</Badge>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {documents.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>Nenhum documento cadastrado</p>
-            </div>
-          ) : (
-            documents.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                <div className="flex items-center gap-3 flex-1">
-                  <FileText className="w-5 h-5 text-blue-600" />
-                  <div className="flex-1">
-                    <p className="font-medium">{doc.document_name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className={documentTypeColors[doc.document_type]}>
-                        {documentTypeLabels[doc.document_type]}
-                      </Badge>
-                      <span className="text-xs text-gray-500">
-                        {doc.upload_date && format(new Date(doc.upload_date + 'T00:00:00'), 'dd/MM/yyyy')} • {doc.uploaded_by}
-                      </span>
-                    </div>
-                    {doc.notes && <p className="text-xs text-gray-600 mt-1">{doc.notes}</p>}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => window.open(doc.file_url, '_blank')} title="Visualizar">
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => window.open(doc.file_url, '_blank')} title="Download">
-                    <Download className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(doc.id)} className="text-red-600 hover:text-red-700" title="Excluir">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))
+        {!readOnly && (
+          <Button size="sm" onClick={() => setShowDialog(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-1" /> Adicionar Documento
+          </Button>
+        )}
+      </div>
+
+      {/* Documents list */}
+      {documents.length === 0 ? (
+        <div className="text-center py-10 border-2 border-dashed rounded-lg text-gray-400">
+          <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">Nenhum documento arquivado</p>
+          {!readOnly && (
+            <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowDialog(true)}>
+              <Upload className="w-4 h-4 mr-1" /> Adicionar primeiro documento
+            </Button>
           )}
         </div>
-      </CardContent>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Documento</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead>Enviado por</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {documents.map(doc => (
+              <TableRow key={doc.id}>
+                <TableCell>
+                  <div>
+                    <p className="font-medium text-sm">{doc.document_name}</p>
+                    {doc.notes && <p className="text-xs text-gray-400 truncate max-w-[200px]">{doc.notes}</p>}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge className={`text-xs ${DOC_TYPES[doc.document_type]?.color || "bg-gray-100 text-gray-700"}`}>
+                    {DOC_TYPES[doc.document_type]?.label || doc.document_type}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-sm text-gray-500">
+                  {doc.upload_date ? format(new Date(doc.upload_date + "T00:00:00"), "dd/MM/yyyy") : "—"}
+                </TableCell>
+                <TableCell className="text-xs text-gray-400">{doc.uploaded_by || "—"}</TableCell>
+                <TableCell>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(doc.file_url, "_blank")}
+                      title="Visualizar"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    {!readOnly && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-500 hover:bg-red-50"
+                        onClick={() => { if (confirm("Excluir este documento?")) deleteMut.mutate(doc.id); }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+      {/* Upload Dialog */}
+      <Dialog open={showDialog} onOpenChange={open => { if (!open) closeDialog(); }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Adicionar Documento</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" /> Adicionar Documento
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome do Documento *</Label>
-              <Input value={formData.document_name} onChange={(e) => setFormData({ ...formData, document_name: e.target.value })} placeholder="Ex: Contrato de Trabalho" />
+
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Nome do documento *</Label>
+              <Input
+                value={form.document_name}
+                onChange={e => setForm({ ...form, document_name: e.target.value })}
+                placeholder="Ex: Contrato de trabalho, Atestado médico..."
+              />
             </div>
-            <div className="space-y-2">
-              <Label>Tipo do Documento *</Label>
-              <Select value={formData.document_type} onValueChange={(value) => setFormData({ ...formData, document_type: value })}>
+
+            <div>
+              <Label>Tipo de documento</Label>
+              <Select value={form.document_type} onValueChange={v => setForm({ ...form, document_type: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(documentTypeLabels).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  {Object.entries(DOC_TYPES).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+
+            <div>
               <Label>Arquivo *</Label>
-              <Input type="file" onChange={(e) => setSelectedFile(e.target.files[0])} />
+              <div className="mt-1">
+                <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <div className="text-center">
+                    {file ? (
+                      <div className="flex items-center gap-2 text-blue-600">
+                        <FileText className="w-5 h-5" />
+                        <span className="text-sm font-medium">{file.name}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+                        <p className="text-sm text-gray-500">Clique para selecionar o arquivo</p>
+                        <p className="text-xs text-gray-400">PDF, JPG, PNG, DOCX</p>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    onChange={e => setFile(e.target.files[0] || null)}
+                  />
+                </label>
+              </div>
             </div>
-            <div className="space-y-2">
+
+            <div>
               <Label>Observações</Label>
-              <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={3} placeholder="Observações sobre o documento..." />
+              <Textarea
+                value={form.notes}
+                onChange={e => setForm({ ...form, notes: e.target.value })}
+                placeholder="Informações adicionais sobre o documento..."
+                className="h-20"
+              />
             </div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }} type="button">Cancelar</Button>
-            <Button onClick={handleFileUpload} disabled={uploading} className="bg-gradient-to-r from-purple-600 to-blue-600" type="button">
-              {uploading ? 'Enviando...' : 'Salvar'}
+            <Button variant="outline" onClick={closeDialog} disabled={uploading}>Cancelar</Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={uploading || !form.document_name.trim() || !file}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {uploading ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+              ) : (
+                <><Upload className="w-4 h-4 mr-2" /> Salvar Documento</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }
