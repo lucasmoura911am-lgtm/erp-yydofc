@@ -31,7 +31,8 @@ import {
   ClipboardList,
   Folder,
   Activity,
-  TrendingUp
+  TrendingUp,
+  ShieldCheck
 } from "lucide-react";
 import {
   DropdownMenu,
