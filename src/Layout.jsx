@@ -42,7 +42,9 @@ import {
   PanelLeftOpen,
   CalendarCheck,
   Zap,
-  Gift
+  Gift,
+  CheckSquare,
+  Bell
 } from "lucide-react";
 import {
   DropdownMenu,
