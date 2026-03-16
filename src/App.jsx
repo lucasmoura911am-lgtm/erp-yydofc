@@ -22,6 +22,9 @@ import EmployeeBenefits from './pages/EmployeeBenefits';
 import DocumentTemplates from './pages/DocumentTemplates';
 import GenerateDocument from './pages/GenerateDocument';
 import GeneratedDocuments from './pages/GeneratedDocuments';
+import EPICatalog from './pages/EPICatalog';
+import EPIDeliveries from './pages/EPIDeliveries';
+import EPIRecords from './pages/EPIRecords';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -136,6 +139,21 @@ const AuthenticatedApp = () => {
       <Route path="/GeneratedDocuments" element={
         <LayoutWrapper currentPageName="GeneratedDocuments">
           <GeneratedDocuments />
+        </LayoutWrapper>
+      } />
+      <Route path="/EPICatalog" element={
+        <LayoutWrapper currentPageName="EPICatalog">
+          <EPICatalog />
+        </LayoutWrapper>
+      } />
+      <Route path="/EPIDeliveries" element={
+        <LayoutWrapper currentPageName="EPIDeliveries">
+          <EPIDeliveries />
+        </LayoutWrapper>
+      } />
+      <Route path="/EPIRecords" element={
+        <LayoutWrapper currentPageName="EPIRecords">
+          <EPIRecords />
         </LayoutWrapper>
       } />
       <Route path="*" element={<PageNotFound />} />
