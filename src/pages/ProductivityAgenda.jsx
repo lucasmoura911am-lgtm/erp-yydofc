@@ -40,9 +40,15 @@ export default function ProductivityAgenda() {
   const [participantInput, setParticipantInput] = useState("");
   const qc = useQueryClient();
 
-  useEffect(() => { base44.auth.me().then(setUser); }, []);
-  const cid = user?.company_id;
-  const enabled = !!cid && !!user?.email;
+  const [cid, setCid] = useState(null);
+  useEffect(() => {
+    base44.auth.me().then(u => {
+      setUser(u);
+      if (u?.company_id) { setCid(u.company_id); return; }
+      if (u?.email) base44.entities.Employee.filter({ user_email: u.email }).then(emps => { if (emps[0]?.company_id) setCid(emps[0].company_id); });
+    });
+  }, []);
+  const enabled = !!user?.email;
 
   const { data: appointments = [] } = useQuery({
     queryKey: ["pa_list", cid, user?.email],
