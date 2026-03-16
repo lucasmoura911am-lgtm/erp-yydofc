@@ -26,7 +26,8 @@ import {
   ListTodo,
   MapPin,
   FileCheck,
-  UserCog
+  UserCog,
+  DollarSign
 } from "lucide-react";
 import {
   DropdownMenu,
