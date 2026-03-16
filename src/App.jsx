@@ -62,6 +62,11 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
+      <Route path="/EmployeeFolder" element={<LayoutWrapper currentPageName="EmployeeFolder"><EmployeeFolder /></LayoutWrapper>} />
+      <Route path="/MyDocuments" element={<LayoutWrapper currentPageName="MyDocuments"><MyDocuments /></LayoutWrapper>} />
+      <Route path="/EPICatalog" element={<LayoutWrapper currentPageName="EPICatalog"><EPICatalog /></LayoutWrapper>} />
+      <Route path="/EPIDeliveries" element={<LayoutWrapper currentPageName="EPIDeliveries"><EPIDeliveries /></LayoutWrapper>} />
+      <Route path="/EPIRecords" element={<LayoutWrapper currentPageName="EPIRecords"><EPIRecords /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
