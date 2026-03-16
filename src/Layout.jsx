@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import {
   LogOut,
@@ -9,7 +8,6 @@ import {
   Moon,
   Sun,
   ChevronDown,
-  ChevronRight,
   LayoutDashboard,
   Clock,
   Users,
@@ -30,7 +28,8 @@ import {
   DollarSign,
   HardHat,
   PackageCheck,
-  ClipboardList
+  ClipboardList,
+  Folder
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,7 +41,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 
 export default function Layout({ children }) {
   const location = useLocation();
@@ -67,12 +65,9 @@ export default function Layout({ children }) {
     try {
       const userData = await base44.auth.me();
       setUser(userData);
-      
       if (userData.company_id) {
         const companies = await base44.entities.Company.filter({ id: userData.company_id });
-        if (companies.length > 0) {
-          setCompany(companies[0]);
-        }
+        if (companies.length > 0) setCompany(companies[0]);
       }
     } catch (error) {
       console.error("Erro ao carregar usuário:", error);
@@ -80,12 +75,12 @@ export default function Layout({ children }) {
   };
 
   const handleLogout = () => {
-    base44.auth.logout(window.location.origin + createPageUrl('Home'));
+    base44.auth.logout(window.location.origin + '/Dashboard');
   };
 
   const isAdmin = user?.role === 'admin';
   const isSuperAdmin = user?.email === 'admin@pontoflex.com';
-  
+
   const getNavigationModules = () => {
     const adminModules = [
       {
@@ -111,6 +106,7 @@ export default function Layout({ children }) {
         title: "Gestão de Pessoas",
         items: [
           { title: "Funcionários", url: "/Employees", icon: Users },
+          { title: "Pasta dos Colaboradores", url: "/EmployeeFolder", icon: Folder },
           { title: "Times", url: "/Teams", icon: Users },
           { title: "Supervisores", url: "/Supervisors", icon: Shield },
           { title: "Justificativas de Falta", url: "/ManageAbsenceJustifications", icon: FileCheck },
@@ -142,21 +138,21 @@ export default function Layout({ children }) {
         ]
       },
       {
-        id: "documents",
-        title: "Documentos",
-        items: [
-          { title: "Templates", url: "/DocumentTemplates", icon: FileText },
-          { title: "Gerar Documento", url: "/GenerateDocument", icon: Edit3 },
-          { title: "Documentos Gerados", url: "/GeneratedDocuments", icon: FileCheck },
-        ]
-      },
-      {
         id: "epi",
         title: "EPI",
         items: [
           { title: "Cadastro de EPIs", url: "/EPICatalog", icon: HardHat },
           { title: "Entrega de EPIs", url: "/EPIDeliveries", icon: PackageCheck },
           { title: "Fichas de EPI", url: "/EPIRecords", icon: ClipboardList },
+        ]
+      },
+      {
+        id: "documents",
+        title: "Documentos",
+        items: [
+          { title: "Templates", url: "/DocumentTemplates", icon: FileText },
+          { title: "Gerar Documento", url: "/GenerateDocument", icon: Edit3 },
+          { title: "Documentos Gerados", url: "/GeneratedDocuments", icon: FileCheck },
         ]
       },
       {
@@ -228,6 +224,7 @@ export default function Layout({ children }) {
         id: "employee_docs",
         title: "Meus Documentos",
         items: [
+          { title: "Meus Documentos", url: "/MyDocuments", icon: Folder },
           { title: "Minhas Férias", url: "/MyVacations", icon: Calendar },
           { title: "Meus Holerites", url: "/MyPayslips", icon: FileText },
           { title: "Folha de Ponto Assinada", url: "/MySignedTimeReports", icon: FileText },
@@ -259,9 +256,7 @@ export default function Layout({ children }) {
               </div>
               <div className="hidden sm:block">
                 <h1 className="font-bold text-lg text-gray-900 dark:text-gray-100">PontoFlex</h1>
-                {company && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{company.name}</p>
-                )}
+                {company && <p className="text-xs text-gray-500 dark:text-gray-400">{company.name}</p>}
               </div>
             </div>
 
@@ -284,9 +279,7 @@ export default function Layout({ children }) {
                         <DropdownMenuItem key={item.title} asChild>
                           <Link
                             to={item.url}
-                            className={`flex items-center gap-2 cursor-pointer ${
-                              isActive ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : ''
-                            }`}
+                            className={`flex items-center gap-2 cursor-pointer ${isActive ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : ''}`}
                           >
                             <item.icon className="w-4 h-4" />
                             {item.title}
@@ -301,16 +294,10 @@ export default function Layout({ children }) {
 
             {/* Right Side Actions */}
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setDarkMode(!darkMode)}
-                className="hidden sm:flex"
-              >
+              <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)} className="hidden sm:flex">
                 {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </Button>
 
-              {/* User Menu */}
               {user && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -336,10 +323,6 @@ export default function Layout({ children }) {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setDarkMode(!darkMode)} className="sm:hidden">
-                      {darkMode ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
-                      {darkMode ? 'Modo Claro' : 'Modo Escuro'}
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                       <LogOut className="w-4 h-4 mr-2" />
                       Sair do Sistema
@@ -349,12 +332,7 @@ export default function Layout({ children }) {
               )}
 
               {/* Mobile Menu Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="lg:hidden"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
+              <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </Button>
             </div>
