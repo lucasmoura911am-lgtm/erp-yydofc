@@ -27,7 +27,10 @@ import {
   MapPin,
   FileCheck,
   UserCog,
-  DollarSign
+  DollarSign,
+  HardHat,
+  PackageCheck,
+  ClipboardList
 } from "lucide-react";
 import {
   DropdownMenu,
