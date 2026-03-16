@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,11 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, Check, Search, Upload, AlertCircle, Clock, Layers } from "lucide-react";
+import { Plus, Edit, Trash2, Check, Search, Upload, AlertCircle, Clock, Layers, UserCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-
 
 const STATUS_COLORS = {
   pendente: "bg-yellow-100 text-yellow-700",
@@ -25,10 +23,10 @@ const STATUS_COLORS = {
 const fmt = (v) => `R$ ${(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
 const emptyForm = {
-  supplier_name: "", description: "", amount: "", due_date: "",
+  supplier_id: "", supplier_name: "", description: "", amount: "", due_date: "",
   payment_date: "", status: "pendente", category_id: "", cost_center_id: "",
   contract_id: "", bank_account_id: "", payment_method: "pix",
-  attachment_url: "", notes: ""
+  attachment_url: "", notes: "", payee_type: "supplier" // supplier | employee | other
 };
 
 export default function AccountsPayablePage() {
@@ -47,10 +45,21 @@ export default function AccountsPayablePage() {
   const cid = user?.company_id;
 
   const { data: payables = [] } = useQuery({ queryKey: ["ap", cid], queryFn: () => base44.entities.AccountsPayable.filter({ company_id: cid }), enabled: !!cid });
+  const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers", cid], queryFn: () => base44.entities.Supplier.filter({ company_id: cid, status: "ativo" }), enabled: !!cid });
+  const { data: employees = [] } = useQuery({ queryKey: ["employees", cid], queryFn: () => base44.entities.Employee.filter({ company_id: cid, status: "active" }), enabled: !!cid });
   const { data: categories = [] } = useQuery({ queryKey: ["coa", cid], queryFn: () => base44.entities.ChartOfAccounts.filter({ company_id: cid, type: "despesa" }), enabled: !!cid });
   const { data: costCenters = [] } = useQuery({ queryKey: ["cc", cid], queryFn: () => base44.entities.CostCenter.filter({ company_id: cid }), enabled: !!cid });
   const { data: contracts = [] } = useQuery({ queryKey: ["contracts", cid], queryFn: () => base44.entities.Contract.filter({ company_id: cid }), enabled: !!cid });
   const { data: bankAccounts = [] } = useQuery({ queryKey: ["ba", cid], queryFn: () => base44.entities.BankAccount.filter({ company_id: cid }), enabled: !!cid });
+
+  // Resolve display name for payable
+  const resolvePayeeName = (p) => {
+    if (p.supplier_id) {
+      const s = suppliers.find(s => s.id === p.supplier_id);
+      return s?.name || p.supplier_name || "—";
+    }
+    return p.supplier_name || "—";
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
@@ -61,8 +70,7 @@ export default function AccountsPayablePage() {
           const dueDate = new Date(formData.due_date + "T00:00:00");
           dueDate.setMonth(dueDate.getMonth() + i);
           await base44.entities.AccountsPayable.create({
-            ...data,
-            amount,
+            ...data, amount,
             due_date: format(dueDate, "yyyy-MM-dd"),
             description: `${data.description} (${i + 1}/${installments.count})`,
             installment_group: groupId,
@@ -74,23 +82,17 @@ export default function AccountsPayablePage() {
         await base44.entities.AccountsPayable.create(data);
       }
     },
-    onSuccess: () => {
-      qc.invalidateQueries(["ap"]);
-      toast.success("Conta criada!");
-      setDialogOpen(false);
-      setFormData(emptyForm);
-    }
+    onSuccess: () => { qc.invalidateQueries(["ap"]); toast.success("Conta criada!"); setDialogOpen(false); setFormData(emptyForm); }
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.AccountsPayable.update(id, data),
     onSuccess: async (_, { id, data }) => {
-      // Auto create cashflow on payment
       if (data.status === "pago" && data.payment_date) {
         await base44.entities.CashFlow.create({
           company_id: cid,
           date: data.payment_date,
-          description: `Pagamento: ${data.supplier_name}`,
+          description: `Pagamento: ${resolvePayeeName(data)}`,
           amount: data.amount,
           type: "saida",
           source: "conta_pagar",
@@ -103,9 +105,7 @@ export default function AccountsPayablePage() {
       qc.invalidateQueries(["ap"]);
       qc.invalidateQueries(["cf"]);
       toast.success("Conta atualizada!");
-      setDialogOpen(false);
-      setEditing(null);
-      setFormData(emptyForm);
+      setDialogOpen(false); setEditing(null); setFormData(emptyForm);
     }
   });
 
@@ -114,15 +114,20 @@ export default function AccountsPayablePage() {
     onSuccess: () => { qc.invalidateQueries(["ap"]); toast.success("Excluído!"); }
   });
 
-  const handleEdit = (p) => {
-    setEditing(p);
-    setFormData({ ...emptyForm, ...p });
-    setDialogOpen(true);
-  };
+  const handleEdit = (p) => { setEditing(p); setFormData({ ...emptyForm, ...p }); setDialogOpen(true); };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const data = { ...formData, amount: parseFloat(formData.amount) || 0, company_id: cid };
+    // Resolve supplier_name from selected supplier or employee
+    let resolved = { ...formData };
+    if (resolved.payee_type === "supplier" && resolved.supplier_id) {
+      const s = suppliers.find(s => s.id === resolved.supplier_id);
+      resolved.supplier_name = s?.name || resolved.supplier_name;
+    } else if (resolved.payee_type === "employee" && resolved.supplier_id) {
+      const e = employees.find(e => e.id === resolved.supplier_id);
+      resolved.supplier_name = e?.full_name || resolved.supplier_name;
+    }
+    const data = { ...resolved, amount: parseFloat(resolved.amount) || 0, company_id: cid };
     if (editing) updateMutation.mutate({ id: editing.id, data });
     else createMutation.mutate(data);
   };
@@ -137,20 +142,15 @@ export default function AccountsPayablePage() {
   };
 
   const markAsPaid = (p) => {
-    updateMutation.mutate({
-      id: p.id,
-      data: { ...p, status: "pago", payment_date: format(new Date(), "yyyy-MM-dd") }
-    });
+    updateMutation.mutate({ id: p.id, data: { ...p, status: "pago", payment_date: format(new Date(), "yyyy-MM-dd") } });
   };
 
-  // Auto update overdue
   const filtered = payables.map(p => {
-    if (p.status === "pendente" && p.due_date && new Date(p.due_date + "T00:00:00") < new Date()) {
-      return { ...p, status: "vencido" };
-    }
+    if (p.status === "pendente" && p.due_date && new Date(p.due_date + "T00:00:00") < new Date()) return { ...p, status: "vencido" };
     return p;
   }).filter(p => {
-    const ms = p.supplier_name?.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase());
+    const name = resolvePayeeName(p).toLowerCase();
+    const ms = name.includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase());
     const st = filterStatus === "all" || p.status === filterStatus;
     return ms && st;
   });
@@ -158,6 +158,11 @@ export default function AccountsPayablePage() {
   const totalPendente = filtered.filter(p => p.status === "pendente").reduce((s, p) => s + (p.amount || 0), 0);
   const totalVencido = filtered.filter(p => p.status === "vencido").reduce((s, p) => s + (p.amount || 0), 0);
   const totalPago = filtered.filter(p => p.status === "pago").reduce((s, p) => s + (p.amount || 0), 0);
+
+  // On payee_type change, reset supplier_id
+  const handlePayeeTypeChange = (type) => {
+    setFormData(prev => ({ ...prev, payee_type: type, supplier_id: "", supplier_name: "" }));
+  };
 
   return (
     <div className="p-6 space-y-5">
@@ -176,10 +181,73 @@ export default function AccountsPayablePage() {
             <DialogHeader><DialogTitle>{editing ? "Editar" : "Nova"} Conta a Pagar</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
+
+                {/* Tipo de beneficiário */}
                 <div className="col-span-2">
-                  <Label>Fornecedor *</Label>
-                  <Input value={formData.supplier_name} onChange={e => setFormData({ ...formData, supplier_name: e.target.value })} required />
+                  <Label>Pagar para</Label>
+                  <div className="flex gap-2 mt-1">
+                    {[
+                      { value: "supplier", label: "Fornecedor" },
+                      { value: "employee", label: "Funcionário" },
+                      { value: "other", label: "Outro (digitar)" }
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => handlePayeeTypeChange(opt.value)}
+                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${formData.payee_type === opt.value ? "bg-red-600 text-white border-red-600" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Beneficiário selecionado via select */}
+                {formData.payee_type === "supplier" && (
+                  <div className="col-span-2">
+                    <Label>Fornecedor *</Label>
+                    <Select value={formData.supplier_id || "none"} onValueChange={v => setFormData({ ...formData, supplier_id: v === "none" ? "" : v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione o fornecedor" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Selecione...</SelectItem>
+                        {suppliers.map(s => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name} {s.cnpj_cpf ? `— ${s.cnpj_cpf}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {suppliers.length === 0 && (
+                      <p className="text-xs text-orange-600 mt-1">Nenhum fornecedor cadastrado. <a href="/SuppliersPage" className="underline">Cadastre aqui</a></p>
+                    )}
+                  </div>
+                )}
+
+                {formData.payee_type === "employee" && (
+                  <div className="col-span-2">
+                    <Label>Funcionário *</Label>
+                    <Select value={formData.supplier_id || "none"} onValueChange={v => setFormData({ ...formData, supplier_id: v === "none" ? "" : v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione o funcionário" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Selecione...</SelectItem>
+                        {employees.map(e => (
+                          <SelectItem key={e.id} value={e.id}>
+                            {e.full_name} {e.cpf ? `— ${e.cpf}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {formData.payee_type === "other" && (
+                  <div className="col-span-2">
+                    <Label>Nome do beneficiário *</Label>
+                    <Input value={formData.supplier_name} onChange={e => setFormData({ ...formData, supplier_name: e.target.value })} placeholder="Nome da pessoa ou empresa" required />
+                  </div>
+                )}
+
                 <div className="col-span-2">
                   <Label>Descrição</Label>
                   <Input value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
@@ -214,7 +282,9 @@ export default function AccountsPayablePage() {
                   <Select value={formData.payment_method} onValueChange={v => setFormData({ ...formData, payment_method: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {["pix", "boleto", "transferencia", "cartao", "dinheiro", "cheque"].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                      {["pix", "boleto", "transferencia", "cartao", "dinheiro", "cheque"].map(m => (
+                        <SelectItem key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -260,6 +330,7 @@ export default function AccountsPayablePage() {
                 </div>
               </div>
 
+              {/* Parcelamento */}
               {!editing && (
                 <div className="border rounded-lg p-3 bg-orange-50 dark:bg-orange-900/10 space-y-2">
                   <div className="flex items-center gap-2">
@@ -317,7 +388,7 @@ export default function AccountsPayablePage() {
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input className="pl-9" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Input className="pl-9" placeholder="Buscar fornecedor ou descrição..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
@@ -338,7 +409,7 @@ export default function AccountsPayablePage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800/50">
                 <tr>
-                  {["Fornecedor", "Descrição", "Valor", "Vencimento", "Status", "Categoria", "Ações"].map(h => (
+                  {["Beneficiário", "Descrição", "Valor", "Vencimento", "Status", "Categoria", "Ações"].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
                   ))}
                 </tr>
@@ -346,9 +417,15 @@ export default function AccountsPayablePage() {
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {filtered.map(p => {
                   const cat = categories.find(c => c.id === p.category_id);
+                  const payeeName = resolvePayeeName(p);
                   return (
                     <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                      <td className="px-4 py-3 font-medium">{p.supplier_name}</td>
+                      <td className="px-4 py-3 font-medium">
+                        <div className="flex items-center gap-1.5">
+                          {p.payee_type === "employee" && <UserCircle className="w-3.5 h-3.5 text-blue-500" />}
+                          {payeeName}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-gray-500 max-w-48 truncate">
                         {p.description}
                         {p.installment_total > 1 && <span className="ml-1 text-xs text-orange-600">({p.installment_number}/{p.installment_total})</span>}
