@@ -51,6 +51,7 @@ import Teams from './pages/Teams';
 import MyTimeRecords from './pages/MyTimeRecords';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import ClockIn from './pages/ClockIn';
+import SuppliersPage from './pages/SuppliersPage';
 import FinancialDashboard from './pages/FinancialDashboard';
 import AccountsPayablePage from './pages/AccountsPayablePage';
 import AccountsReceivablePage from './pages/AccountsReceivablePage';
@@ -161,6 +162,7 @@ const AuthenticatedApp = () => {
       <Route path="/MyTimeRecords" element={<LayoutWrapper currentPageName="MyTimeRecords"><MyTimeRecords /></LayoutWrapper>} />
       <Route path="/EmployeeDashboard" element={<LayoutWrapper currentPageName="EmployeeDashboard"><EmployeeDashboard /></LayoutWrapper>} />
       <Route path="/ClockIn" element={<LayoutWrapper currentPageName="ClockIn"><ClockIn /></LayoutWrapper>} />
+      <Route path="/SuppliersPage" element={<LayoutWrapper currentPageName="SuppliersPage"><SuppliersPage /></LayoutWrapper>} />
       <Route path="/FinancialDashboard" element={<LayoutWrapper currentPageName="FinancialDashboard"><FinancialDashboard /></LayoutWrapper>} />
       <Route path="/AccountsPayablePage" element={<LayoutWrapper currentPageName="AccountsPayablePage"><AccountsPayablePage /></LayoutWrapper>} />
       <Route path="/AccountsReceivablePage" element={<LayoutWrapper currentPageName="AccountsReceivablePage"><AccountsReceivablePage /></LayoutWrapper>} />
