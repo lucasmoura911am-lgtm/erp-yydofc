@@ -47,14 +47,16 @@ export default function ProductivityKanban() {
   const isAdmin = user?.role === "admin";
 
   const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ["pk_tasks", cid],
-    queryFn: () => base44.entities.ProductivityTask.filter({ company_id: cid }),
+    queryKey: ["pk_tasks", cid, user?.email],
+    queryFn: () => cid
+      ? base44.entities.ProductivityTask.filter({ company_id: cid })
+      : base44.entities.ProductivityTask.filter({ responsible_email: user.email }),
     enabled,
   });
   const { data: employees = [] } = useQuery({
     queryKey: ["pk_emps", cid],
-    queryFn: () => base44.entities.Employee.filter({ company_id: cid }),
-    enabled,
+    queryFn: () => cid ? base44.entities.Employee.filter({ company_id: cid }) : [],
+    enabled: !!cid,
   });
 
   const save = useMutation({
