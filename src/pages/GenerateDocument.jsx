@@ -71,7 +71,7 @@ export default function GenerateDocument() {
 
   const employee = employees.find((e) => e.id === selectedEmployee);
   const template = templates.find((t) => t.id === selectedTemplate);
-  const contract = contracts.find((c) => c.id === selectedContract);
+  const contract = contracts.find((c) => c.id === selectedContract) || null;
 
   const resolvedHtml = template && employee
     ? resolveVariables(template.html_content, employee, company, contract)
@@ -81,12 +81,13 @@ export default function GenerateDocument() {
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>${template?.name}</title>
     <style>
-      body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.6; padding: 40px; color: #000; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.7; padding: 40px; color: #111; background: #fff; }
       @media print { .no-print { display:none; } }
     </style></head><body>
     ${resolvedHtml}
     <div class="no-print" style="position:fixed;bottom:20px;right:20px;">
-      <button onclick="window.print()" style="background:#6366f1;color:#fff;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:16px;">
+      <button onclick="window.print()" style="background:#6366f1;color:#fff;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:16px;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
         🖨️ Imprimir / Salvar PDF
       </button>
     </div>
@@ -177,7 +178,7 @@ export default function GenerateDocument() {
                     <SelectValue placeholder="Nenhum contrato" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={null}>Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {contracts.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.contract_number}
