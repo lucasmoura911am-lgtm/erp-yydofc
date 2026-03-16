@@ -11,6 +11,12 @@ import MyDocuments from './pages/MyDocuments';
 import EPICatalog from './pages/EPICatalog';
 import EPIDeliveries from './pages/EPIDeliveries';
 import EPIRecords from './pages/EPIRecords';
+import SafetyDashboard from './pages/SafetyDashboard';
+import SafetyPrograms from './pages/SafetyPrograms';
+import RiskInventoryPage from './pages/RiskInventoryPage';
+import RiskActionPlanPage from './pages/RiskActionPlanPage';
+import HealthActivitiesPage from './pages/HealthActivitiesPage';
+import SafetyReports from './pages/SafetyReports';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];

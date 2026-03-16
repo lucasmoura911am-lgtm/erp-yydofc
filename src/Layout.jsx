@@ -147,6 +147,18 @@ export default function Layout({ children }) {
         ]
       },
       {
+        id: "safety",
+        title: "Segurança do Trabalho",
+        items: [
+          { title: "Dashboard", url: "/SafetyDashboard", icon: ShieldCheck },
+          { title: "Contratos e Programas", url: "/SafetyPrograms", icon: FileText },
+          { title: "Inventário de Riscos", url: "/RiskInventoryPage", icon: AlertTriangle },
+          { title: "Plano de Ação (PGR)", url: "/RiskActionPlanPage", icon: TrendingUp },
+          { title: "Atividades de Saúde (PCMSO)", url: "/HealthActivitiesPage", icon: Activity },
+          { title: "Relatórios", url: "/SafetyReports", icon: BarChart3 },
+        ]
+      },
+      {
         id: "documents",
         title: "Documentos",
         items: [
