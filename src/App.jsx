@@ -73,6 +73,12 @@ const AuthenticatedApp = () => {
       <Route path="/EPICatalog" element={<LayoutWrapper currentPageName="EPICatalog"><EPICatalog /></LayoutWrapper>} />
       <Route path="/EPIDeliveries" element={<LayoutWrapper currentPageName="EPIDeliveries"><EPIDeliveries /></LayoutWrapper>} />
       <Route path="/EPIRecords" element={<LayoutWrapper currentPageName="EPIRecords"><EPIRecords /></LayoutWrapper>} />
+      <Route path="/SafetyDashboard" element={<LayoutWrapper currentPageName="SafetyDashboard"><SafetyDashboard /></LayoutWrapper>} />
+      <Route path="/SafetyPrograms" element={<LayoutWrapper currentPageName="SafetyPrograms"><SafetyPrograms /></LayoutWrapper>} />
+      <Route path="/RiskInventoryPage" element={<LayoutWrapper currentPageName="RiskInventoryPage"><RiskInventoryPage /></LayoutWrapper>} />
+      <Route path="/RiskActionPlanPage" element={<LayoutWrapper currentPageName="RiskActionPlanPage"><RiskActionPlanPage /></LayoutWrapper>} />
+      <Route path="/HealthActivitiesPage" element={<LayoutWrapper currentPageName="HealthActivitiesPage"><HealthActivitiesPage /></LayoutWrapper>} />
+      <Route path="/SafetyReports" element={<LayoutWrapper currentPageName="SafetyReports"><SafetyReports /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

@@ -29,7 +29,9 @@ import {
   HardHat,
   PackageCheck,
   ClipboardList,
-  Folder
+  Folder,
+  Activity,
+  TrendingUp
 } from "lucide-react";
 import {
   DropdownMenu,
