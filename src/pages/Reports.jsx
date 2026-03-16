@@ -1205,7 +1205,7 @@ export default function Reports() {
       </div>
 
       {/* Relatório Diário de Presença */}
-      <DailyAttendanceReport companyId={user?.company_id} />
+      <DailyAttendanceReport companyId={user?.company_id} company={company} />
 
       {/* Relatório Gerencial Mensal */}
       <Card className="shadow-xl border-2 border-green-200 dark:border-green-800">
