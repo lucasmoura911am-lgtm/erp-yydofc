@@ -148,6 +148,15 @@ export default function Layout({ children }) {
         ]
       },
       {
+        id: "epi",
+        title: "EPI",
+        items: [
+          { title: "Cadastro de EPIs", url: "/EPICatalog", icon: HardHat },
+          { title: "Entrega de EPIs", url: "/EPIDeliveries", icon: PackageCheck },
+          { title: "Fichas de EPI", url: "/EPIRecords", icon: ClipboardList },
+        ]
+      },
+      {
         id: "benefits",
         title: "Benefícios",
         items: [
