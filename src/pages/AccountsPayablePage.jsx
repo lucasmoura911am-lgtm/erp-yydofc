@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2, Check, Search, Upload, AlertCircle, Clock, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { v4 as uuidv4 } from "uuid";
+
 
 const STATUS_COLORS = {
   pendente: "bg-yellow-100 text-yellow-700",
@@ -55,7 +55,7 @@ export default function AccountsPayablePage() {
   const createMutation = useMutation({
     mutationFn: async (data) => {
       if (installments.enabled && !editing) {
-        const groupId = uuidv4();
+        const groupId = `grp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         const amount = parseFloat(formData.amount) / installments.count;
         for (let i = 0; i < installments.count; i++) {
           const dueDate = new Date(formData.due_date + "T00:00:00");

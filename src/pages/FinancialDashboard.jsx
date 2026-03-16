@@ -103,7 +103,7 @@ export default function FinancialDashboard() {
     return { value: format(d, "yyyy-MM"), label: format(d, "MMMM/yyyy", { locale: ptBR }) };
   });
 
-  const KPICard = ({ title, value, icon: Icon, colorClass, trend, trendLabel }) => (
+  const KPICard = ({ title, value, icon: KpiIcon, colorClass, trend, trendLabel }) => (
     <Card>
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
@@ -118,7 +118,7 @@ export default function FinancialDashboard() {
             )}
           </div>
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorClass.includes("green") ? "bg-green-50 dark:bg-green-900/20" : colorClass.includes("red") ? "bg-red-50 dark:bg-red-900/20" : colorClass.includes("blue") ? "bg-blue-50 dark:bg-blue-900/20" : "bg-purple-50 dark:bg-purple-900/20"}`}>
-            <Icon className={`w-5 h-5 ${colorClass}`} />
+            <KpiIcon className={`w-5 h-5 ${colorClass}`} />
           </div>
         </div>
       </CardContent>

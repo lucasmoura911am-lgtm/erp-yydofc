@@ -52,8 +52,7 @@ export default function AccountsReceivablePage() {
   const createMutation = useMutation({
     mutationFn: async (data) => {
       if (installments.enabled && !editing) {
-        const { v4: uuidv4 } = await import("uuid");
-        const groupId = uuidv4();
+        const groupId = `grp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         const amount = parseFloat(formData.amount) / installments.count;
         for (let i = 0; i < installments.count; i++) {
           const dueDate = new Date(formData.due_date + "T00:00:00");
