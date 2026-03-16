@@ -172,6 +172,7 @@ export default function Layout({ children }) {
         items: [
           { title: "Gestão de Férias", url: "/ManageVacations", icon: Calendar },
           { title: "Gestão de Holerites", url: "/ManagePayslips", icon: FileText },
+          { title: "Aniversários & Datas", url: "/BirthdaysAndDates", icon: Gift },
         ]
       },
       {
