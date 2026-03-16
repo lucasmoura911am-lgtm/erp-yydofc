@@ -139,6 +139,15 @@ export default function Layout({ children }) {
         ]
       },
       {
+        id: "documents",
+        title: "Documentos",
+        items: [
+          { title: "Templates", url: "/DocumentTemplates", icon: FileText },
+          { title: "Gerar Documento", url: "/GenerateDocument", icon: Edit3 },
+          { title: "Documentos Gerados", url: "/GeneratedDocuments", icon: FileCheck },
+        ]
+      },
+      {
         id: "benefits",
         title: "Benefícios",
         items: [
