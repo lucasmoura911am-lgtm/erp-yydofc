@@ -51,6 +51,15 @@ import Teams from './pages/Teams';
 import MyTimeRecords from './pages/MyTimeRecords';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import ClockIn from './pages/ClockIn';
+import FinancialDashboard from './pages/FinancialDashboard';
+import AccountsPayablePage from './pages/AccountsPayablePage';
+import AccountsReceivablePage from './pages/AccountsReceivablePage';
+import CashFlowPage from './pages/CashFlowPage';
+import FinancialSettings from './pages/FinancialSettings';
+import BankReconciliationPage from './pages/BankReconciliationPage';
+import FinancialReports from './pages/FinancialReports';
+import FinancialDRE from './pages/FinancialDRE';
+import BudgetVsActual from './pages/BudgetVsActual';
 import RecruitmentOverview from './pages/RecruitmentOverview';
 import JobPositions from './pages/JobPositions';
 import CandidatePool from './pages/CandidatePool';
@@ -152,6 +161,15 @@ const AuthenticatedApp = () => {
       <Route path="/MyTimeRecords" element={<LayoutWrapper currentPageName="MyTimeRecords"><MyTimeRecords /></LayoutWrapper>} />
       <Route path="/EmployeeDashboard" element={<LayoutWrapper currentPageName="EmployeeDashboard"><EmployeeDashboard /></LayoutWrapper>} />
       <Route path="/ClockIn" element={<LayoutWrapper currentPageName="ClockIn"><ClockIn /></LayoutWrapper>} />
+      <Route path="/FinancialDashboard" element={<LayoutWrapper currentPageName="FinancialDashboard"><FinancialDashboard /></LayoutWrapper>} />
+      <Route path="/AccountsPayablePage" element={<LayoutWrapper currentPageName="AccountsPayablePage"><AccountsPayablePage /></LayoutWrapper>} />
+      <Route path="/AccountsReceivablePage" element={<LayoutWrapper currentPageName="AccountsReceivablePage"><AccountsReceivablePage /></LayoutWrapper>} />
+      <Route path="/CashFlowPage" element={<LayoutWrapper currentPageName="CashFlowPage"><CashFlowPage /></LayoutWrapper>} />
+      <Route path="/FinancialSettings" element={<LayoutWrapper currentPageName="FinancialSettings"><FinancialSettings /></LayoutWrapper>} />
+      <Route path="/BankReconciliationPage" element={<LayoutWrapper currentPageName="BankReconciliationPage"><BankReconciliationPage /></LayoutWrapper>} />
+      <Route path="/FinancialReports" element={<LayoutWrapper currentPageName="FinancialReports"><FinancialReports /></LayoutWrapper>} />
+      <Route path="/FinancialDRE" element={<LayoutWrapper currentPageName="FinancialDRE"><FinancialDRE /></LayoutWrapper>} />
+      <Route path="/BudgetVsActual" element={<LayoutWrapper currentPageName="BudgetVsActual"><BudgetVsActual /></LayoutWrapper>} />
       <Route path="/RecruitmentOverview" element={<LayoutWrapper currentPageName="RecruitmentOverview"><RecruitmentOverview /></LayoutWrapper>} />
       <Route path="/JobPositions" element={<LayoutWrapper currentPageName="JobPositions"><JobPositions /></LayoutWrapper>} />
       <Route path="/CandidatePool" element={<LayoutWrapper currentPageName="CandidatePool"><CandidatePool /></LayoutWrapper>} />

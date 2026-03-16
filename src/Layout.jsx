@@ -34,6 +34,7 @@ import {
   Activity,
   TrendingUp,
   TrendingDown,
+  Target,
   ShieldCheck,
   AlertTriangle,
   PanelLeftClose,
@@ -210,6 +211,22 @@ export default function Layout({ children }) {
         items: [
           { title: "Configurar Benefícios", url: "/BenefitConfigs", icon: Settings },
           { title: "Gestão de Benefícios", url: "/EmployeeBenefits", icon: DollarSign },
+        ]
+      },
+      {
+        id: "financial",
+        title: "Financeiro",
+        icon: DollarSign,
+        items: [
+          { title: "Dashboard Financeiro", url: "/FinancialDashboard", icon: LayoutDashboard },
+          { title: "Contas a Pagar", url: "/AccountsPayablePage", icon: TrendingDown },
+          { title: "Contas a Receber", url: "/AccountsReceivablePage", icon: TrendingUp },
+          { title: "Fluxo de Caixa", url: "/CashFlowPage", icon: BarChart3 },
+          { title: "DRE — Demonstrativo", url: "/FinancialDRE", icon: FileText },
+          { title: "Orçamento x Realizado", url: "/BudgetVsActual", icon: Target },
+          { title: "Config. Financeiras", url: "/FinancialSettings", icon: Building },
+          { title: "Conciliação Bancária", url: "/BankReconciliationPage", icon: FileCheck },
+          { title: "Relatórios Financeiros", url: "/FinancialReports", icon: BarChart3 },
         ]
       },
       {
