@@ -52,7 +52,9 @@ export default function ProductivityAgenda() {
 
   const { data: appointments = [] } = useQuery({
     queryKey: ["pa_list", cid, user?.email],
-    queryFn: () => base44.entities.Appointment.filter({ company_id: cid, employee_email: user.email }),
+    queryFn: () => cid
+      ? base44.entities.Appointment.filter({ company_id: cid, employee_email: user.email })
+      : base44.entities.Appointment.filter({ employee_email: user.email }),
     enabled,
   });
 
