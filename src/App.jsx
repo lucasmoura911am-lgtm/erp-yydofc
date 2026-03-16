@@ -73,6 +73,12 @@ import BudgetVsActual from './pages/BudgetVsActual';
 import RecruitmentOverview from './pages/RecruitmentOverview';
 import Overview360 from './pages/Overview360';
 import BirthdaysAndDates from './pages/BirthdaysAndDates';
+import ProductivityHub from './pages/ProductivityHub';
+import WorkActivities from './pages/WorkActivities';
+import ProductivityKanban from './pages/ProductivityKanban';
+import ProductivityAgenda from './pages/ProductivityAgenda';
+import ProductivityNotices from './pages/ProductivityNotices';
+import ProductivityManager from './pages/ProductivityManager';
 import JobPositions from './pages/JobPositions';
 import CandidatePool from './pages/CandidatePool';
 import RecruitmentKanban from './pages/RecruitmentKanban';
@@ -198,6 +204,12 @@ const AuthenticatedApp = () => {
       <Route path="/RecruitmentKanban" element={<LayoutWrapper currentPageName="RecruitmentKanban"><RecruitmentKanban /></LayoutWrapper>} />
       <Route path="/Interviews" element={<LayoutWrapper currentPageName="Interviews"><Interviews /></LayoutWrapper>} />
       <Route path="/BirthdaysAndDates" element={<LayoutWrapper currentPageName="BirthdaysAndDates"><BirthdaysAndDates /></LayoutWrapper>} />
+      <Route path="/ProductivityHub" element={<LayoutWrapper currentPageName="ProductivityHub"><ProductivityHub /></LayoutWrapper>} />
+      <Route path="/WorkActivities" element={<LayoutWrapper currentPageName="WorkActivities"><WorkActivities /></LayoutWrapper>} />
+      <Route path="/ProductivityKanban" element={<LayoutWrapper currentPageName="ProductivityKanban"><ProductivityKanban /></LayoutWrapper>} />
+      <Route path="/ProductivityAgenda" element={<LayoutWrapper currentPageName="ProductivityAgenda"><ProductivityAgenda /></LayoutWrapper>} />
+      <Route path="/ProductivityNotices" element={<LayoutWrapper currentPageName="ProductivityNotices"><ProductivityNotices /></LayoutWrapper>} />
+      <Route path="/ProductivityManager" element={<LayoutWrapper currentPageName="ProductivityManager"><ProductivityManager /></LayoutWrapper>} />
       <Route path="/Overview360" element={<LayoutWrapper currentPageName="Overview360"><Overview360 /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
