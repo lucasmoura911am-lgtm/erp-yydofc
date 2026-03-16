@@ -41,7 +41,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   CalendarCheck,
-  Zap
+  Zap,
+  Gift
 } from "lucide-react";
 import {
   DropdownMenu,
