@@ -71,6 +71,7 @@ import FinancialReports from './pages/FinancialReports';
 import FinancialDRE from './pages/FinancialDRE';
 import BudgetVsActual from './pages/BudgetVsActual';
 import RecruitmentOverview from './pages/RecruitmentOverview';
+import Overview360 from './pages/Overview360';
 import JobPositions from './pages/JobPositions';
 import CandidatePool from './pages/CandidatePool';
 import RecruitmentKanban from './pages/RecruitmentKanban';
