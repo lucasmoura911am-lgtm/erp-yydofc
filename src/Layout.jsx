@@ -32,7 +32,8 @@ import {
   Folder,
   Activity,
   TrendingUp,
-  ShieldCheck
+  ShieldCheck,
+  AlertTriangle
 } from "lucide-react";
 import {
   DropdownMenu,
