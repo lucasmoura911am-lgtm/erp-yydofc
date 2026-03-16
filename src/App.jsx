@@ -113,6 +113,40 @@ const AuthenticatedApp = () => {
       <Route path="/RiskActionPlanPage" element={<LayoutWrapper currentPageName="RiskActionPlanPage"><RiskActionPlanPage /></LayoutWrapper>} />
       <Route path="/HealthActivitiesPage" element={<LayoutWrapper currentPageName="HealthActivitiesPage"><HealthActivitiesPage /></LayoutWrapper>} />
       <Route path="/SafetyReports" element={<LayoutWrapper currentPageName="SafetyReports"><SafetyReports /></LayoutWrapper>} />
+      <Route path="/BenefitConfigs" element={<LayoutWrapper currentPageName="BenefitConfigs"><BenefitConfigs /></LayoutWrapper>} />
+      <Route path="/EmployeeBenefits" element={<LayoutWrapper currentPageName="EmployeeBenefits"><EmployeeBenefits /></LayoutWrapper>} />
+      <Route path="/ManageTasks" element={<LayoutWrapper currentPageName="ManageTasks"><ManageTasks /></LayoutWrapper>} />
+      <Route path="/TasksDashboard" element={<LayoutWrapper currentPageName="TasksDashboard"><TasksDashboard /></LayoutWrapper>} />
+      <Route path="/ManageVacations" element={<LayoutWrapper currentPageName="ManageVacations"><ManageVacations /></LayoutWrapper>} />
+      <Route path="/ManagePayslips" element={<LayoutWrapper currentPageName="ManagePayslips"><ManagePayslips /></LayoutWrapper>} />
+      <Route path="/MyVacations" element={<LayoutWrapper currentPageName="MyVacations"><MyVacations /></LayoutWrapper>} />
+      <Route path="/MyPayslips" element={<LayoutWrapper currentPageName="MyPayslips"><MyPayslips /></LayoutWrapper>} />
+      <Route path="/MyTasks" element={<LayoutWrapper currentPageName="MyTasks"><MyTasks /></LayoutWrapper>} />
+      <Route path="/Clients" element={<LayoutWrapper currentPageName="Clients"><Clients /></LayoutWrapper>} />
+      <Route path="/Contracts" element={<LayoutWrapper currentPageName="Contracts"><Contracts /></LayoutWrapper>} />
+      <Route path="/Allocations" element={<LayoutWrapper currentPageName="Allocations"><Allocations /></LayoutWrapper>} />
+      <Route path="/AllocationReports" element={<LayoutWrapper currentPageName="AllocationReports"><AllocationReports /></LayoutWrapper>} />
+      <Route path="/Reports" element={<LayoutWrapper currentPageName="Reports"><Reports /></LayoutWrapper>} />
+      <Route path="/MoodReport" element={<LayoutWrapper currentPageName="MoodReport"><MoodReport /></LayoutWrapper>} />
+      <Route path="/Announcements" element={<LayoutWrapper currentPageName="Announcements"><Announcements /></LayoutWrapper>} />
+      <Route path="/Settings" element={<LayoutWrapper currentPageName="Settings"><Settings /></LayoutWrapper>} />
+      <Route path="/UsersManagement" element={<LayoutWrapper currentPageName="UsersManagement"><UsersManagement /></LayoutWrapper>} />
+      <Route path="/Companies" element={<LayoutWrapper currentPageName="Companies"><Companies /></LayoutWrapper>} />
+      <Route path="/SupervisorDashboard" element={<LayoutWrapper currentPageName="SupervisorDashboard"><SupervisorDashboard /></LayoutWrapper>} />
+      <Route path="/Supervisors" element={<LayoutWrapper currentPageName="Supervisors"><Supervisors /></LayoutWrapper>} />
+      <Route path="/ManageAbsenceJustifications" element={<LayoutWrapper currentPageName="ManageAbsenceJustifications"><ManageAbsenceJustifications /></LayoutWrapper>} />
+      <Route path="/MyAbsenceJustifications" element={<LayoutWrapper currentPageName="MyAbsenceJustifications"><MyAbsenceJustifications /></LayoutWrapper>} />
+      <Route path="/ManageSignedTimeReports" element={<LayoutWrapper currentPageName="ManageSignedTimeReports"><ManageSignedTimeReports /></LayoutWrapper>} />
+      <Route path="/MySignedTimeReports" element={<LayoutWrapper currentPageName="MySignedTimeReports"><MySignedTimeReports /></LayoutWrapper>} />
+      <Route path="/HoursBank" element={<LayoutWrapper currentPageName="HoursBank"><HoursBank /></LayoutWrapper>} />
+      <Route path="/ManageTimeRecordsSimple" element={<LayoutWrapper currentPageName="ManageTimeRecordsSimple"><ManageTimeRecordsSimple /></LayoutWrapper>} />
+      <Route path="/DocumentTemplates" element={<LayoutWrapper currentPageName="DocumentTemplates"><DocumentTemplates /></LayoutWrapper>} />
+      <Route path="/GenerateDocument" element={<LayoutWrapper currentPageName="GenerateDocument"><GenerateDocument /></LayoutWrapper>} />
+      <Route path="/GeneratedDocuments" element={<LayoutWrapper currentPageName="GeneratedDocuments"><GeneratedDocuments /></LayoutWrapper>} />
+      <Route path="/Teams" element={<LayoutWrapper currentPageName="Teams"><Teams /></LayoutWrapper>} />
+      <Route path="/MyTimeRecords" element={<LayoutWrapper currentPageName="MyTimeRecords"><MyTimeRecords /></LayoutWrapper>} />
+      <Route path="/EmployeeDashboard" element={<LayoutWrapper currentPageName="EmployeeDashboard"><EmployeeDashboard /></LayoutWrapper>} />
+      <Route path="/ClockIn" element={<LayoutWrapper currentPageName="ClockIn"><ClockIn /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
