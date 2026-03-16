@@ -63,7 +63,7 @@ export default function ProductivityKanban() {
     mutationFn: async (data) => {
       if (editing) return base44.entities.ProductivityTask.update(editing.id, data);
       return base44.entities.ProductivityTask.create({
-        ...data, company_id: cid,
+        ...data, company_id: cid || "unknown",
         created_by_email: user.email,
         created_by_name: user.full_name,
       });
