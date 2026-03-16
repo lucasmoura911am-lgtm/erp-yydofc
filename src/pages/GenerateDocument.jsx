@@ -33,7 +33,7 @@ export default function GenerateDocument() {
   const [showPreview, setShowPreview] = useState(false);
   const qc = useQueryClient();
 
-  React.useEffect(() => {
+  useEffect(() => {
     base44.auth.me().then(setUser);
   }, []);
 

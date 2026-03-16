@@ -18,7 +18,7 @@ export default function GeneratedDocuments() {
   const [viewing, setViewing] = useState(null);
   const qc = useQueryClient();
 
-  React.useEffect(() => {
+  useEffect(() => {
     base44.auth.me().then(setUser);
   }, []);
 

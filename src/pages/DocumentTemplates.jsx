@@ -50,7 +50,7 @@ export default function DocumentTemplates() {
   const quillRef = useRef(null);
   const qc = useQueryClient();
 
-  React.useEffect(() => {
+  useEffect(() => {
     base44.auth.me().then(setUser);
   }, []);
 

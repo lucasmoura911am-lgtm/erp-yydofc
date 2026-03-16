@@ -19,6 +19,9 @@ import MyAbsenceJustifications from './pages/MyAbsenceJustifications';
 import ManageAbsenceJustifications from './pages/ManageAbsenceJustifications';
 import BenefitConfigs from './pages/BenefitConfigs';
 import EmployeeBenefits from './pages/EmployeeBenefits';
+import DocumentTemplates from './pages/DocumentTemplates';
+import GenerateDocument from './pages/GenerateDocument';
+import GeneratedDocuments from './pages/GeneratedDocuments';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
