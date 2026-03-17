@@ -44,7 +44,13 @@ import {
   Zap,
   Gift,
   CheckSquare,
-  Bell
+  Bell,
+  ShoppingCart,
+  Package,
+  Shirt,
+  Wrench,
+  Factory,
+  Siren
 } from "lucide-react";
 import {
   DropdownMenu,
