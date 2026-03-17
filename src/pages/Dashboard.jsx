@@ -81,34 +81,15 @@ export default function Dashboard() {
     enabled: !!user?.company_id,
   });
 
-  useEffect(() => {
-    calculateStats();
-  }, [employees, timeRecords, selectedDate]);
-
-  const calculateStats = () => {
-    const selectedDayStr = selectedDate; // Já está em formato yyyy-MM-dd
+  const stats = useMemo(() => {
     const monthStart = startOfMonth(new Date(selectedDate + 'T12:00:00'));
     const monthEnd = endOfMonth(new Date(selectedDate + 'T12:00:00'));
-
     const activeEmployees = employees.filter(emp => emp.status === 'active');
 
-    // Filtrar registros do dia (incluindo manuais e automáticos)
-    const todayRecords = timeRecords.filter(record => {
-      const recordDateStr = record.timestamp.substring(0, 10);
-      return recordDateStr === selectedDayStr;
-    });
-
-    // Funcionários que bateram ponto hoje (entrada) - incluindo registros manuais
-    const employeesWithEntryToday = new Set(
-      todayRecords
-        .filter(r => r.type === 'entrada')
-        .map(r => r.employee_id)
-    );
-
-    const presentToday = employeesWithEntryToday.size;
+    const todayRecords = timeRecords.filter(record => record.timestamp.substring(0, 10) === selectedDate);
+    const presentToday = new Set(todayRecords.filter(r => r.type === 'entrada').map(r => r.employee_id)).size;
     const absentToday = activeEmployees.length - presentToday;
 
-    // Filtrar registros do mês (incluindo manuais)
     const monthRecords = timeRecords.filter(record => {
       const recordDate = parseISO(record.timestamp);
       return recordDate >= monthStart && recordDate <= monthEnd;
@@ -117,19 +98,17 @@ export default function Dashboard() {
     const workDays = 22;
     const uniqueDays = new Set(monthRecords.map(r => format(parseISO(r.timestamp), 'yyyy-MM-dd'))).size;
     const monthPresence = uniqueDays > 0 ? Math.round((uniqueDays / workDays) * 100) : 0;
-
-    // Contar atrasos do mês (incluindo registros manuais)
     const delays = monthRecords.filter(record => record.status === 'atrasado').length;
 
-    setStats({
+    return {
       totalEmployees: activeEmployees.length,
       todayRecords: todayRecords.length,
       monthPresence,
       delays,
       presentToday,
       absentToday
-    });
-  };
+    };
+  }, [employees, timeRecords, selectedDate]);
 
   const getPresentEmployees = () => {
     const selectedDayStr = selectedDate; // Já está em formato yyyy-MM-dd
