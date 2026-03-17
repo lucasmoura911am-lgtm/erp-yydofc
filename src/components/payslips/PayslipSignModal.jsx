@@ -75,6 +75,7 @@ export default function PayslipSignModal({ payslip, onClose }) {
         ip = ipData.ip;
       } catch {}
 
+      // Save signature data first
       await base44.entities.SmartPayslip.update(payslip.id, {
         status_assinado: "assinado",
         assinatura_digital: signatureData,
@@ -83,6 +84,13 @@ export default function PayslipSignModal({ payslip, onClose }) {
         data_assinatura: new Date().toISOString(),
         user_agent_assinatura: navigator.userAgent
       });
+
+      // Generate signed PDF with embedded signature, photo and IP
+      try {
+        await base44.functions.invoke("generateSignedPayslip", { payslip_id: payslip.id });
+      } catch (pdfErr) {
+        console.warn("PDF assinado não gerado:", pdfErr.message);
+      }
 
       queryClient.invalidateQueries(["smart_payslips"]);
       queryClient.invalidateQueries(["my_smart_payslips"]);
