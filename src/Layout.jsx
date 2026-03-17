@@ -305,6 +305,7 @@ export default function Layout({ children }) {
         icon: Building2,
         items: [
           { title: "Clientes", url: "/Clients", icon: Building2 },
+          { title: "Documentos do Cliente", url: "/ClientDocuments", icon: FileText },
           { title: "Contratos", url: "/Contracts", icon: FileText },
           { title: "Lotações", url: "/Allocations", icon: MapPin },
           { title: "Relatório de Alocações", url: "/AllocationReports", icon: FileText },

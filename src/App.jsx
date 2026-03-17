@@ -229,6 +229,8 @@ const AuthenticatedApp = () => {
       <Route path="/OccurrencesPage" element={<LayoutWrapper currentPageName="OccurrencesPage"><OccurrencesPage /></LayoutWrapper>} />
       <Route path="/ContractStockPage" element={<LayoutWrapper currentPageName="ContractStockPage"><ContractStockPage /></LayoutWrapper>} />
       <Route path="/OperationsDashboard" element={<LayoutWrapper currentPageName="OperationsDashboard"><OperationsDashboard /></LayoutWrapper>} />
+      <Route path="/ClientPortal" element={<ClientPortal />} />
+      <Route path="/ClientDocuments" element={<LayoutWrapper currentPageName="ClientDocuments"><ClientDocuments /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
