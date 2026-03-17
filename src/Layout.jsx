@@ -409,6 +409,36 @@ export default function Layout({ children }) {
 
     if (isSuperAdmin) return [...superAdminModules, ...adminModules];
     if (isAdmin) return adminModules;
+
+    // Custom role: build menu from allowed_modules list
+    if (customRole && customRole.allowed_modules && customRole.allowed_modules.length > 0) {
+      const allowedUrls = new Set(
+        customRole.allowed_modules
+          .map(id => ALL_MODULES.find(m => m.id === id)?.url)
+          .filter(Boolean)
+      );
+      // Collect all admin menu items and filter by allowed URLs
+      const allAdminItems = adminModules.flatMap(m => m.items);
+      const filtered = allAdminItems.filter(item => allowedUrls.has(item.url));
+      // Group them back by their original module group
+      const grouped = {};
+      adminModules.forEach(mod => {
+        const visibleItems = mod.items.filter(item => allowedUrls.has(item.url));
+        if (visibleItems.length > 0) {
+          grouped[mod.id] = { ...mod, items: visibleItems };
+        }
+      });
+      // Also include employee modules that are allowed
+      const allEmployeeItems = employeeModules.flatMap(m => m.items);
+      employeeModules.forEach(mod => {
+        const visibleItems = mod.items.filter(item => allowedUrls.has(item.url));
+        if (visibleItems.length > 0) {
+          grouped['emp_' + mod.id] = { ...mod, items: visibleItems };
+        }
+      });
+      return Object.values(grouped);
+    }
+
     return employeeModules;
   };
 
