@@ -363,6 +363,15 @@ export default function Layout({ children }) {
         ]
       },
       {
+        id: "employee_facilities",
+        title: "Operações",
+        icon: Factory,
+        items: [
+          { title: "Registrar EPI Diário", url: "/EPIDailyLogs", icon: HardHat },
+          { title: "Ocorrências", url: "/OccurrencesPage", icon: Bell },
+        ]
+      },
+      {
         id: "employee_productivity",
         title: "Central de Produtividade",
         icon: Zap,
