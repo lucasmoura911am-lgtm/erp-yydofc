@@ -384,7 +384,14 @@ export default function ManageSignedTimeReports() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                          {report.status === "pendente" && !report.file_url ? (
+                          {report.file_url && (
+                            <Button variant="ghost" size="icon" asChild>
+                              <a href={report.file_url} target="_blank" rel="noopener noreferrer">
+                                <Eye className="w-4 h-4" />
+                              </a>
+                            </Button>
+                          )}
+                          {!report.file_url && (
                             <div className="relative">
                               <Input
                                 type="file"
@@ -396,23 +403,14 @@ export default function ManageSignedTimeReports() {
                                 }}
                               />
                               <Button size="sm" className="pointer-events-none">
-                                <Upload className="w-4 h-4 mr-1" />
-                                Upload
+                                <Upload className="w-4 h-4 mr-1" />Upload
                               </Button>
                             </div>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              asChild
-                              disabled={!report.file_url}
-                            >
-                              <a
-                                href={report.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <Eye className="w-4 h-4" />
+                          )}
+                          {report.status === "assinado" && report.arquivo_pdf_assinado && (
+                            <Button variant="outline" size="sm" className="border-green-500 text-green-600" asChild>
+                              <a href={report.arquivo_pdf_assinado} target="_blank" rel="noopener noreferrer">
+                                <CheckCircle className="w-4 h-4 mr-1" />PDF Assinado
                               </a>
                             </Button>
                           )}
