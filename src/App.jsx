@@ -236,6 +236,9 @@ const AuthenticatedApp = () => {
       <Route path="/ClientPortal" element={<ClientPortal />} />
       <Route path="/ClientDocuments" element={<LayoutWrapper currentPageName="ClientDocuments"><ClientDocuments /></LayoutWrapper>} />
       <Route path="/ClientTicketsManage" element={<LayoutWrapper currentPageName="ClientTicketsManage"><ClientTicketsManage /></LayoutWrapper>} />
+      <Route path="/SmartPayslipsDashboard" element={<LayoutWrapper currentPageName="SmartPayslipsDashboard"><SmartPayslipsDashboard /></LayoutWrapper>} />
+      <Route path="/SmartPayslipsUpload" element={<LayoutWrapper currentPageName="SmartPayslipsUpload"><SmartPayslipsUpload /></LayoutWrapper>} />
+      <Route path="/MySmartPayslips" element={<LayoutWrapper currentPageName="MySmartPayslips"><MySmartPayslips /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
