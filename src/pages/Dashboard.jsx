@@ -74,32 +74,24 @@ export default function Dashboard() {
     enabled: !!user?.company_id,
   });
 
-  const stats = useMemo(() => {
+  const dashStats = useMemo(() => {
     const monthStart = startOfMonth(new Date(selectedDate + 'T12:00:00'));
     const monthEnd = endOfMonth(new Date(selectedDate + 'T12:00:00'));
-    const activeEmployees = employees.filter(emp => emp.status === 'active');
-
-    const todayRecords = timeRecords.filter(record => record.timestamp.substring(0, 10) === selectedDate);
-    const presentToday = new Set(todayRecords.filter(r => r.type === 'entrada').map(r => r.employee_id)).size;
-    const absentToday = activeEmployees.length - presentToday;
-
-    const monthRecords = timeRecords.filter(record => {
-      const recordDate = parseISO(record.timestamp);
-      return recordDate >= monthStart && recordDate <= monthEnd;
+    const activeEmps = employees.filter(emp => emp.status === 'active');
+    const dayRecords = timeRecords.filter(r => r.timestamp.substring(0, 10) === selectedDate);
+    const presentCount = new Set(dayRecords.filter(r => r.type === 'entrada').map(r => r.employee_id)).size;
+    const monthRecords = timeRecords.filter(r => {
+      const d = parseISO(r.timestamp);
+      return d >= monthStart && d <= monthEnd;
     });
-
-    const workDays = 22;
     const uniqueDays = new Set(monthRecords.map(r => format(parseISO(r.timestamp), 'yyyy-MM-dd'))).size;
-    const monthPresence = uniqueDays > 0 ? Math.round((uniqueDays / workDays) * 100) : 0;
-    const delays = monthRecords.filter(record => record.status === 'atrasado').length;
-
     return {
-      totalEmployees: activeEmployees.length,
-      todayRecords: todayRecords.length,
-      monthPresence,
-      delays,
-      presentToday,
-      absentToday
+      totalEmployees: activeEmps.length,
+      todayRecords: dayRecords.length,
+      monthPresence: uniqueDays > 0 ? Math.round((uniqueDays / 22) * 100) : 0,
+      delays: monthRecords.filter(r => r.status === 'atrasado').length,
+      presentToday: presentCount,
+      absentToday: activeEmps.length - presentCount
     };
   }, [employees, timeRecords, selectedDate]);
 
