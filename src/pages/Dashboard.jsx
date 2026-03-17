@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Clock, TrendingUp, AlertCircle, UserCheck, UserX, Calendar } from "lucide-react";
-import { format, startOfMonth, endOfMonth, parseISO, startOfDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import StatsCard from "../components/dashboard/StatsCard";
@@ -22,14 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [stats, setStats] = useState({
-    totalEmployees: 0,
-    todayRecords: 0,
-    monthPresence: 0,
-    delays: 0,
-    presentToday: 0,
-    absentToday: 0
-  });
+
 
   useEffect(() => {
     loadUser();
