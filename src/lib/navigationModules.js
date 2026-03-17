@@ -131,6 +131,7 @@ export const ALL_MODULES = [
   { id: "my_documents", label: "Meus Documentos", url: "/MyDocuments", group: "Painel do Funcionário" },
   { id: "my_vacations", label: "Minhas Férias", url: "/MyVacations", group: "Painel do Funcionário" },
   { id: "my_payslips", label: "Meus Holerites", url: "/MyPayslips", group: "Painel do Funcionário" },
+  { id: "my_smart_payslips", label: "Meus Holerites (IA)", url: "/MySmartPayslips", group: "Painel do Funcionário" },
   { id: "my_signed_time_reports", label: "Folha de Ponto Assinada", url: "/MySignedTimeReports", group: "Painel do Funcionário" },
 ];
 
