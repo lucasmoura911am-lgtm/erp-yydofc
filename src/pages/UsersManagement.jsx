@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Mail, UserPlus, Edit, Search, CheckCircle2, Crown, User, Plus, Trash2, Eye, EyeOff, Key, Settings, ChevronDown, ChevronRight, Check } from "lucide-react";
+import { Shield, Mail, UserPlus, Edit, Search, CheckCircle2, Crown, User, Plus, Trash2, Key, Settings, ChevronDown, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
