@@ -439,7 +439,7 @@ export default function ClientPortal() {
                 ? <div className="text-center py-8 bg-white rounded-xl border border-gray-200 text-slate-400 text-sm">Nenhum boleto disponível</div>
                 : <div className="space-y-2">
                   {boletos.map(d => (
-                    <div key={d.id} className={`bg-white rounded-xl border p-4 flex items-center gap-4 ${d.status==="vencido"?"border-red-300":"d.status==="pago"?"border-emerald-200":"border-gray-200"}`}>
+                    <div key={d.id} className={`bg-white rounded-xl border p-4 flex items-center gap-4 ${d.status==="vencido"?"border-red-300":d.status==="pago"?"border-emerald-200":"border-gray-200"}`}>
                       <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
                         <Receipt className="w-5 h-5 text-orange-500"/>
                       </div>
