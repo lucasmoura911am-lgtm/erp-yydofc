@@ -1,14 +1,14 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Camera, CheckCircle2, FileText, Loader2, Shield } from "lucide-react";
-import SignatureCanvas from "./SignatureCanvas";
+import SignatureCanvas from "@/components/payslips/SignatureCanvas";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 
-export default function PayslipSignModal({ payslip, onClose }) {
+export default function TimeReportSignModal({ report, employeeName, onClose }) {
   const [step, setStep] = useState("signature"); // signature | photo | confirm | done
   const [signatureData, setSignatureData] = useState(null);
   const [photoData, setPhotoData] = useState(null);
@@ -87,26 +87,27 @@ export default function PayslipSignModal({ payslip, onClose }) {
         });
       } catch {}
 
-      // Save signature data first
-      await base44.entities.SmartPayslip.update(payslip.id, {
-        status_assinado: "assinado",
+      // Save signature data
+      await base44.entities.SignedTimeReport.update(report.id, {
+        status: "assinado",
         assinatura_digital: signatureData,
         foto_assinatura: photoUrl,
         ip_assinatura: ip,
         gps_assinatura: gps,
         data_assinatura: new Date().toISOString(),
+        signed_at: new Date().toISOString(),
         user_agent_assinatura: navigator.userAgent
       });
 
-      // Generate signed PDF with embedded signature, photo and IP
+      // Generate signed PDF with embedded signature, photo, IP and GPS
       try {
-        await base44.functions.invoke("generateSignedPayslip", { payslip_id: payslip.id });
+        await base44.functions.invoke("generateSignedTimeReport", { report_id: report.id });
       } catch (pdfErr) {
         console.warn("PDF assinado não gerado:", pdfErr.message);
       }
 
-      queryClient.invalidateQueries(["smart_payslips"]);
-      queryClient.invalidateQueries(["my_smart_payslips"]);
+      queryClient.invalidateQueries(["mySignedTimeReports"]);
+      queryClient.invalidateQueries(["signedTimeReports"]);
       setStep("done");
     } catch (e) {
       setError("Erro ao salvar assinatura: " + e.message);
@@ -124,22 +125,22 @@ export default function PayslipSignModal({ payslip, onClose }) {
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-purple-600" />
-            Assinar Holerite
+            <Shield className="w-5 h-5 text-blue-600" />
+            Assinar Folha de Ponto
           </DialogTitle>
         </DialogHeader>
 
-        {/* Payslip info */}
+        {/* Report info */}
         <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl mb-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center">
             <FileText className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-semibold text-sm">{payslip.employee_name}</p>
-            <p className="text-xs text-gray-500">Competência: {payslip.competencia}</p>
+            <p className="font-semibold text-sm">{employeeName}</p>
+            <p className="text-xs text-gray-500">Folha de Ponto — Competência: {report.competence}</p>
           </div>
-          <Badge className="ml-auto" variant="outline">
-            R$ {(payslip.valor_liquido || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+          <Badge className="ml-auto bg-blue-100 text-blue-800" variant="outline">
+            {report.competence}
           </Badge>
         </div>
 
@@ -147,10 +148,7 @@ export default function PayslipSignModal({ payslip, onClose }) {
 
         {/* Step: Signature */}
         {step === "signature" && (
-          <SignatureCanvas
-            onSave={handleSignatureSave}
-            onCancel={handleClose}
-          />
+          <SignatureCanvas onSave={handleSignatureSave} onCancel={handleClose} />
         )}
 
         {/* Step: Photo */}
@@ -162,7 +160,7 @@ export default function PayslipSignModal({ payslip, onClose }) {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={skipPhoto}>Pular Foto</Button>
-              <Button className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600" onClick={takePhoto}>
+              <Button className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600" onClick={takePhoto}>
                 <Camera className="w-4 h-4 mr-1" /> Capturar
               </Button>
             </div>
@@ -190,11 +188,11 @@ export default function PayslipSignModal({ payslip, onClose }) {
             </div>
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                ✓ Ao confirmar, você declara que leu e recebeu este holerite. Seu IP e data/hora serão registrados.
+                ✓ Ao confirmar, você declara que os registros deste mês são corretos. Seu IP, GPS e data/hora serão registrados.
               </p>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setStep("signature")}>Reassinado</Button>
+              <Button variant="outline" onClick={() => setStep("signature")}>Reasinar</Button>
               <Button
                 className="bg-gradient-to-r from-green-600 to-emerald-600 text-white"
                 onClick={handleConfirm}
@@ -211,9 +209,9 @@ export default function PayslipSignModal({ payslip, onClose }) {
         {step === "done" && (
           <div className="text-center py-8">
             <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Holerite Assinado!</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Folha de Ponto Assinada!</h3>
             <p className="text-gray-500 mt-2">Sua assinatura foi registrada com sucesso.</p>
-            <Button className="mt-6 bg-gradient-to-r from-purple-600 to-blue-600" onClick={handleClose}>
+            <Button className="mt-6 bg-gradient-to-r from-blue-600 to-cyan-600" onClick={handleClose}>
               Fechar
             </Button>
           </div>
