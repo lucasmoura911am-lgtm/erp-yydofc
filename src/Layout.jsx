@@ -72,6 +72,7 @@ export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedModules, setExpandedModules] = useState({});
+  const [customRole, setCustomRole] = useState(null); // AccessRole object for non-admin users
 
   useEffect(() => {
     loadUser();
