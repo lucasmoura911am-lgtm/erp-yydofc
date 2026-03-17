@@ -83,6 +83,14 @@ import JobPositions from './pages/JobPositions';
 import CandidatePool from './pages/CandidatePool';
 import RecruitmentKanban from './pages/RecruitmentKanban';
 import Interviews from './pages/Interviews';
+import PurchaseOrders from './pages/PurchaseOrders';
+import StockControl from './pages/StockControl';
+import UniformControl from './pages/UniformControl';
+import EPIDailyLogs from './pages/EPIDailyLogs';
+import MaintenancePage from './pages/MaintenancePage';
+import OccurrencesPage from './pages/OccurrencesPage';
+import ContractStockPage from './pages/ContractStockPage';
+import OperationsDashboard from './pages/OperationsDashboard';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -211,6 +219,14 @@ const AuthenticatedApp = () => {
       <Route path="/ProductivityNotices" element={<LayoutWrapper currentPageName="ProductivityNotices"><ProductivityNotices /></LayoutWrapper>} />
       <Route path="/ProductivityManager" element={<LayoutWrapper currentPageName="ProductivityManager"><ProductivityManager /></LayoutWrapper>} />
       <Route path="/Overview360" element={<LayoutWrapper currentPageName="Overview360"><Overview360 /></LayoutWrapper>} />
+      <Route path="/PurchaseOrders" element={<LayoutWrapper currentPageName="PurchaseOrders"><PurchaseOrders /></LayoutWrapper>} />
+      <Route path="/StockControl" element={<LayoutWrapper currentPageName="StockControl"><StockControl /></LayoutWrapper>} />
+      <Route path="/UniformControl" element={<LayoutWrapper currentPageName="UniformControl"><UniformControl /></LayoutWrapper>} />
+      <Route path="/EPIDailyLogs" element={<LayoutWrapper currentPageName="EPIDailyLogs"><EPIDailyLogs /></LayoutWrapper>} />
+      <Route path="/MaintenancePage" element={<LayoutWrapper currentPageName="MaintenancePage"><MaintenancePage /></LayoutWrapper>} />
+      <Route path="/OccurrencesPage" element={<LayoutWrapper currentPageName="OccurrencesPage"><OccurrencesPage /></LayoutWrapper>} />
+      <Route path="/ContractStockPage" element={<LayoutWrapper currentPageName="ContractStockPage"><ContractStockPage /></LayoutWrapper>} />
+      <Route path="/OperationsDashboard" element={<LayoutWrapper currentPageName="OperationsDashboard"><OperationsDashboard /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
