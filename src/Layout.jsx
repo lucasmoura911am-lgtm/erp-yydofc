@@ -179,6 +179,21 @@ export default function Layout({ children }) {
         ]
       },
       {
+        id: "facilities_ops",
+        title: "Operações Facilities",
+        icon: Factory,
+        items: [
+          { title: "Dashboard Operacional", url: "/OperationsDashboard", icon: LayoutDashboard },
+          { title: "Pedidos de Compra", url: "/PurchaseOrders", icon: ShoppingCart },
+          { title: "Controle de Estoque", url: "/StockControl", icon: Package },
+          { title: "Estoque por Contrato", url: "/ContractStockPage", icon: Factory },
+          { title: "Uniformes", url: "/UniformControl", icon: Shirt },
+          { title: "Diário de EPI", url: "/EPIDailyLogs", icon: HardHat },
+          { title: "Manutenção", url: "/MaintenancePage", icon: Wrench },
+          { title: "Ocorrências", url: "/OccurrencesPage", icon: Bell },
+        ]
+      },
+      {
         id: "tasks",
         title: "Plano de Trabalho",
         icon: ListTodo,
