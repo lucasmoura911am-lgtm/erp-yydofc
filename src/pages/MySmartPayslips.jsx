@@ -113,8 +113,18 @@ export default function MySmartPayslips() {
                         <PenLine className="w-4 h-4 mr-1" />Assinar
                       </Button>
                     )}
-                    {p.status_assinado === "assinado" && (
-                      <Button size="sm" variant="outline" className="flex-1 border-green-500 text-green-600">
+                    {p.status_assinado === "assinado" && p.arquivo_pdf_assinado && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 border-green-500 text-green-600"
+                        onClick={() => window.open(p.arquivo_pdf_assinado, "_blank")}
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-1" />PDF Assinado
+                      </Button>
+                    )}
+                    {p.status_assinado === "assinado" && !p.arquivo_pdf_assinado && (
+                      <Button size="sm" variant="outline" className="flex-1 border-green-500 text-green-600" disabled>
                         <CheckCircle2 className="w-4 h-4 mr-1" />Assinado
                       </Button>
                     )}

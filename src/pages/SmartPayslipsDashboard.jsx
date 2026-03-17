@@ -216,9 +216,9 @@ export default function SmartPayslipsDashboard() {
                         <Eye className="w-3.5 h-3.5 mr-1" />Ver
                       </Button>
                     )}
-                    {p.status_assinado === "assinado" && p.assinatura_digital && (
-                      <Button size="sm" variant="outline" className="border-green-500 text-green-600" onClick={() => window.open(p.assinatura_digital, "_blank")}>
-                        <Shield className="w-3.5 h-3.5 mr-1" />Ass.
+                    {p.status_assinado === "assinado" && p.arquivo_pdf_assinado && (
+                      <Button size="sm" variant="outline" className="border-green-500 text-green-600" onClick={() => window.open(p.arquivo_pdf_assinado, "_blank")}>
+                        <Shield className="w-3.5 h-3.5 mr-1" />PDF Assinado
                       </Button>
                     )}
                   </div>
