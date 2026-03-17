@@ -219,6 +219,7 @@ export default function Layout({ children }) {
         items: [
           { title: "Gestão de Férias", url: "/ManageVacations", icon: Calendar },
           { title: "Gestão de Holerites", url: "/ManagePayslips", icon: FileText },
+          { title: "Holerites Inteligentes", url: "/SmartPayslipsDashboard", icon: Zap },
           { title: "Aniversários & Datas", url: "/BirthdaysAndDates", icon: Gift },
         ]
       },
@@ -402,6 +403,7 @@ export default function Layout({ children }) {
           { title: "Meus Documentos", url: "/MyDocuments", icon: Folder },
           { title: "Minhas Férias", url: "/MyVacations", icon: Calendar },
           { title: "Meus Holerites", url: "/MyPayslips", icon: FileText },
+          { title: "Meus Holerites (IA)", url: "/MySmartPayslips", icon: Zap },
           { title: "Folha de Ponto Assinada", url: "/MySignedTimeReports", icon: FileText },
         ]
       }
