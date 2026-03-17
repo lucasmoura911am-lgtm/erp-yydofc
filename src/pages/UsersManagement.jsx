@@ -195,25 +195,19 @@ export default function UsersManagement() {
   // ─── Password ─────────────────────────────────────────────────
   const handleOpenPassword = (usr) => {
     setSelectedUser(usr);
-    setNewPassword(""); setConfirmPassword(""); setShowPassword(false);
     setPasswordDialog(true);
   };
 
-  const handleChangePassword = async () => {
-    if (!newPassword) { toast.error("Digite a nova senha"); return; }
-    if (newPassword.length < 6) { toast.error("Mínimo 6 caracteres"); return; }
-    if (newPassword !== confirmPassword) { toast.error("As senhas não coincidem"); return; }
+  const handleSendPasswordReset = async () => {
+    if (!selectedUser?.email) return;
     setSaving(true);
     try {
-      await base44.functions.invoke("changeUserPassword", {
-        target_user_id: selectedUser.id,
-        new_password: newPassword
-      });
-      toast.success("Senha alterada com sucesso!");
+      await base44.functions.invoke("changeUserPassword", { email: selectedUser.email });
+      toast.success(`Email de redefinição enviado para ${selectedUser.email}!`);
       setPasswordDialog(false);
       setSelectedUser(null);
     } catch (err) {
-      toast.error("Erro ao alterar senha: " + (err.response?.data?.error || err.message));
+      toast.error("Erro: " + (err.response?.data?.error || err.message));
     }
     setSaving(false);
   };
