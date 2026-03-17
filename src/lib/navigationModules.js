@@ -51,6 +51,7 @@ export const ALL_MODULES = [
   // ── RH ───────────────────────────────────────────────────────
   { id: "manage_vacations", label: "Gestão de Férias", url: "/ManageVacations", group: "Recursos Humanos" },
   { id: "manage_payslips", label: "Gestão de Holerites", url: "/ManagePayslips", group: "Recursos Humanos" },
+  { id: "smart_payslips_dashboard", label: "Holerites Inteligentes", url: "/SmartPayslipsDashboard", group: "Recursos Humanos" },
   { id: "birthdays", label: "Aniversários & Datas", url: "/BirthdaysAndDates", group: "Recursos Humanos" },
 
   // ── EPI ──────────────────────────────────────────────────────

@@ -94,6 +94,9 @@ import OperationsDashboard from './pages/OperationsDashboard';
 import ClientPortal from './pages/ClientPortal';
 import ClientDocuments from './pages/ClientDocuments';
 import ClientTicketsManage from './pages/ClientTicketsManage';
+import SmartPayslipsDashboard from './pages/SmartPayslipsDashboard';
+import SmartPayslipsUpload from './pages/SmartPayslipsUpload';
+import MySmartPayslips from './pages/MySmartPayslips';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
