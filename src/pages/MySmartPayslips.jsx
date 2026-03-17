@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +18,7 @@ export default function MySmartPayslips() {
   const [employee, setEmployee] = React.useState(null);
   const [signingPayslip, setSigningPayslip] = useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     base44.auth.me().then(u => {
       setUser(u);
       base44.entities.Employee.filter({ user_email: u.email })

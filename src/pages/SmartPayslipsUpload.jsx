@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ export default function SmartPayslipsUpload() {
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
 
-  React.useEffect(() => { base44.auth.me().then(setUser); }, []);
+  useEffect(() => { base44.auth.me().then(setUser); }, []);
 
   const handleDrop = (e) => {
     e.preventDefault();

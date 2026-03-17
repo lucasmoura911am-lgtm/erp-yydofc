@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +22,7 @@ export default function SmartPayslipsDashboard() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
 
-  React.useEffect(() => { base44.auth.me().then(setUser); }, []);
+  useEffect(() => { base44.auth.me().then(setUser); }, []);
 
   const { data: payslips = [] } = useQuery({
     queryKey: ["smart_payslips", user?.company_id],
