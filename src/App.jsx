@@ -91,6 +91,8 @@ import MaintenancePage from './pages/MaintenancePage';
 import OccurrencesPage from './pages/OccurrencesPage';
 import ContractStockPage from './pages/ContractStockPage';
 import OperationsDashboard from './pages/OperationsDashboard';
+import ClientPortal from './pages/ClientPortal';
+import ClientDocuments from './pages/ClientDocuments';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
