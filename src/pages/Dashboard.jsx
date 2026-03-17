@@ -178,41 +178,41 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatsCard
           title="Funcionários Ativos"
-          value={stats.totalEmployees}
+          value={dashStats.totalEmployees}
           icon={Users}
           gradient="from-blue-600 to-blue-400"
-          trend={stats.totalEmployees > 0 ? "+2 este mês" : ""}
+          trend={dashStats.totalEmployees > 0 ? "+2 este mês" : ""}
         />
         <StatsCard
           title="Presentes Hoje"
-          value={stats.presentToday}
+          value={dashStats.presentToday}
           icon={UserCheck}
           gradient="from-green-600 to-green-400"
-          trend={`${stats.totalEmployees > 0 ? Math.round((stats.presentToday/stats.totalEmployees)*100) : 0}%`}
+          trend={`${dashStats.totalEmployees > 0 ? Math.round((dashStats.presentToday/dashStats.totalEmployees)*100) : 0}%`}
         />
         <StatsCard
           title="Ausentes Hoje"
-          value={stats.absentToday}
+          value={dashStats.absentToday}
           icon={UserX}
           gradient="from-orange-600 to-orange-400"
-          trend={stats.absentToday > 0 ? 'Atenção' : 'Ótimo!'}
+          trend={dashStats.absentToday > 0 ? 'Atenção' : 'Ótimo!'}
         />
         <StatsCard
           title="Registros Hoje"
-          value={stats.todayRecords}
+          value={dashStats.todayRecords}
           icon={Clock}
           gradient="from-purple-600 to-purple-400"
         />
         <StatsCard
           title="Presença (Mês)"
-          value={`${stats.monthPresence}%`}
+          value={`${dashStats.monthPresence}%`}
           icon={TrendingUp}
           gradient="from-emerald-600 to-emerald-400"
-          trend={stats.monthPresence > 90 ? 'Excelente!' : stats.monthPresence > 0 ? 'Bom' : ''}
+          trend={dashStats.monthPresence > 90 ? 'Excelente!' : dashStats.monthPresence > 0 ? 'Bom' : ''}
         />
         <StatsCard
           title="Atrasos (Mês)"
-          value={stats.delays}
+          value={dashStats.delays}
           icon={AlertCircle}
           gradient="from-red-600 to-red-400"
         />
