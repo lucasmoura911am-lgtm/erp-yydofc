@@ -93,6 +93,7 @@ import ContractStockPage from './pages/ContractStockPage';
 import OperationsDashboard from './pages/OperationsDashboard';
 import ClientPortal from './pages/ClientPortal';
 import ClientDocuments from './pages/ClientDocuments';
+import ClientTicketsManage from './pages/ClientTicketsManage';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -231,6 +232,7 @@ const AuthenticatedApp = () => {
       <Route path="/OperationsDashboard" element={<LayoutWrapper currentPageName="OperationsDashboard"><OperationsDashboard /></LayoutWrapper>} />
       <Route path="/ClientPortal" element={<ClientPortal />} />
       <Route path="/ClientDocuments" element={<LayoutWrapper currentPageName="ClientDocuments"><ClientDocuments /></LayoutWrapper>} />
+      <Route path="/ClientTicketsManage" element={<LayoutWrapper currentPageName="ClientTicketsManage"><ClientTicketsManage /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
