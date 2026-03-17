@@ -106,6 +106,13 @@ export default function Layout({ children }) {
         const companies = await base44.entities.Company.filter({ id: userData.company_id });
         if (companies.length > 0) setCompany(companies[0]);
       }
+      // Load custom access role if user has one
+      if (userData.access_role_id && userData.role !== 'admin') {
+        try {
+          const roles = await base44.entities.AccessRole.filter({ id: userData.access_role_id });
+          if (roles.length > 0) setCustomRole(roles[0]);
+        } catch {}
+      }
     } catch (error) {
       console.error("Erro ao carregar usuário:", error);
     }
