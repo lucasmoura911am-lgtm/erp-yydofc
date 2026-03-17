@@ -556,46 +556,34 @@ export default function UsersManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* ─── Dialog: Alterar Senha ─────────────────────────────────── */}
+      {/* ─── Dialog: Redefinir Senha ─────────────────────────────────── */}
       <Dialog open={passwordDialog} onOpenChange={setPasswordDialog}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Alterar Senha — {selectedUser?.full_name || selectedUser?.email}</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label className="mb-1.5 block">Nova Senha</Label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Mínimo 6 caracteres"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  className="pr-10"
-                />
-                <button onClick={() => setShowPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  {showPassword ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
-                </button>
+          <DialogHeader><DialogTitle>Redefinir Senha</DialogTitle></DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  {(selectedUser.full_name || selectedUser.email || "?").charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-bold text-sm">{selectedUser.full_name || "—"}</p>
+                  <p className="text-xs text-gray-400">{selectedUser.email}</p>
+                </div>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 rounded-xl p-4">
+                <p className="text-sm text-blue-800 dark:text-blue-300 font-medium">Como funciona</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  Será enviado um email de redefinição de senha para <strong>{selectedUser.email}</strong>. 
+                  O usuário poderá criar uma nova senha pelo link recebido.
+                </p>
               </div>
             </div>
-            <div>
-              <Label className="mb-1.5 block">Confirmar Senha</Label>
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="Repita a senha"
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-              />
-            </div>
-            {newPassword && confirmPassword && newPassword !== confirmPassword && (
-              <p className="text-xs text-red-500">As senhas não coincidem</p>
-            )}
-            {newPassword && newPassword.length < 6 && (
-              <p className="text-xs text-red-500">Mínimo 6 caracteres</p>
-            )}
-          </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => { setPasswordDialog(false); setSelectedUser(null); }}>Cancelar</Button>
-            <Button onClick={handleChangePassword} disabled={saving} className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-              <Key className="w-4 h-4 mr-1"/>{saving ? "Alterando..." : "Alterar Senha"}
+            <Button onClick={handleSendPasswordReset} disabled={saving} className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+              <Key className="w-4 h-4 mr-1"/>{saving ? "Enviando..." : "Enviar Email de Redefinição"}
             </Button>
           </DialogFooter>
         </DialogContent>
