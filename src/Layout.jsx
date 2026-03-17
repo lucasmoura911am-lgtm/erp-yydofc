@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { ALL_MODULES } from "@/lib/navigationModules";
 import { base44 } from "@/api/base44Client";
 import {
   LogOut,
