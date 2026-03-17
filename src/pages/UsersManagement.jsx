@@ -52,10 +52,6 @@ export default function UsersManagement() {
   // User role assign
   const [newRoleId, setNewRoleId] = useState("");
 
-  // Password
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { base44.auth.me().then(setCurrentUser); }, []);
