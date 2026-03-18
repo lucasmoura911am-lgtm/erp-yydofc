@@ -8,19 +8,14 @@ import { ptBR } from "date-fns/locale";
 import { Clock, MapPin, Play, CheckCircle, AlertCircle, RefreshCw, ListTodo, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TaskActionDialog from "@/components/tasks/TaskActionDialog";
+import { getCurrentEmployee, QK, STATUS_META, PRIORITY_META } from "@/lib/taskHelpers";
 
-const STATUS_LABEL = {
-  pendente: { label: "Pendente", color: "bg-gray-100 text-gray-700 border-gray-200" },
-  em_andamento: { label: "Em Andamento", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  atrasada: { label: "Atrasada", color: "bg-red-100 text-red-700 border-red-200" },
-  concluida: { label: "Concluída", color: "bg-green-100 text-green-700 border-green-200" },
-  pausada: { label: "Pausada", color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
-};
-
+// Aliases para retrocompatibilidade interna
+const STATUS_LABEL = STATUS_META;
 const PRIORITY_COLOR = {
   baixa: "bg-blue-50 text-blue-600 border-blue-200",
   media: "bg-yellow-50 text-yellow-700 border-yellow-200",
-  alta: "bg-red-50 text-red-700 border-red-200",
+  alta:  "bg-red-50 text-red-700 border-red-200",
 };
 
 export default function MyTasks() {
