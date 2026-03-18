@@ -54,8 +54,44 @@ export default function MyTasks() {
 
   const { data: myTasks = [] } = useQuery({
     queryKey: ['myTasks', employee?.id],
-    queryFn: () => employee?.id ? base44.entities.Task.filter({ employee_id: employee.id }, '-due_date') : [],
+    queryFn: async () => {
+      if (!employee?.id) return [];
+      // Fetch all tasks for this employee (direct assignment or via allocation/client)
+      const allTasks = await base44.entities.Task.filter({ employee_id: employee.id });
+
+      // Also fetch tasks assigned to this employee's allocation or client if not already included
+      const extra = [];
+      if (employee.current_allocation_id) {
+        const byAlloc = await base44.entities.Task.filter({ allocation_id: employee.current_allocation_id });
+        byAlloc.forEach(t => { if (!allTasks.find(x => x.id === t.id)) extra.push(t); });
+      }
+      if (employee.default_client_id) {
+        const byClient = await base44.entities.Task.filter({ client_id: employee.default_client_id, employee_id: employee.id });
+        byClient.forEach(t => { if (!allTasks.find(x => x.id === t.id) && !extra.find(x => x.id === t.id)) extra.push(t); });
+      }
+
+      const combined = [...allTasks, ...extra];
+
+      // Include recurring tasks scheduled for today (diaria/semanal by day of week)
+      const todayDate = format(new Date(), "yyyy-MM-dd");
+      const dayNames = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
+      const todayDow = dayNames[new Date().getDay()];
+
+      // Fetch recurring templates assigned to this employee
+      const recurring = await base44.entities.Task.filter({ employee_id: employee.id, is_template: false, frequency: "diaria" });
+      const recurringWeekly = await base44.entities.Task.filter({ employee_id: employee.id, is_template: false, frequency: "semanal" });
+      [...recurring, ...recurringWeekly].forEach(t => {
+        if (combined.find(x => x.id === t.id)) return;
+        const isScheduledToday =
+          t.frequency === "diaria" ||
+          (t.frequency === "semanal" && t.scheduled_days?.includes(todayDow));
+        if (isScheduledToday) combined.push(t);
+      });
+
+      return combined.sort((a, b) => (b.due_date || "").localeCompare(a.due_date || ""));
+    },
     enabled: !!employee?.id,
+    refetchInterval: 60000,
   });
 
   const updateTaskMutation = useMutation({
