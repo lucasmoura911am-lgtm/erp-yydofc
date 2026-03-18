@@ -388,7 +388,7 @@ export default function ManageTasks() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
           </DialogHeader>
