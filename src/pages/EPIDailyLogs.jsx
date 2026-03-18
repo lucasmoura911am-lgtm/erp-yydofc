@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import EPIReportTab from "@/components/epi/EPIReportTab";
+import EPIPGRComplianceTab from "@/components/epi/EPIPGRComplianceTab";
 
 const today = format(new Date(), "yyyy-MM-dd");
 const EMPTY = { date: today, epi_name: "", epi_id: "", quantity: 1, photo_url: "", observations: "", location: "", employee_name: "", employee_email: "", client_name: "" };
@@ -166,7 +168,15 @@ export default function EPIDailyLogs() {
     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href=url; a.download=`conformidade_epi_${complianceDate}.csv`; a.click();
   };
 
-  const TABS = [{ id: "registros", label: "📋 Registros" }, ...(isAdmin ? [{ id: "conformidade", label: "✅ Conformidade" }, { id: "epis", label: "⚙️ EPIs Obrigatórios" }] : [])];
+  const TABS = [
+    { id: "registros", label: "📋 Registros" },
+    ...(isAdmin ? [
+      { id: "conformidade", label: "✅ Conformidade" },
+      { id: "relatorio", label: "📊 Relatório" },
+      { id: "pgr", label: "🔗 EPIs x PGR/PCMSO" },
+      { id: "epis", label: "⚙️ EPIs Obrigatórios" },
+    ] : [])
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 md:p-6 space-y-5">
