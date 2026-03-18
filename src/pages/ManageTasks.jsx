@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Edit, Trash2, Pause, Play, XCircle, Calendar } from "lucide-react";
+import { Plus, Edit, Trash2, Pause, Play, XCircle, Calendar, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -37,6 +37,16 @@ export default function ManageTasks() {
   const [user, setUser] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const DAYS = [
+    { id: "seg", label: "Seg" },
+    { id: "ter", label: "Ter" },
+    { id: "qua", label: "Qua" },
+    { id: "qui", label: "Qui" },
+    { id: "sex", label: "Sex" },
+    { id: "sab", label: "Sáb" },
+    { id: "dom", label: "Dom" },
+  ];
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -44,10 +54,22 @@ export default function ManageTasks() {
     allocation_id: "",
     client_id: "",
     due_date: "",
+    scheduled_start_time: "",
+    scheduled_end_time: "",
+    scheduled_days: [],
     location: "",
     priority: "media",
     frequency: "avulsa"
   });
+
+  const toggleDay = (day) => {
+    setFormData(prev => ({
+      ...prev,
+      scheduled_days: prev.scheduled_days.includes(day)
+        ? prev.scheduled_days.filter(d => d !== day)
+        : [...prev.scheduled_days, day]
+    }));
+  };
 
   const queryClient = useQueryClient();
 
