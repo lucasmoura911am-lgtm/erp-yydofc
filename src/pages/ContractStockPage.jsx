@@ -173,10 +173,11 @@ export default function ContractStockPage() {
   });
   const lowAlert = stocks.filter(s => (s.quantity_on_site || 0) <= (s.min_quantity || 0) && s.min_quantity > 0);
 
-  // Date-filtered consumptions
+  // Date-filtered consumptions (non-admin sees only their client)
   const filteredConsumptions = consumptions.filter(c => {
     if (c.date < filterDateFrom || c.date > filterDateTo) return false;
-    if (filterClient !== "all" && c.client_name !== filterClient && c.client_id !== filterClient) return false;
+    if (employeeClientId && c.client_id !== employeeClientId) return false;
+    if (isAdmin && filterClient !== "all" && c.client_name !== filterClient && c.client_id !== filterClient) return false;
     return true;
   });
 
