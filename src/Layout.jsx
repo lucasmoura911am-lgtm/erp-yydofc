@@ -193,6 +193,7 @@ export default function Layout({ children }) {
         icon: Factory,
         items: [
           { title: "Dashboard Operacional", url: "/OperationsDashboard", icon: LayoutDashboard },
+          { title: "Kanban de Lotações", url: "/FacilitiesKanban", icon: Factory },
           { title: "Pedidos de Compra", url: "/PurchaseOrders", icon: ShoppingCart },
           { title: "Controle de Estoque", url: "/StockControl", icon: Package },
           { title: "Estoque por Contrato", url: "/ContractStockPage", icon: Factory },
