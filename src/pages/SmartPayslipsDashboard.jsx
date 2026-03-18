@@ -24,6 +24,7 @@ export default function SmartPayslipsDashboard() {
     base44.auth.me().then(setUser);
   }, []);
 
+  // 🔒 LISTAGEM SEGURA
   const { data: payslips = [] } = useQuery({
     queryKey: ["smart_payslips", user?.company_id, user?.email],
     queryFn: async () => {
@@ -55,7 +56,39 @@ export default function SmartPayslipsDashboard() {
     enabled: !!user?.company_id,
   });
 
-  // CAMERA
+  // 📄 ABRIR DOCUMENTO COMPLETO (HOLERITE + COMPROVANTE)
+  const openFullDocument = (p) => {
+    const html = `
+      <html>
+      <body style="font-family: Arial; padding:20px;">
+
+        <h2>HOLERITE</h2>
+        <iframe src="${p.arquivo_pdf_individual}" width="100%" height="500"></iframe>
+
+        <hr/>
+
+        <h2>COMPROVANTE DE ASSINATURA DIGITAL</h2>
+
+        <p><b>Usuário:</b> ${p.assinatura_nome || "-"}</p>
+        <p><b>Data:</b> ${p.data_assinatura || "-"}</p>
+        <p><b>IP:</b> ${p.assinatura_ip || "-"}</p>
+        <p><b>Dispositivo:</b> ${p.assinatura_device || "-"}</p>
+        <p><b>Geo:</b> ${p.assinatura_geo || "-"}</p>
+
+        ${p.assinatura_foto_url ? `<h3>Foto</h3><img src="${p.assinatura_foto_url}" width="200"/>` : ""}
+
+        ${p.assinatura_desenho_url ? `<h3>Assinatura</h3><img src="${p.assinatura_desenho_url}" width="200"/>` : ""}
+
+      </body>
+      </html>
+    `;
+
+    const win = window.open();
+    win.document.write(html);
+    win.document.close();
+  };
+
+  // 📸 CAMERA
   const startCamera = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     videoRef.current.srcObject = stream;
@@ -70,7 +103,7 @@ export default function SmartPayslipsDashboard() {
     setPhoto(canvas.toDataURL("image/png"));
   };
 
-  // ASSINATURA
+  // ✍️ ASSINATURA
   const startDraw = (e) => {
     isDrawing.current = true;
     draw(e);
@@ -123,7 +156,7 @@ export default function SmartPayslipsDashboard() {
     return blank.toDataURL();
   }
 
-  // ASSINAR
+  // 🚀 ASSINAR
   const signMutation = useMutation({
     mutationFn: async () => {
       const canvas = signCanvasRef.current;
@@ -152,27 +185,6 @@ export default function SmartPayslipsDashboard() {
         file: dataURLtoFile(canvas.toDataURL(), "assinatura.png")
       });
 
-      const html = `
-        <html>
-        <body style="font-family: Arial; padding:20px;">
-          <h2>COMPROVANTE DE ASSINATURA DIGITAL</h2>
-          <p><b>Usuário:</b> ${user.email}</p>
-          <p><b>Data:</b> ${new Date().toLocaleString()}</p>
-          <p><b>IP:</b> ${ip}</p>
-          <p><b>Dispositivo:</b> ${device}</p>
-          <p><b>Geo:</b> ${geo ? geo.latitude + "," + geo.longitude : "Não permitido"}</p>
-          <h3>Foto</h3><img src="${photo}" width="200"/>
-          <h3>Assinatura</h3><img src="${canvas.toDataURL()}" width="200"/>
-        </body>
-        </html>
-      `;
-
-      const file = new File([html], "comprovante.html", { type: "text/html" });
-
-      const comprovanteUpload = await base44.integrations.Core.UploadFile({ file });
-
-      console.log("COMPROVANTE:", comprovanteUpload.file_url);
-
       return base44.entities.SmartPayslip.update(currentPayslip.id, {
         status_assinado: "assinado",
         data_assinatura: new Date().toISOString(),
@@ -181,8 +193,7 @@ export default function SmartPayslipsDashboard() {
         assinatura_device: device,
         assinatura_geo: geo ? `${geo.latitude},${geo.longitude}` : null,
         assinatura_foto_url: fotoUpload.file_url,
-        assinatura_desenho_url: assinaturaUpload.file_url,
-        comprovante_assinatura_url: comprovanteUpload.file_url
+        assinatura_desenho_url: assinaturaUpload.file_url
       });
     },
     onSuccess: () => {
@@ -224,37 +235,9 @@ export default function SmartPayslipsDashboard() {
 
               <div className="flex gap-2">
 
-                <Button onClick={() => window.open(p.arquivo_pdf_individual)}>
+                <Button onClick={() => openFullDocument(p)}>
                   <Eye className="w-4 h-4" />
                 </Button>
-
-                {p.comprovante_assinatura_url && (
-                  <Button onClick={() => window.open(p.comprovante_assinatura_url)}>
-                    📄
-                  </Button>
-                )}
-
-                {isAdmin && (
-                  <label>
-                    <input
-                      type="file"
-                      className="hidden"
-                      onChange={async (e) => {
-                        const file = e.target.files[0];
-                        if (!file) return;
-
-                        const upload = await base44.integrations.Core.UploadFile({ file });
-
-                        await base44.entities.SmartPayslip.update(p.id, {
-                          comprovante_assinatura_url: upload.file_url
-                        });
-
-                        queryClient.invalidateQueries(["smart_payslips"]);
-                      }}
-                    />
-                    <Button>Upload</Button>
-                  </label>
-                )}
 
                 {!isAdmin && p.status_assinado !== "assinado" && (
                   <Button onClick={() => {
@@ -278,7 +261,7 @@ export default function SmartPayslipsDashboard() {
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
           <div className="bg-white p-6 rounded-xl w-full max-w-md space-y-4">
 
-            <h2>Assinar</h2>
+            <h2>Assinar Holerite</h2>
 
             <video ref={videoRef} autoPlay className="w-full" />
 
