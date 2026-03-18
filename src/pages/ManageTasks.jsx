@@ -41,6 +41,8 @@ export default function ManageTasks() {
     title: "",
     description: "",
     employee_id: "",
+    allocation_id: "",
+    client_id: "",
     due_date: "",
     location: "",
     priority: "media",
@@ -73,6 +75,18 @@ export default function ManageTasks() {
   const { data: allEmployees = [] } = useQuery({
     queryKey: ['employees', user?.company_id],
     queryFn: () => user?.company_id ? base44.entities.Employee.filter({ company_id: user.company_id, status: 'active' }) : [],
+    enabled: !!user?.company_id,
+  });
+
+  const { data: allocations = [] } = useQuery({
+    queryKey: ['allocations', user?.company_id],
+    queryFn: () => user?.company_id ? base44.entities.Allocation.filter({ company_id: user.company_id, status: 'ativo' }) : [],
+    enabled: !!user?.company_id,
+  });
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients', user?.company_id],
+    queryFn: () => user?.company_id ? base44.entities.Client.filter({ company_id: user.company_id }) : [],
     enabled: !!user?.company_id,
   });
 
@@ -163,6 +177,8 @@ export default function ManageTasks() {
       title: "",
       description: "",
       employee_id: "",
+      allocation_id: "",
+      client_id: "",
       due_date: "",
       location: "",
       priority: "media",
@@ -177,10 +193,12 @@ export default function ManageTasks() {
       title: formData.title,
       description: formData.description,
       employee_id: formData.employee_id,
+      allocation_id: formData.allocation_id || "",
+      client_id: formData.client_id || "",
       company_id: user.company_id,
       supervisor_email: user.email,
       due_date: formData.due_date,
-      location: formData.location,
+      location: formData.location || (allocations.find(a => a.id === formData.allocation_id)?.post_location || ""),
       priority: formData.priority,
       frequency: formData.frequency,
       status: 'pendente'
@@ -199,6 +217,8 @@ export default function ManageTasks() {
       title: task.title,
       description: task.description || "",
       employee_id: task.employee_id,
+      allocation_id: task.allocation_id || "",
+      client_id: task.client_id || "",
       due_date: task.due_date,
       location: task.location || "",
       priority: task.priority,
