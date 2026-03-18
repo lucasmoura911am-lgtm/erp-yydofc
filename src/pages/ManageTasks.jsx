@@ -367,6 +367,32 @@ export default function ManageTasks() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label>Lotação (Posto)</Label>
+                <Select
+                  value={formData.allocation_id}
+                  onValueChange={(value) => {
+                    const alloc = allocations.find(a => a.id === value);
+                    setFormData({ ...formData, allocation_id: value, client_id: alloc?.client_id || "", employee_id: alloc?.employee_id || formData.employee_id });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a lotação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={null}>Sem lotação específica</SelectItem>
+                    {allocations.map((a) => {
+                      const cli = clients.find(c => c.id === a.client_id);
+                      return (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.post_name}{cli ? ` — ${cli.name}` : ""}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Funcionário *</Label>
                 <Select
                   value={formData.employee_id}
