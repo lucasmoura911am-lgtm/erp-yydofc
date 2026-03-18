@@ -157,10 +157,18 @@ export default function ContractStockPage() {
     return Math.floor((s.quantity_on_site || 0) / s.daily_consumption);
   };
 
+  // For non-admin employees: auto-filter to their allocated client/contract
+  const employeeClientId = !isAdmin ? (employeeData?.default_client_id || null) : null;
+  const employeeContractId = !isAdmin ? (employeeData?.default_contract_id || null) : null;
+
   const allClients = [...new Set(stocks.map(s => s.client_name).filter(Boolean))];
   const filtered = stocks.filter(s => {
-    if (filterClient !== "all" && s.client_name !== filterClient && s.client_id !== filterClient) return false;
-    if (filterContract !== "all" && s.contract_id !== filterContract) return false;
+    // Non-admin: restrict to their client
+    if (employeeClientId && s.client_id !== employeeClientId) return false;
+    if (employeeContractId && s.contract_id !== employeeContractId) return false;
+    // Admin filters
+    if (isAdmin && filterClient !== "all" && s.client_name !== filterClient && s.client_id !== filterClient) return false;
+    if (isAdmin && filterContract !== "all" && s.contract_id !== filterContract) return false;
     return true;
   });
   const lowAlert = stocks.filter(s => (s.quantity_on_site || 0) <= (s.min_quantity || 0) && s.min_quantity > 0);
