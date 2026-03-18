@@ -36,6 +36,8 @@ export const ALL_MODULES = [
 
   // ── Operações Facilities ─────────────────────────────────────
   { id: "operations_dashboard", label: "Dashboard Operacional", url: "/OperationsDashboard", group: "Operações Facilities" },
+  { id: "facilities_kanban", label: "Kanban de Lotações", url: "/FacilitiesKanban", group: "Operações Facilities" },
+  { id: "post_coverage", label: "Coberturas de Posto", url: "/PostCoveragePage", group: "Operações Facilities" },
   { id: "purchase_orders", label: "Pedidos de Compra", url: "/PurchaseOrders", group: "Operações Facilities" },
   { id: "stock_control", label: "Controle de Estoque", url: "/StockControl", group: "Operações Facilities" },
   { id: "contract_stock", label: "Estoque por Contrato", url: "/ContractStockPage", group: "Operações Facilities" },
