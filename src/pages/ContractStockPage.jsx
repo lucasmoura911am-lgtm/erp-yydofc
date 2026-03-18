@@ -34,12 +34,19 @@ export default function ContractStockPage() {
   const [addQty, setAddQty] = useState(0);
   const qc = useQueryClient();
 
+  const [employeeData, setEmployeeData] = useState(null);
+
   useEffect(() => {
     base44.auth.me().then(u => {
       setUser(u);
-      if (u?.company_id) { setCid(u.company_id); return; }
+      const companyId = u?.company_id;
+      if (companyId) { setCid(companyId); }
+      // Load employee profile to get default_client_id / default_contract_id
       base44.entities.Employee.filter({ user_email: u.email }).then(emps => {
-        if (emps[0]?.company_id) setCid(emps[0].company_id);
+        if (emps.length > 0) {
+          setEmployeeData(emps[0]);
+          if (!companyId && emps[0]?.company_id) setCid(emps[0].company_id);
+        }
       });
     });
   }, []);
