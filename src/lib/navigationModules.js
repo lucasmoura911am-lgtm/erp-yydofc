@@ -133,6 +133,8 @@ export const ALL_MODULES = [
   { id: "my_time_records", label: "Meus Registros", url: "/MyTimeRecords", group: "Painel do Funcionário" },
   { id: "my_tasks", label: "Minhas Tarefas", url: "/MyTasks", group: "Painel do Funcionário" },
   { id: "my_absence_justifications", label: "Justificar Falta", url: "/MyAbsenceJustifications", group: "Painel do Funcionário" },
+  { id: "epi_daily_logs_emp", label: "Registrar EPI Diário", url: "/EPIDailyLogs", group: "Painel do Funcionário" },
+  { id: "occurrences_emp", label: "Ocorrências", url: "/OccurrencesPage", group: "Painel do Funcionário" },
   { id: "my_documents", label: "Meus Documentos", url: "/MyDocuments", group: "Painel do Funcionário" },
   { id: "my_vacations", label: "Minhas Férias", url: "/MyVacations", group: "Painel do Funcionário" },
   { id: "my_payslips", label: "Meus Holerites", url: "/MyPayslips", group: "Painel do Funcionário" },
