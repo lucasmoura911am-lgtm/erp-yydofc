@@ -271,6 +271,15 @@ export default function FacilitiesKanban() {
         </div>
       </div>
 
+      {/* Task Action Dialog (with photo) */}
+      <TaskActionDialog
+        open={taskDialog.open}
+        onClose={() => setTaskDialog({ open: false, task: null, mode: null })}
+        task={taskDialog.task}
+        mode={taskDialog.mode}
+        onSuccess={handleTaskActionSuccess}
+      />
+
       {/* Kanban Board */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
         <div className="flex gap-4 p-6 h-full" style={{ minWidth: "max-content" }}>
