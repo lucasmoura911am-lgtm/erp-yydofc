@@ -489,6 +489,50 @@ export default function ManageTasks() {
               </div>
             </div>
 
+            {/* Horário previsto */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-purple-500" />Horário Previsto</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Início</label>
+                  <Input
+                    type="time"
+                    value={formData.scheduled_start_time}
+                    onChange={(e) => setFormData({ ...formData, scheduled_start_time: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Término</label>
+                  <Input
+                    type="time"
+                    value={formData.scheduled_end_time}
+                    onChange={(e) => setFormData({ ...formData, scheduled_end_time: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Dias da semana */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-purple-500" />Dias de Execução</Label>
+              <div className="flex gap-2 flex-wrap">
+                {DAYS.map(d => {
+                  const active = formData.scheduled_days.includes(d.id);
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => toggleDay(d.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${active ? "bg-purple-600 text-white border-purple-600" : "bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:border-purple-400"}`}
+                    >
+                      {d.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-400">Deixe em branco para não vincular a dias específicos</p>
+            </div>
+
             <div className="space-y-2">
               <Label>Local (opcional)</Label>
               <Input
