@@ -54,43 +54,93 @@ const STATUS_STYLES = {
   },
 };
 
+const DAY_LABELS = { seg: "Seg", ter: "Ter", qua: "Qua", qui: "Qui", sex: "Sex", sab: "Sáb", dom: "Dom" };
+const DAY_ORDER = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
+
 export default function TaskRow({ task, now, onComplete }) {
   const computedStatus = getTaskStatus(task, now);
   const cfg = STATUS_STYLES[computedStatus];
   const StatusIcon = cfg.icon;
   const isDone = computedStatus === "concluida";
 
-  const dueLabel = task.due_date
-    ? format(new Date(task.due_date), "HH:mm")
-    : null;
+  const hasSchedule = task.scheduled_start_time || task.scheduled_end_time;
+  const hasDays = task.scheduled_days?.length > 0;
+
+  // Time bar: progress between start and end
+  let timeProgress = null;
+  if (task.scheduled_start_time && task.scheduled_end_time && !isDone) {
+    const [sh, sm] = task.scheduled_start_time.split(":").map(Number);
+    const [eh, em] = task.scheduled_end_time.split(":").map(Number);
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const startMins = sh * 60 + sm;
+    const endMins = eh * 60 + em;
+    if (endMins > startMins) {
+      timeProgress = Math.min(100, Math.max(0, Math.round(((nowMins - startMins) / (endMins - startMins)) * 100)));
+    }
+  }
 
   return (
-    <div className={`rounded-lg border ${cfg.border} ${cfg.bg} px-3 py-2 flex items-start gap-2`}>
-      <StatusIcon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${cfg.color}`} />
-      <div className="flex-1 min-w-0">
-        <p className={`text-xs font-medium leading-tight truncate ${isDone ? "line-through text-gray-400" : "text-gray-800 dark:text-gray-100"}`}>
-          {task.title}
-        </p>
-        <div className="flex items-center gap-2 mt-0.5">
-          {dueLabel && (
-            <span className="flex items-center gap-0.5 text-xs text-gray-400">
-              <Clock className="w-2.5 h-2.5" />
-              {dueLabel}
-            </span>
-          )}
-          <span className={`text-xs font-medium ${cfg.labelColor}`}>{cfg.label}</span>
+    <div className={`rounded-lg border ${cfg.border} ${cfg.bg} px-3 py-2 flex flex-col gap-1.5`}>
+      <div className="flex items-start gap-2">
+        <StatusIcon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${cfg.color}`} />
+        <div className="flex-1 min-w-0">
+          <p className={`text-xs font-medium leading-tight truncate ${isDone ? "line-through text-gray-400" : "text-gray-800 dark:text-gray-100"}`}>
+            {task.title}
+          </p>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            {hasSchedule && (
+              <span className="flex items-center gap-0.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                <Clock className="w-2.5 h-2.5" />
+                {task.scheduled_start_time || "?"}{task.scheduled_end_time ? ` – ${task.scheduled_end_time}` : ""}
+              </span>
+            )}
+            {!hasSchedule && task.due_date && (
+              <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                <Clock className="w-2.5 h-2.5" />
+                {format(new Date(task.due_date), "HH:mm")}
+              </span>
+            )}
+            <span className={`text-xs font-medium ${cfg.labelColor}`}>{cfg.label}</span>
+          </div>
         </div>
+        {!isDone && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-xs text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 flex-shrink-0"
+            onClick={onComplete}
+            title="Marcar como concluída"
+          >
+            ✓
+          </Button>
+        )}
       </div>
-      {!isDone && (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-6 px-2 text-xs text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 flex-shrink-0"
-          onClick={onComplete}
-          title="Marcar como concluída"
-        >
-          OK
-        </Button>
+
+      {/* Time progress bar */}
+      {timeProgress !== null && (
+        <div className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${timeProgress >= 100 ? "bg-red-400" : timeProgress > 60 ? "bg-yellow-400" : "bg-blue-400"}`}
+            style={{ width: timeProgress + "%" }}
+          />
+        </div>
+      )}
+
+      {/* Days of week chips */}
+      {hasDays && (
+        <div className="flex gap-0.5 flex-wrap">
+          {DAY_ORDER.map(d => {
+            const active = task.scheduled_days.includes(d);
+            return (
+              <span
+                key={d}
+                className={`text-[10px] px-1.5 py-0 rounded font-medium ${active ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" : "bg-gray-100 text-gray-300 dark:bg-gray-800 dark:text-gray-600"}`}
+              >
+                {DAY_LABELS[d]}
+              </span>
+            );
+          })}
+        </div>
       )}
     </div>
   );
