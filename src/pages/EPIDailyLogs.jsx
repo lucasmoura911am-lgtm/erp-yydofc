@@ -188,6 +188,7 @@ export default function EPIDailyLogs() {
           {tab === "conformidade" && <Button variant="outline" onClick={exportComplianceCSV} className="gap-2"><Download className="w-4 h-4"/>Exportar</Button>}
           {tab === "registros" && <><Button variant="outline" onClick={exportCSV} className="gap-2"><Download className="w-4 h-4"/>CSV</Button><Button onClick={openNew} className="bg-violet-600 hover:bg-violet-700 text-white gap-2"><Plus className="w-4 h-4"/>Registrar EPI</Button></>}
           {tab === "epis" && <Button onClick={()=>{setEditingEpi(null);setEpiForm({name:"",mandatory_for_all:true,is_mandatory:true,ca_number:"",description:""});setOpenEpiConfig(true);}} className="bg-violet-600 hover:bg-violet-700 text-white gap-2"><Plus className="w-4 h-4"/>Novo EPI</Button>}
+          {(tab === "relatorio" || tab === "pgr") && <span className="text-xs text-gray-400 self-center">Use os filtros internos para exportar</span>}
         </div>
       </div>
 
