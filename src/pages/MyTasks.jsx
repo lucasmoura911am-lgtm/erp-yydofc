@@ -91,7 +91,9 @@ export default function MyTasks() {
       return combined.sort((a, b) => (b.due_date || "").localeCompare(a.due_date || ""));
     },
     enabled: !!employee?.id,
-    refetchInterval: 60000,
+    staleTime: 0,
+    refetchInterval: 30000,
+    refetchOnMount: true,
   });
 
   const updateTaskMutation = useMutation({
