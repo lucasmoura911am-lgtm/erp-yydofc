@@ -159,6 +159,7 @@ export default function Layout({ children }) {
         icon: Users,
         items: [
           { title: "Funcionários", url: "/Employees", icon: Users },
+          { title: "Vida do Funcionário", url: "/EmployeeLifeReport", icon: TrendingUp },
           { title: "Pasta dos Colaboradores", url: "/EmployeeFolder", icon: Folder },
           { title: "Times", url: "/Teams", icon: Users },
           { title: "Supervisores", url: "/Supervisors", icon: Shield },
@@ -266,6 +267,7 @@ export default function Layout({ children }) {
         items: [
           { title: "Configurar Benefícios", url: "/BenefitConfigs", icon: Settings },
           { title: "Gestão de Benefícios", url: "/EmployeeBenefits", icon: DollarSign },
+          { title: "Pedidos Aprovados", url: "/ApprovedBenefitOrders", icon: PackageCheck },
         ]
       },
       {
