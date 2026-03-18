@@ -103,10 +103,22 @@ export default function Layout({ children }) {
     try {
       const userData = await base44.auth.me();
       setUser(userData);
-      if (userData.company_id) {
-        const companies = await base44.entities.Company.filter({ id: userData.company_id });
+
+      let companyId = userData.company_id;
+
+      // Funcionários podem não ter company_id no User — buscar pelo Employee
+      if (!companyId && userData.role !== 'admin') {
+        try {
+          const empList = await base44.entities.Employee.filter({ user_email: userData.email });
+          if (empList.length > 0) companyId = empList[0].company_id;
+        } catch {}
+      }
+
+      if (companyId) {
+        const companies = await base44.entities.Company.filter({ id: companyId });
         if (companies.length > 0) setCompany(companies[0]);
       }
+
       // Load custom access role if user has one
       if (userData.access_role_id && userData.role !== 'admin') {
         try {
