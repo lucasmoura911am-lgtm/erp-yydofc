@@ -432,12 +432,14 @@ export default function ContractStockPage() {
       {/* ===== ESTOQUE ===== */}
       {tab === "estoque" && (
         <>
-          <div className="flex gap-2">
-            <Select value={filterClient} onValueChange={setFilterClient}>
-              <SelectTrigger className="w-52"><SelectValue placeholder="Todos os clientes"/></SelectTrigger>
-              <SelectContent><SelectItem value="all">Todos os clientes</SelectItem>{allClients.map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
+          {isAdmin && (
+            <div className="flex gap-2">
+              <Select value={filterClient} onValueChange={setFilterClient}>
+                <SelectTrigger className="w-52"><SelectValue placeholder="Todos os clientes"/></SelectTrigger>
+                <SelectContent><SelectItem value="all">Todos os clientes</SelectItem>{allClients.map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          )}
 
           {isLoading ? <div className="text-center py-12 text-gray-400">Carregando...</div> : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
