@@ -604,14 +604,16 @@ export default function Layout({ children }) {
         </aside>
 
         {/* Mobile Sidebar Overlay */}
-        {mobileOpen && (
-          <div className="lg:hidden fixed inset-0 z-50 flex">
-            <div className="fixed inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-            <aside className="relative flex flex-col w-72 bg-white dark:bg-gray-900 shadow-xl">
-              <SidebarContent onLinkClick={() => setMobileOpen(false)} />
-            </aside>
-          </div>
-        )}
+        <div
+          className={`lg:hidden fixed inset-0 z-50 flex transition-opacity duration-300 ${mobileOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        >
+          <div className="fixed inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
+          <aside
+            className={`relative flex flex-col w-72 bg-white dark:bg-gray-900 shadow-xl transition-transform duration-300 ease-in-out ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+          >
+            <SidebarContent onLinkClick={() => setMobileOpen(false)} />
+          </aside>
+        </div>
 
         {/* Main area */}
         <div className="flex-1 flex flex-col min-w-0">
