@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter, Building2, Users, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { RefreshCw, Filter, Building2, Users, CheckCircle, AlertTriangle, XCircle, Calendar, ListTodo } from "lucide-react";
 import AllocationCard from "@/components/facilities/AllocationCard";
 
 export default function FacilitiesKanban() {
@@ -17,6 +17,8 @@ export default function FacilitiesKanban() {
   const [filterClient, setFilterClient] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterSupervisor, setFilterSupervisor] = useState("all");
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [showScheduled, setShowScheduled] = useState(true);
 
   // Tick every minute for real-time status
   useEffect(() => {
@@ -50,19 +52,34 @@ export default function FacilitiesKanban() {
   const todayStr = format(now, "yyyy-MM-dd");
 
   const { data: timeRecords = [] } = useQuery({
-    queryKey: ["timeRecords_today", user?.company_id, todayStr],
+    queryKey: ["timeRecords_today", user?.company_id, selectedDate],
     queryFn: () => base44.entities.TimeRecord.filter({ company_id: user.company_id }),
     enabled: !!user?.company_id,
-    refetchInterval: 60000,
-    select: (records) => records.filter(r => r.timestamp?.substring(0, 10) === todayStr),
+    refetchInterval: selectedDate === todayStr ? 60000 : false,
+    select: (records) => records.filter(r => r.timestamp?.substring(0, 10) === selectedDate),
   });
 
   const { data: tasks = [] } = useQuery({
-    queryKey: ["tasks_today", user?.company_id, todayStr],
+    queryKey: ["tasks_kanban", user?.company_id, selectedDate, showScheduled],
     queryFn: () => base44.entities.Task.filter({ company_id: user.company_id }),
     enabled: !!user?.company_id,
-    refetchInterval: 60000,
-    select: (tasks) => tasks.filter(t => t.due_date?.substring(0, 10) === todayStr),
+    refetchInterval: selectedDate === todayStr ? 60000 : false,
+    select: (allTasks) => {
+      if (!showScheduled) {
+        // Only tasks with exact due_date on selected date
+        return allTasks.filter(t => t.due_date?.substring(0, 10) === selectedDate);
+      }
+      // Also include recurring tasks scheduled for the day of week of selectedDate
+      const dayNames = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
+      const dayOfWeek = dayNames[new Date(selectedDate + "T12:00:00").getDay()];
+      return allTasks.filter(t => {
+        const onDate = t.due_date?.substring(0, 10) === selectedDate;
+        const scheduled = t.scheduled_days?.includes(dayOfWeek) &&
+          ["diaria", "semanal"].includes(t.frequency) &&
+          t.status !== "cancelada" && t.status !== "concluida";
+        return onDate || scheduled;
+      });
+    },
   });
 
   const completeTaskMutation = useMutation({
@@ -142,7 +159,9 @@ export default function FacilitiesKanban() {
               Kanban de Lotações — Facilities
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {format(now, "EEEE, dd 'de' MMMM 'de' yyyy '•' HH:mm", { locale: ptBR })}
+              {selectedDate === todayStr
+                ? format(now, "EEEE, dd 'de' MMMM 'de' yyyy '•' HH:mm", { locale: ptBR })
+                : format(new Date(selectedDate + "T12:00:00"), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
             </p>
           </div>
 
@@ -175,6 +194,22 @@ export default function FacilitiesKanban() {
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 mt-4">
           <Filter className="w-4 h-4 text-gray-400" />
+
+          {/* Date picker */}
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-purple-500" />
+            <Input
+              type="date"
+              value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)}
+              className="w-36 h-8 text-xs"
+            />
+            {selectedDate !== todayStr && (
+              <Button size="sm" variant="ghost" className="h-8 text-xs text-purple-600 px-2" onClick={() => setSelectedDate(todayStr)}>
+                Hoje
+              </Button>
+            )}
+          </div>
           <Select value={filterClient} onValueChange={setFilterClient}>
             <SelectTrigger className="w-44 h-8 text-xs">
               <SelectValue placeholder="Cliente" />
@@ -210,6 +245,15 @@ export default function FacilitiesKanban() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* Toggle scheduled tasks */}
+          <button
+            onClick={() => setShowScheduled(s => !s)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${showScheduled ? "bg-purple-50 border-purple-300 text-purple-700 dark:bg-purple-900/20" : "border-gray-200 text-gray-400"}`}
+          >
+            <ListTodo className="w-3.5 h-3.5" />
+            {showScheduled ? "Com tarefas programadas" : "Só tarefas do dia"}
+          </button>
 
           <span className="text-xs text-gray-400 ml-auto">{filteredAllocations.length} postos exibidos</span>
         </div>
