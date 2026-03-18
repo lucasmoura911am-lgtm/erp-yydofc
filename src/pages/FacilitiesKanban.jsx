@@ -89,6 +89,7 @@ export default function FacilitiesKanban() {
     mutationFn: ({ id, data }) => base44.entities.Task.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks_kanban"] });
+      queryClient.invalidateQueries({ queryKey: QK.tasks(user?.company_id) });
       queryClient.invalidateQueries({ queryKey: ["myTasks"] });
       setTaskDialog({ open: false, task: null, mode: null });
     },
