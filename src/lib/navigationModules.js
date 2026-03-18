@@ -116,6 +116,7 @@ export const ALL_MODULES = [
   { id: "contracts", label: "Contratos", url: "/Contracts", group: "Clientes e Contratos" },
   { id: "allocations", label: "Lotações", url: "/Allocations", group: "Clientes e Contratos" },
   { id: "allocation_reports", label: "Relatório de Alocações", url: "/AllocationReports", group: "Clientes e Contratos" },
+  { id: "contract_expenses", label: "Gastos por Contrato", url: "/ContractExpensesPage", group: "Clientes e Contratos" },
 
   // ── Relatórios ───────────────────────────────────────────────
   { id: "reports", label: "Relatórios Gerais", url: "/Reports", group: "Relatórios" },
