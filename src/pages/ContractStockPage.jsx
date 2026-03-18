@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
-import { Plus, X, Pencil, Trash2, AlertTriangle, Download, Minus, BarChart3, Package, TrendingDown, History } from "lucide-react";
+import { format, subDays, startOfMonth } from "date-fns";
+import { Plus, X, Pencil, Trash2, AlertTriangle, Download, Minus, BarChart3, Package, TrendingDown, History, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const today = format(new Date(), "yyyy-MM-dd");
 const COLORS = ["#8b5cf6","#3b82f6","#10b981","#f59e0b","#ef4444","#ec4899","#14b8a6"];
@@ -25,7 +25,10 @@ export default function ContractStockPage() {
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(null);
   const [filterClient, setFilterClient] = useState("all");
-  const [consumeModal, setConsumeModal] = useState(null); // stock item being consumed
+  const [filterContract, setFilterContract] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
+  const [filterDateTo, setFilterDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [consumeModal, setConsumeModal] = useState(null);
   const [consumeForm, setConsumeForm] = useState(EMPTY_CONSUME);
   const [addStockModal, setAddStockModal] = useState(null);
   const [addQty, setAddQty] = useState(0);
@@ -58,6 +61,18 @@ export default function ContractStockPage() {
   const { data: clients = [] } = useQuery({
     queryKey: ["cstock_clients", cid],
     queryFn: () => base44.entities.Client.filter({ company_id: cid }),
+    enabled: !!cid,
+  });
+
+  const { data: contracts = [] } = useQuery({
+    queryKey: ["cstock_contracts", cid],
+    queryFn: () => base44.entities.Contract.filter({ company_id: cid }),
+    enabled: !!cid,
+  });
+
+  const { data: allocations = [] } = useQuery({
+    queryKey: ["cstock_allocs", cid],
+    queryFn: () => base44.entities.Allocation.filter({ company_id: cid }),
     enabled: !!cid,
   });
 
@@ -136,8 +151,42 @@ export default function ContractStockPage() {
   };
 
   const allClients = [...new Set(stocks.map(s => s.client_name).filter(Boolean))];
-  const filtered = stocks.filter(s => filterClient === "all" || s.client_name === filterClient);
+  const filtered = stocks.filter(s => {
+    if (filterClient !== "all" && s.client_name !== filterClient && s.client_id !== filterClient) return false;
+    if (filterContract !== "all" && s.contract_id !== filterContract) return false;
+    return true;
+  });
   const lowAlert = stocks.filter(s => (s.quantity_on_site || 0) <= (s.min_quantity || 0) && s.min_quantity > 0);
+
+  // Date-filtered consumptions
+  const filteredConsumptions = consumptions.filter(c => {
+    if (c.date < filterDateFrom || c.date > filterDateTo) return false;
+    if (filterClient !== "all" && c.client_name !== filterClient && c.client_id !== filterClient) return false;
+    return true;
+  });
+
+  // Employee usage stats
+  const employeeUsageMap = {};
+  filteredConsumptions.forEach(c => {
+    const key = c.employee_name || c.employee_email || "Desconhecido";
+    if (!employeeUsageMap[key]) employeeUsageMap[key] = { name: key, total: 0, count: 0 };
+    employeeUsageMap[key].total += c.quantity || 0;
+    employeeUsageMap[key].count += 1;
+  });
+  const employeeUsage = Object.values(employeeUsageMap).sort((a, b) => b.total - a.total).slice(0, 8);
+
+  // Product average daily consumption
+  const productAvgMap = {};
+  filteredConsumptions.forEach(c => {
+    if (!productAvgMap[c.product]) productAvgMap[c.product] = { name: c.product, total: 0, days: new Set() };
+    productAvgMap[c.product].total += c.quantity || 0;
+    productAvgMap[c.product].days.add(c.date);
+  });
+  const productAvg = Object.values(productAvgMap).map(p => ({
+    name: p.name,
+    avg: p.days.size > 0 ? (p.total / p.days.size).toFixed(2) : 0,
+    total: p.total
+  })).sort((a, b) => b.total - a.total).slice(0, 8);
 
   // Dashboard data
   const productTotals = useMemo(() => {
