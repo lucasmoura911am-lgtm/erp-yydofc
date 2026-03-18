@@ -420,6 +420,26 @@ export default function EPIDailyLogs() {
         </>
       )}
 
+      {/* ===== TAB: RELATÓRIO GESTOR ===== */}
+      {tab === "relatorio" && isAdmin && (
+        <EPIReportTab
+          logs={logs}
+          employees={employees}
+          epis={epis}
+          clients={clients}
+        />
+      )}
+
+      {/* ===== TAB: EPIs x PGR/PCMSO ===== */}
+      {tab === "pgr" && isAdmin && (
+        <EPIPGRComplianceTab
+          epis={epis}
+          logs={logs}
+          employees={employees}
+          companyId={cid}
+        />
+      )}
+
       {/* MODAL: Registro de EPI */}
       {open && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
