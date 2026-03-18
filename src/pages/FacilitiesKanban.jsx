@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Filter, Building2, Users, CheckCircle, AlertTriangle, XCircle, Calendar, ListTodo } from "lucide-react";
 import AllocationCard from "@/components/facilities/AllocationCard";
+import TaskActionDialog from "@/components/tasks/TaskActionDialog";
 
 export default function FacilitiesKanban() {
   const queryClient = useQueryClient();
