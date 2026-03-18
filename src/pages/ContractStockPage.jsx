@@ -238,6 +238,7 @@ export default function ContractStockPage() {
     { id: "dashboard", label: "📊 Dashboard" },
     { id: "estoque", label: "📦 Estoque" },
     { id: "consumo", label: "📋 Histórico" },
+    { id: "relatorios", label: "📈 Relatórios" },
   ];
 
   return (
@@ -250,8 +251,10 @@ export default function ContractStockPage() {
           <p className="text-sm text-gray-400">Materiais nos clientes · Consumo diário · Relatórios</p>
         </div>
         <div className="flex gap-2">
-          {tab === "consumo" && <Button variant="outline" onClick={exportConsumptionCSV} className="gap-2"><Download className="w-4 h-4"/>Exportar</Button>}
-          {tab === "estoque" && <><Button variant="outline" onClick={exportCSV} className="gap-2"><Download className="w-4 h-4"/>CSV</Button>{isAdmin && <Button onClick={openNew} className="bg-violet-600 hover:bg-violet-700 text-white gap-2"><Plus className="w-4 h-4"/>Novo Produto</Button>}</>}
+          
+          {(tab === "estoque" || tab === "dashboard") && <Button variant="outline" onClick={exportCSV} className="gap-2"><Download className="w-4 h-4"/>CSV</Button>}
+          {tab === "estoque" && isAdmin && <Button onClick={openNew} className="bg-violet-600 hover:bg-violet-700 text-white gap-2"><Plus className="w-4 h-4"/>Novo Produto</Button>}
+          {tab === "consumo" && <Button variant="outline" onClick={exportConsumptionCSV} className="gap-2"><Download className="w-4 h-4"/>CSV</Button>}
         </div>
       </div>
 
