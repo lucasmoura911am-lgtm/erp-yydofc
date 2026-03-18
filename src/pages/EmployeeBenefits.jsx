@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calculator, DollarSign, Download, Info } from "lucide-react";
+import { Calculator, DollarSign, Download, Info, CheckCircle2, PackageCheck } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, subMonths, setDate } from "date-fns";
 
@@ -74,6 +74,58 @@ export default function EmployeeBenefits() {
 
     return { startDate, endDate };
   };
+
+  const approveMutation = useMutation({
+    mutationFn: async (benefit) => {
+      // Mark benefit as approved
+      await base44.entities.EmployeeBenefit.update(benefit.id, { status: "pago" });
+      // Create or update ApprovedBenefitOrder
+      const existing = await base44.entities.ApprovedBenefitOrder.filter({
+        employee_id: benefit.employee_id,
+        competence: benefit.competence,
+        company_id: user.company_id
+      });
+      const orderData = {
+        company_id: user.company_id,
+        competence: benefit.competence,
+        employee_id: benefit.employee_id,
+        employee_benefit_id: benefit.id,
+        state: benefit.state,
+        worked_days: benefit.worked_days,
+        absences: benefit.absences,
+        vr_total_value: benefit.vr_total_value,
+        va_total_value: benefit.va_total_value,
+        vt_total_value: benefit.vt_total_value,
+        basket_value: benefit.basket_value,
+        total_benefits: benefit.total_benefits,
+        approved_by: user.email,
+        approved_at: new Date().toISOString(),
+        status: "aprovado"
+      };
+      if (existing.length > 0) {
+        await base44.entities.ApprovedBenefitOrder.update(existing[0].id, orderData);
+      } else {
+        await base44.entities.ApprovedBenefitOrder.create(orderData);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["employeeBenefits"]);
+      toast.success("Benefício aprovado e enviado para emissão!");
+    }
+  });
+
+  const approveAllMutation = useMutation({
+    mutationFn: async () => {
+      const pending = benefits.filter(b => b.status !== "pago");
+      for (const benefit of pending) {
+        await approveMutation.mutateAsync(benefit);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["employeeBenefits"]);
+      toast.success("Todos os benefícios aprovados!");
+    }
+  });
 
   const calculateMutation = useMutation({
     mutationFn: async () => {
@@ -286,15 +338,17 @@ export default function EmployeeBenefits() {
                       <TableHead>VT</TableHead>
                       <TableHead>Cesta</TableHead>
                       <TableHead>Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {benefits.map((benefit) => {
+                      <TableHead>Aprovar</TableHead>
+                      </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                      {benefits.map((benefit) => {
                       const emp = employees.find(e => e.id === benefit.employee_id);
                       const cfg = getConfigForDisplay(benefit.state);
                       const maxAbs = cfg?.basket_max_absences ?? 0;
+                      const isApproved = benefit.status === "pago";
                       return (
-                        <TableRow key={benefit.id}>
+                        <TableRow key={benefit.id} className={isApproved ? "bg-green-50 dark:bg-green-900/10" : ""}>
                           <TableCell className="font-medium">{emp?.full_name || "N/A"}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{benefit.state}</Badge>
@@ -320,11 +374,48 @@ export default function EmployeeBenefits() {
                           <TableCell className="font-bold">
                             R$ {(benefit.total_benefits || 0).toFixed(2)}
                           </TableCell>
+                          <TableCell>
+                            {isApproved ? (
+                              <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Aprovado
+                              </span>
+                            ) : (
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 h-7 text-xs"
+                                onClick={() => approveMutation.mutate(benefit)}
+                                disabled={approveMutation.isPending}
+                              >
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Aprovar
+                              </Button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       );
-                    })}
+                      })}
                   </TableBody>
                 </Table>
+
+                {/* Approve All Footer */}
+                {benefits.some(b => b.status !== "pago") && (
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="text-sm text-gray-500">
+                      {benefits.filter(b => b.status !== "pago").length} pendente(s) de aprovação ·{" "}
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">
+                        Total: R$ {benefits.reduce((s, b) => s + (b.total_benefits || 0), 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <Button
+                      onClick={() => approveAllMutation.mutate()}
+                      disabled={approveAllMutation.isPending}
+                      className="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800"
+                    >
+                      <PackageCheck className="w-4 h-4 mr-2" />
+                      {approveAllMutation.isPending ? "Aprovando..." : "Aprovar Todos e Enviar para Emissão"}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
