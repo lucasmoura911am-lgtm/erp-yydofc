@@ -97,6 +97,8 @@ import ClientTicketsManage from './pages/ClientTicketsManage';
 import SmartPayslipsDashboard from './pages/SmartPayslipsDashboard';
 import FacilitiesKanban from './pages/FacilitiesKanban';
 import PostCoveragePage from './pages/PostCoveragePage';
+import ApprovedBenefitOrders from './pages/ApprovedBenefitOrders';
+import EmployeeLifeReport from './pages/EmployeeLifeReport';
 import SmartPayslipsUpload from './pages/SmartPayslipsUpload';
 import MySmartPayslips from './pages/MySmartPayslips';
 
@@ -243,6 +245,8 @@ const AuthenticatedApp = () => {
       <Route path="/SmartPayslipsDashboard" element={<LayoutWrapper currentPageName="SmartPayslipsDashboard"><SmartPayslipsDashboard /></LayoutWrapper>} />
       <Route path="/SmartPayslipsUpload" element={<LayoutWrapper currentPageName="SmartPayslipsUpload"><SmartPayslipsUpload /></LayoutWrapper>} />
       <Route path="/MySmartPayslips" element={<LayoutWrapper currentPageName="MySmartPayslips"><MySmartPayslips /></LayoutWrapper>} />
+      <Route path="/ApprovedBenefitOrders" element={<LayoutWrapper currentPageName="ApprovedBenefitOrders"><ApprovedBenefitOrders /></LayoutWrapper>} />
+      <Route path="/EmployeeLifeReport" element={<LayoutWrapper currentPageName="EmployeeLifeReport"><EmployeeLifeReport /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
