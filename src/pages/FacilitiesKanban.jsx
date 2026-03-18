@@ -293,7 +293,7 @@ export default function FacilitiesKanban() {
                 isPresent={presentEmployeeIds.has(allocation.employee_id)}
                 status={getAllocationStatus(allocation)}
                 now={now}
-                onCompleteTask={(taskId) => completeTaskMutation.mutate(taskId)}
+                onCompleteTask={(task) => handleKanbanTaskAction(task)}
               />
             ))
           )}
