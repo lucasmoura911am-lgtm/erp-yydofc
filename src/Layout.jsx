@@ -325,6 +325,7 @@ export default function Layout({ children }) {
           { title: "Contratos", url: "/Contracts", icon: FileText },
           { title: "Lotações", url: "/Allocations", icon: MapPin },
           { title: "Relatório de Alocações", url: "/AllocationReports", icon: FileText },
+          { title: "Gastos por Contrato", url: "/ContractExpensesPage", icon: TrendingDown },
         ]
       },
       {

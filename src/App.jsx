@@ -99,6 +99,7 @@ import FacilitiesKanban from './pages/FacilitiesKanban';
 import PostCoveragePage from './pages/PostCoveragePage';
 import ApprovedBenefitOrders from './pages/ApprovedBenefitOrders';
 import EmployeeLifeReport from './pages/EmployeeLifeReport';
+import ContractExpensesPage from './pages/ContractExpensesPage';
 import SmartPayslipsUpload from './pages/SmartPayslipsUpload';
 import MySmartPayslips from './pages/MySmartPayslips';
 
@@ -247,6 +248,7 @@ const AuthenticatedApp = () => {
       <Route path="/MySmartPayslips" element={<LayoutWrapper currentPageName="MySmartPayslips"><MySmartPayslips /></LayoutWrapper>} />
       <Route path="/ApprovedBenefitOrders" element={<LayoutWrapper currentPageName="ApprovedBenefitOrders"><ApprovedBenefitOrders /></LayoutWrapper>} />
       <Route path="/EmployeeLifeReport" element={<LayoutWrapper currentPageName="EmployeeLifeReport"><EmployeeLifeReport /></LayoutWrapper>} />
+      <Route path="/ContractExpensesPage" element={<LayoutWrapper currentPageName="ContractExpensesPage"><ContractExpensesPage /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
