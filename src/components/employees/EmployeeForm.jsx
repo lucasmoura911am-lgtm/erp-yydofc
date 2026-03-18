@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, FileText, Home, Briefcase, DollarSign, Calendar, Camera, Loader2, Factory } from "lucide-react";
 
-export default function EmployeeForm({ formData, setFormData, positions, departments, shifts, teams, supervisors }) {
+export default function EmployeeForm({ formData, setFormData, positions, departments, shifts, teams, supervisors, allocations = [], clients = [] }) {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const brazilianStates = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
 
@@ -30,13 +30,14 @@ export default function EmployeeForm({ formData, setFormData, positions, departm
 
   return (
     <Tabs defaultValue="personal" className="w-full">
-      <TabsList className="grid w-full grid-cols-6">
+      <TabsList className="grid w-full grid-cols-7">
         <TabsTrigger value="personal" className="text-xs"><User className="w-3 h-3 mr-1" />Pessoal</TabsTrigger>
         <TabsTrigger value="documents" className="text-xs"><FileText className="w-3 h-3 mr-1" />Documentos</TabsTrigger>
         <TabsTrigger value="address" className="text-xs"><Home className="w-3 h-3 mr-1" />Endereço</TabsTrigger>
         <TabsTrigger value="work" className="text-xs"><Briefcase className="w-3 h-3 mr-1" />Trabalho</TabsTrigger>
         <TabsTrigger value="financial" className="text-xs"><DollarSign className="w-3 h-3 mr-1" />Financeiro</TabsTrigger>
         <TabsTrigger value="additional" className="text-xs"><Calendar className="w-3 h-3 mr-1" />Adicional</TabsTrigger>
+        <TabsTrigger value="facilities" className="text-xs"><Factory className="w-3 h-3 mr-1" />Facilities</TabsTrigger>
       </TabsList>
 
       {/* Dados Pessoais */}
@@ -432,6 +433,68 @@ export default function EmployeeForm({ formData, setFormData, positions, departm
           <div className="space-y-2">
             <Label>Contrib. Sindical</Label>
             <Input value={formData.union_contribution} onChange={(e) => setFormData({ ...formData, union_contribution: e.target.value })} />
+          </div>
+        </div>
+      </TabsContent>
+
+      {/* Facilities */}
+      <TabsContent value="facilities" className="space-y-4 max-h-96 overflow-y-auto p-4">
+        <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+          <p className="text-sm font-semibold text-purple-800 dark:text-purple-300">Vinculação com Operações Facilities</p>
+          <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">Associe o funcionário ao seu cliente, contrato e lotação padrão</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Cliente Padrão</Label>
+            <Select value={formData.default_client_id || ""} onValueChange={(value) => setFormData({ ...formData, default_client_id: value })}>
+              <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={null}>Nenhum</SelectItem>
+                {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Lotação Padrão</Label>
+            <Select value={formData.current_allocation_id || ""} onValueChange={(value) => setFormData({ ...formData, current_allocation_id: value })}>
+              <SelectTrigger><SelectValue placeholder="Selecione a lotação" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={null}>Nenhuma</SelectItem>
+                {allocations.map((a) => <SelectItem key={a.id} value={a.id}>{a.post_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Tamanhos de Uniforme</p>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Camisa/Blusa</Label>
+              <Select value={formData.shirt_size || ""} onValueChange={(value) => setFormData({ ...formData, shirt_size: value })}>
+                <SelectTrigger><SelectValue placeholder="Tamanho" /></SelectTrigger>
+                <SelectContent>
+                  {["PP","P","M","G","GG","XGG"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Calça (numeração)</Label>
+              <Input
+                value={formData.pants_size || ""}
+                onChange={(e) => setFormData({ ...formData, pants_size: e.target.value })}
+                placeholder="Ex: 38, 40, 42"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Bota/Calçado (nº)</Label>
+              <Input
+                value={formData.boot_size || ""}
+                onChange={(e) => setFormData({ ...formData, boot_size: e.target.value })}
+                placeholder="Ex: 40, 41, 42"
+              />
+            </div>
           </div>
         </div>
       </TabsContent>
