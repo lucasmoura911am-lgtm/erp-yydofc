@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, differenceInHours } from "date-fns";
@@ -44,7 +44,7 @@ export default function PostCoveragePage() {
   const [tab, setTab] = useState("list"); // "list" | "dashboard"
   const queryClient = useQueryClient();
 
-  React.useEffect(() => { base44.auth.me().then(setUser).catch(() => {}); }, []);
+  useEffect(() => { base44.auth.me().then(setUser).catch(() => {}); }, []);
 
   const { data: coverages = [] } = useQuery({
     queryKey: ["postCoverages", user?.company_id],
