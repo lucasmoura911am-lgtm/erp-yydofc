@@ -37,6 +37,15 @@ export default function ManageTasks() {
   const [user, setUser] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const DAYS = [
+    { id: "seg", label: "Seg" },
+    { id: "ter", label: "Ter" },
+    { id: "qua", label: "Qua" },
+    { id: "qui", label: "Qui" },
+    { id: "sex", label: "Sex" },
+    { id: "sab", label: "Sáb" },
+    { id: "dom", label: "Dom" },
+  ];
 
   const [formData, setFormData] = useState({
     title: "",
@@ -53,6 +62,15 @@ export default function ManageTasks() {
     frequency: "avulsa"
   });
 
+  const toggleDay = (day) => {
+    setFormData(prev => ({
+      ...prev,
+      scheduled_days: prev.scheduled_days.includes(day)
+        ? prev.scheduled_days.filter(d => d !== day)
+        : [...prev.scheduled_days, day]
+    }));
+  };
+
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -64,68 +82,120 @@ export default function ManageTasks() {
     setUser(userData);
   };
 
-  // 🔥 TASKS
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks', user?.company_id],
-    queryFn: () =>
-      user?.company_id
-        ? base44.entities.Task.filter({ company_id: user.company_id }, '-created_date')
-        : [],
+    queryFn: async () => {
+      if (!user?.company_id) return [];
+      const allTasks = await base44.entities.Task.filter({ company_id: user.company_id }, '-created_date');
+      await checkAndCreateRecurringTasks(allTasks);
+      return allTasks;
+    },
     enabled: !!user?.company_id,
+    refetchInterval: 300000, // Recheck every 5 minutes
   });
 
   const { data: allEmployees = [] } = useQuery({
     queryKey: ['employees', user?.company_id],
-    queryFn: () =>
-      user?.company_id
-        ? base44.entities.Employee.filter({ company_id: user.company_id, status: 'active' })
-        : [],
+    queryFn: () => user?.company_id ? base44.entities.Employee.filter({ company_id: user.company_id, status: 'active' }) : [],
     enabled: !!user?.company_id,
   });
 
   const { data: allocations = [] } = useQuery({
     queryKey: ['allocations', user?.company_id],
-    queryFn: () =>
-      user?.company_id
-        ? base44.entities.Allocation.filter({ company_id: user.company_id, status: 'ativo' })
-        : [],
+    queryFn: () => user?.company_id ? base44.entities.Allocation.filter({ company_id: user.company_id, status: 'ativo' }) : [],
     enabled: !!user?.company_id,
   });
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients', user?.company_id],
-    queryFn: () =>
-      user?.company_id
-        ? base44.entities.Client.filter({ company_id: user.company_id })
-        : [],
+    queryFn: () => user?.company_id ? base44.entities.Client.filter({ company_id: user.company_id }) : [],
     enabled: !!user?.company_id,
   });
 
-  // 🔥 CREATE
+  const employees = user?.is_supervisor 
+    ? allEmployees.filter(emp => emp.supervisor_email === user.email || user.supervised_teams?.some(teamId => emp.team_id === teamId))
+    : allEmployees;
+
+  const checkAndCreateRecurringTasks = async (existingTasks) => {
+    const recurringTasks = existingTasks.filter(t => 
+      (t.frequency === 'diaria' || t.frequency === 'semanal') && 
+      t.status !== 'cancelada'
+    );
+
+    for (const task of recurringTasks) {
+      const taskDueDate = new Date(task.due_date);
+      const now = new Date();
+      
+      // Check if task is overdue and should spawn a new instance
+      if (taskDueDate < now) {
+        let nextDueDate = new Date(taskDueDate);
+        
+        if (task.frequency === 'diaria') {
+          // Add days until we get to today or future
+          while (nextDueDate < now) {
+            nextDueDate.setDate(nextDueDate.getDate() + 1);
+          }
+        } else if (task.frequency === 'semanal') {
+          // Add weeks
+          while (nextDueDate < now) {
+            nextDueDate.setDate(nextDueDate.getDate() + 7);
+          }
+        }
+
+        // Check if a task already exists for this new due date
+        const nextDueDateStr = nextDueDate.toISOString().substring(0, 16);
+        const existingNextTask = existingTasks.find(t => 
+          t.employee_id === task.employee_id &&
+          t.title === task.title &&
+          t.due_date.substring(0, 16) === nextDueDateStr
+        );
+
+        if (!existingNextTask) {
+          // Create new recurring task instance — preserve all linkage fields
+          await base44.entities.Task.create({
+            title: task.title,
+            description: task.description,
+            employee_id: task.employee_id,
+            allocation_id: task.allocation_id || "",
+            client_id: task.client_id || "",
+            company_id: task.company_id,
+            supervisor_email: task.supervisor_email,
+            due_date: nextDueDate.toISOString(),
+            scheduled_start_time: task.scheduled_start_time || "",
+            scheduled_end_time: task.scheduled_end_time || "",
+            scheduled_days: task.scheduled_days || [],
+            location: task.location,
+            priority: task.priority,
+            frequency: task.frequency,
+            status: 'pendente'
+          });
+        }
+      }
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Task.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['tasks', user.company_id]);
+      queryClient.invalidateQueries(['tasks']);
       setDialogOpen(false);
       resetForm();
     },
   });
 
-  // 🔥 UPDATE
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Task.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['tasks', user.company_id]);
+      queryClient.invalidateQueries(['tasks']);
       setDialogOpen(false);
       resetForm();
     },
   });
 
-  // 🔥 DELETE
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Task.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['tasks', user.company_id]);
+      queryClient.invalidateQueries(['tasks']);
     },
   });
 
@@ -147,44 +217,21 @@ export default function ManageTasks() {
     setEditing(null);
   };
 
-  // 🔥 SUBMIT CORRIGIDO
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    if (!user?.company_id) {
-      alert("Erro: usuário não carregado");
-      return;
-    }
-
-    if (!formData.employee_id) {
-      alert("Selecione um funcionário");
-      return;
-    }
-
-    const selectedEmployee = allEmployees.find(e => e.id === formData.employee_id);
-
     const data = { 
       title: formData.title,
       description: formData.description,
       employee_id: formData.employee_id,
-
-      // 🔥 importante
-      employee_email: selectedEmployee?.email || "",
-
       allocation_id: formData.allocation_id || "",
       client_id: formData.client_id || "",
-
       company_id: user.company_id,
       supervisor_email: user.email,
-
       due_date: formData.due_date || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-
       scheduled_start_time: formData.scheduled_start_time || "",
       scheduled_end_time: formData.scheduled_end_time || "",
       scheduled_days: formData.scheduled_days || [],
-
       location: formData.location || (allocations.find(a => a.id === formData.allocation_id)?.post_location || ""),
-
       priority: formData.priority,
       frequency: formData.frequency,
       status: 'pendente'
@@ -197,12 +244,28 @@ export default function ManageTasks() {
     }
   };
 
-  // 🔥 STATUS FIX
-  const handleStatusChange = async (taskId, newStatus) => {
-    await updateMutation.mutateAsync({
-      id: taskId,
-      data: { status: newStatus }
+  const handleEdit = (task) => {
+    setEditing(task);
+    setFormData({
+      title: task.title,
+      description: task.description || "",
+      employee_id: task.employee_id,
+      allocation_id: task.allocation_id || "",
+      client_id: task.client_id || "",
+      due_date: task.due_date,
+      scheduled_start_time: task.scheduled_start_time || "",
+      scheduled_end_time: task.scheduled_end_time || "",
+      scheduled_days: task.scheduled_days || [],
+      location: task.location || "",
+      priority: task.priority,
+      frequency: task.frequency
     });
+    setDialogOpen(true);
+  };
+
+  const handleStatusChange = async (taskId, newStatus) => {
+    const task = tasks.find(t => t.id === taskId);
+    await updateMutation.mutateAsync({ id: taskId, data: { ...task, status: newStatus } });
   };
 
   const getEmployeeName = (id) => {
@@ -210,13 +273,31 @@ export default function ManageTasks() {
     return emp?.full_name || "Desconhecido";
   };
 
+  const statusColors = {
+    pendente: "bg-gray-100 text-gray-800",
+    em_andamento: "bg-blue-100 text-blue-800",
+    concluida: "bg-green-100 text-green-800",
+    atrasada: "bg-red-100 text-red-800",
+    cancelada: "bg-red-100 text-red-800",
+    pausada: "bg-yellow-100 text-yellow-800"
+  };
+
+  const priorityColors = {
+    baixa: "bg-blue-100 text-blue-800",
+    media: "bg-yellow-100 text-yellow-800",
+    alta: "bg-red-100 text-red-800"
+  };
+
   return (
     <div className="p-6 space-y-6">
-
-      <div className="flex justify-between">
-        <h1 className="text-2xl font-bold">Gestão de Tarefas</h1>
-
-        <Button onClick={() => { resetForm(); setDialogOpen(true); }}>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Gestão de Tarefas</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Crie e gerencie tarefas para sua equipe
+          </p>
+        </div>
+        <Button onClick={() => { resetForm(); setDialogOpen(true); }} className="bg-gradient-to-r from-purple-600 to-blue-600">
           <Plus className="w-4 h-4 mr-2" />
           Nova Tarefa
         </Button>
@@ -224,90 +305,298 @@ export default function ManageTasks() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tarefas</CardTitle>
+          <CardTitle>Todas as Tarefas</CardTitle>
         </CardHeader>
-
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Tarefa</TableHead>
                 <TableHead>Funcionário</TableHead>
+                <TableHead>Prazo</TableHead>
+                <TableHead>Prioridade</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead></TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
-
             <TableBody>
               {tasks.map((task) => (
                 <TableRow key={task.id}>
-                  <TableCell>{task.title}</TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{task.title}</p>
+                      {task.description && (
+                        <p className="text-sm text-gray-500 truncate max-w-xs">{task.description}</p>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{getEmployeeName(task.employee_id)}</TableCell>
-                  <TableCell>{task.status}</TableCell>
-
-                  <TableCell className="flex gap-2 justify-end">
-                    <Button size="icon" onClick={() => handleStatusChange(task.id, 'pausada')}>
-                      <Pause className="w-4 h-4" />
-                    </Button>
-
-                    <Button size="icon" onClick={() => handleStatusChange(task.id, 'pendente')}>
-                      <Play className="w-4 h-4" />
-                    </Button>
-
-                    <Button size="icon" onClick={() => deleteMutation.mutate(task.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <TableCell>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1 text-sm">
+                        <Calendar className="w-3 h-3" />
+                        {format(parseISO(task.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                      {(task.scheduled_start_time || task.scheduled_end_time) && (
+                        <div className="flex items-center gap-1 text-xs text-purple-600 font-medium">
+                          <Clock className="w-3 h-3" />
+                          {task.scheduled_start_time || "?"}{task.scheduled_end_time ? ` – ${task.scheduled_end_time}` : ""}
+                        </div>
+                      )}
+                      {task.scheduled_days?.length > 0 && (
+                        <div className="flex gap-0.5 flex-wrap mt-0.5">
+                          {task.scheduled_days.map(d => (
+                            <span key={d} className="text-[10px] px-1 py-0 bg-purple-100 text-purple-700 rounded font-medium capitalize">{d}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={priorityColors[task.priority]}>
+                      {task.priority}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={statusColors[task.status]}>
+                      {task.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(task)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      {task.status === 'pendente' && (
+                        <Button variant="ghost" size="icon" onClick={() => handleStatusChange(task.id, 'pausada')}>
+                          <Pause className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {task.status === 'pausada' && (
+                        <Button variant="ghost" size="icon" onClick={() => handleStatusChange(task.id, 'pendente')}>
+                          <Play className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => handleStatusChange(task.id, 'cancelada')}>
+                        <XCircle className="w-4 h-4 text-red-600" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(task.id)}>
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
-
           </Table>
         </CardContent>
       </Card>
 
-      {/* 🔥 DIALOG */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nova Tarefa</DialogTitle>
+            <DialogTitle>{editing ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
           </DialogHeader>
-
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Título *</Label>
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+              />
+            </div>
 
-            <Input
-              placeholder="Título"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              required
-            />
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={3}
+              />
+            </div>
 
-            <Select
-              value={formData.employee_id}
-              onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione funcionário" />
-              </SelectTrigger>
+            {/* Allocation + Employee row — linked */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2 col-span-2">
+                <Label>Lotação (Posto) — selecione para vincular funcionário automaticamente</Label>
+                <Select
+                  value={formData.allocation_id}
+                  onValueChange={(value) => {
+                    const alloc = allocations.find(a => a.id === value);
+                    setFormData({
+                      ...formData,
+                      allocation_id: value,
+                      client_id: alloc?.client_id || formData.client_id,
+                      employee_id: alloc?.employee_id || formData.employee_id,
+                      location: formData.location || alloc?.post_location || "",
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a lotação (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={null}>Sem lotação específica</SelectItem>
+                    {allocations.map((a) => {
+                      const cli = clients.find(c => c.id === a.client_id);
+                      const emp = allEmployees.find(e => e.id === a.employee_id);
+                      return (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.post_name}{cli ? ` — ${cli.name}` : ""}{emp ? ` (${emp.full_name})` : ""}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                {formData.allocation_id && (() => {
+                  const alloc = allocations.find(a => a.id === formData.allocation_id);
+                  const cli = clients.find(c => c.id === alloc?.client_id);
+                  const emp = allEmployees.find(e => e.id === alloc?.employee_id);
+                  return (
+                    <div className="flex items-center gap-2 text-xs text-purple-700 bg-purple-50 dark:bg-purple-900/20 rounded-lg px-3 py-1.5">
+                      <span>📌</span>
+                      <span>Vinculado a: <b>{emp?.full_name || "—"}</b> · {cli?.name || "—"} · {alloc?.post_name}</span>
+                    </div>
+                  );
+                })()}
+              </div>
 
-              <SelectContent>
-                {allEmployees.map(emp => (
-                  <SelectItem key={emp.id} value={emp.id}>
-                    {emp.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <div className="space-y-2">
+                <Label>Funcionário *</Label>
+                <Select
+                  value={formData.employee_id}
+                  onValueChange={(value) => setFormData({ ...formData, employee_id: value, allocation_id: formData.allocation_id })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allEmployees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.full_name}
+                        {emp.default_client_id ? (() => {
+                          const cli = clients.find(c => c.id === emp.default_client_id);
+                          return cli ? ` — ${cli.name}` : "";
+                        })() : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1">
+                  Data de Referência
+                  <span className="text-xs font-normal text-gray-400 ml-1">(opcional para tarefas recorrentes)</span>
+                </Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.due_date}
+                  onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Prioridade</Label>
+                <Select
+                  value={formData.priority}
+                  onValueChange={(value) => setFormData({ ...formData, priority: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Frequência</Label>
+                <Select
+                  value={formData.frequency}
+                  onValueChange={(value) => setFormData({ ...formData, frequency: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="avulsa">Avulsa</SelectItem>
+                    <SelectItem value="diaria">Diária</SelectItem>
+                    <SelectItem value="semanal">Semanal</SelectItem>
+                    <SelectItem value="mensal">Mensal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Horário previsto */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-purple-500" />Horário Previsto</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Início</label>
+                  <Input
+                    type="time"
+                    value={formData.scheduled_start_time}
+                    onChange={(e) => setFormData({ ...formData, scheduled_start_time: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Término</label>
+                  <Input
+                    type="time"
+                    value={formData.scheduled_end_time}
+                    onChange={(e) => setFormData({ ...formData, scheduled_end_time: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Dias da semana */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-purple-500" />Dias de Execução</Label>
+              <div className="flex gap-2 flex-wrap">
+                {DAYS.map(d => {
+                  const active = formData.scheduled_days.includes(d.id);
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => toggleDay(d.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${active ? "bg-purple-600 text-white border-purple-600" : "bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:border-purple-400"}`}
+                    >
+                      {d.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-400">Deixe em branco para não vincular a dias específicos</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Local (opcional)</Label>
+              <Input
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              />
+            </div>
 
             <DialogFooter>
-              <Button type="submit">Salvar</Button>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" className="bg-gradient-to-r from-purple-600 to-blue-600">
+                {editing ? "Salvar" : "Criar"}
+              </Button>
             </DialogFooter>
-
           </form>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
