@@ -107,11 +107,15 @@ export default function TaskRow({ task, now, onComplete }) {
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 px-2 text-xs text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 flex-shrink-0"
+            className={`h-6 px-2 text-xs flex-shrink-0 ${
+              computedStatus === "em_andamento" || computedStatus === "atrasada"
+                ? "text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30"
+                : "text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+            }`}
             onClick={onComplete}
-            title="Marcar como concluída"
+            title={computedStatus === "pendente" ? "Iniciar tarefa" : "Concluir tarefa"}
           >
-            ✓
+            {computedStatus === "pendente" ? "▶" : "✓"}
           </Button>
         )}
       </div>
