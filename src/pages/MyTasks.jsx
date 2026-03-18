@@ -34,14 +34,8 @@ export default function MyTasks() {
     setLoadingEmployee(true);
     const userData = await base44.auth.me();
     setUser(userData);
-    let empData = [];
-    if (userData.employee_id) {
-      empData = await base44.entities.Employee.filter({ id: userData.employee_id });
-    }
-    if (empData.length === 0 && userData.email) {
-      empData = await base44.entities.Employee.filter({ user_email: userData.email });
-    }
-    if (empData.length > 0) setEmployee(empData[0]);
+    const emp = await getCurrentEmployee(userData);
+    if (emp) setEmployee(emp);
     setLoadingEmployee(false);
   };
 
