@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Eye, Shield } from "lucide-react";
+import { Eye, Shield } from "lucide-react";
 
 export default function SmartPayslipsDashboard() {
   const [user, setUser] = useState(null);
@@ -72,7 +72,7 @@ export default function SmartPayslipsDashboard() {
     setPhoto(canvas.toDataURL("image/png"));
   };
 
-  // ✍️ DESENHO ASSINATURA
+  // ✍️ ASSINATURA
   const startDraw = (e) => {
     isDrawing.current = true;
     draw(e);
@@ -80,6 +80,7 @@ export default function SmartPayslipsDashboard() {
 
   const endDraw = () => {
     isDrawing.current = false;
+    signCanvasRef.current.getContext("2d").beginPath();
   };
 
   const draw = (e) => {
@@ -104,63 +105,17 @@ export default function SmartPayslipsDashboard() {
 
   const clearSignature = () => {
     const canvas = signCanvasRef.current;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  // 🔥 ASSINAR
-  const signMutation = useMutation({
-    mutationFn: async () => {
-      const canvas = signCanvasRef.current;
-
-      if (!photo) {
-        alert("Tire a foto");
-        return;
-      }
-
-      if (canvas.toDataURL() === blankCanvas(canvas)) {
-        alert("Desenhe a assinatura");
-        return;
-      }
-
-      const ip = await fetch("https://api.ipify.org?format=json")
-        .then(res => res.json())
-        .then(data => data.ip);
-
-      const fotoUpload = await base44.integrations.Core.UploadFile({
-        file: dataURLtoFile(photo, "foto.png")
-      });
-
-      const assinaturaUpload = await base44.integrations.Core.UploadFile({
-        file: dataURLtoFile(canvas.toDataURL(), "assinatura.png")
-      });
-
-      return base44.entities.SmartPayslip.update(currentPayslip.id, {
-        status_assinado: "assinado",
-        data_assinatura: new Date().toISOString(),
-        assinatura_nome: user.email,
-        assinatura_ip: ip,
-        assinatura_foto_url: fotoUpload.file_url,
-        assinatura_desenho_url: assinaturaUpload.file_url
-      });
-    },
-    onSuccess: () => {
-      setOpenSign(false);
-      setPhoto(null);
-      clearSignature();
-      queryClient.invalidateQueries(["smart_payslips"]);
-    }
-  });
-
+  // 🔥 FUNÇÕES AUX
   function dataURLtoFile(dataurl, filename) {
-    let arr = dataurl.split(',');
+    let arr = dataurl.split(",");
     let mime = arr[0].match(/:(.*?);/)[1];
     let bstr = atob(arr[1]);
     let n = bstr.length;
     let u8arr = new Uint8Array(n);
-
     while (n--) u8arr[n] = bstr.charCodeAt(n);
-
     return new File([u8arr], filename, { type: mime });
   }
 
@@ -170,6 +125,89 @@ export default function SmartPayslipsDashboard() {
     blank.height = canvas.height;
     return blank.toDataURL();
   }
+
+  // 🚀 ASSINAR COM COMPROVANTE
+  const signMutation = useMutation({
+    mutationFn: async () => {
+      const canvas = signCanvasRef.current;
+
+      if (!photo) return alert("Tire a foto");
+
+      if (canvas.toDataURL() === blankCanvas(canvas)) {
+        return alert("Desenhe a assinatura");
+      }
+
+      const ip = await fetch("https://api.ipify.org?format=json")
+        .then(r => r.json())
+        .then(d => d.ip);
+
+      const geo = await new Promise(resolve => {
+        navigator.geolocation.getCurrentPosition(
+          pos => resolve(pos.coords),
+          () => resolve(null)
+        );
+      });
+
+      const device = navigator.userAgent;
+
+      const fotoUpload = await base44.integrations.Core.UploadFile({
+        file: dataURLtoFile(photo, "foto.png")
+      });
+
+      const assinaturaUpload = await base44.integrations.Core.UploadFile({
+        file: dataURLtoFile(canvas.toDataURL(), "assinatura.png")
+      });
+
+      // 📄 COMPROVANTE
+      const html = `
+        <html>
+        <body style="font-family: Arial; padding:20px;">
+          <h2>COMPROVANTE DE ASSINATURA DIGITAL</h2>
+
+          <p><b>Usuário:</b> ${user.email}</p>
+          <p><b>Data:</b> ${new Date().toLocaleString()}</p>
+          <p><b>IP:</b> ${ip}</p>
+          <p><b>Dispositivo:</b> ${device}</p>
+          <p><b>Geo:</b> ${geo ? geo.latitude + "," + geo.longitude : "Não permitido"}</p>
+
+          <h3>Foto</h3>
+          <img src="${photo}" width="200"/>
+
+          <h3>Assinatura</h3>
+          <img src="${canvas.toDataURL()}" width="200"/>
+
+          <hr/>
+          <p>Documento gerado automaticamente.</p>
+        </body>
+        </html>
+      `;
+
+      const file = new File([html], "comprovante.html", { type: "text/html" });
+
+      const comprovanteUpload = await base44.integrations.Core.UploadFile({
+        file
+      });
+
+      return base44.entities.SmartPayslip.update(currentPayslip.id, {
+        status_assinado: "assinado",
+        data_assinatura: new Date().toISOString(),
+        assinatura_nome: user.email,
+        assinatura_ip: ip,
+        assinatura_device: device,
+        assinatura_geo: geo ? `${geo.latitude},${geo.longitude}` : null,
+        assinatura_foto_url: fotoUpload.file_url,
+        assinatura_desenho_url: assinaturaUpload.file_url,
+        comprovante_assinatura_url: comprovanteUpload.file_url
+      });
+    },
+
+    onSuccess: () => {
+      setOpenSign(false);
+      setPhoto(null);
+      clearSignature();
+      queryClient.invalidateQueries(["smart_payslips"]);
+    }
+  });
 
   const filtered = payslips.filter(p =>
     (p.employee_name || "").toLowerCase().includes(search.toLowerCase())
@@ -201,6 +239,7 @@ export default function SmartPayslipsDashboard() {
               </div>
 
               <div className="flex gap-2">
+
                 <Button onClick={() => window.open(p.arquivo_pdf_individual)}>
                   <Eye className="w-4 h-4" />
                 </Button>
@@ -217,6 +256,7 @@ export default function SmartPayslipsDashboard() {
                     Assinar
                   </Button>
                 )}
+
               </div>
 
             </div>
@@ -224,13 +264,12 @@ export default function SmartPayslipsDashboard() {
         </CardContent>
       </Card>
 
-      {/* MODAL */}
       {openSign && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
 
           <div className="bg-white p-6 rounded-xl w-full max-w-md space-y-4">
 
-            <h2 className="font-bold">Assinar</h2>
+            <h2 className="font-bold">Assinar Holerite</h2>
 
             <video ref={videoRef} autoPlay className="w-full" />
 
