@@ -151,14 +151,19 @@ export default function ManageTasks() {
         );
 
         if (!existingNextTask) {
-          // Create new recurring task instance
+          // Create new recurring task instance — preserve all linkage fields
           await base44.entities.Task.create({
             title: task.title,
             description: task.description,
             employee_id: task.employee_id,
+            allocation_id: task.allocation_id || "",
+            client_id: task.client_id || "",
             company_id: task.company_id,
             supervisor_email: task.supervisor_email,
             due_date: nextDueDate.toISOString(),
+            scheduled_start_time: task.scheduled_start_time || "",
+            scheduled_end_time: task.scheduled_end_time || "",
+            scheduled_days: task.scheduled_days || [],
             location: task.location,
             priority: task.priority,
             frequency: task.frequency,
