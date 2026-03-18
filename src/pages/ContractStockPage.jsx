@@ -258,6 +258,27 @@ export default function ContractStockPage() {
         </div>
       </div>
 
+      {/* Global Filters */}
+      <div className="flex flex-wrap gap-2 items-center bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
+        <Select value={filterClient} onValueChange={setFilterClient}>
+          <SelectTrigger className="w-48"><SelectValue placeholder="Todos os clientes"/></SelectTrigger>
+          <SelectContent><SelectItem value="all">Todos os clientes</SelectItem>{clients.map(c=><SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
+        </Select>
+        <Select value={filterContract} onValueChange={setFilterContract}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="Todos os contratos"/></SelectTrigger>
+          <SelectContent><SelectItem value="all">Todos os contratos</SelectItem>{contracts.map(c=><SelectItem key={c.id} value={c.id}>{c.contract_number}</SelectItem>)}</SelectContent>
+        </Select>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400">De:</span>
+          <Input type="date" value={filterDateFrom} onChange={e=>setFilterDateFrom(e.target.value)} className="w-36 h-9"/>
+          <span className="text-xs text-gray-400">Até:</span>
+          <Input type="date" value={filterDateTo} onChange={e=>setFilterDateTo(e.target.value)} className="w-36 h-9"/>
+        </div>
+        {(filterClient !== "all" || filterContract !== "all") && (
+          <Button size="sm" variant="ghost" onClick={() => { setFilterClient("all"); setFilterContract("all"); }} className="text-xs text-gray-400">Limpar filtros</Button>
+        )}
+      </div>
+
       {/* TABS */}
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit">
         {TABS.map(t => (
@@ -445,9 +466,9 @@ export default function ContractStockPage() {
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
-              {label:"Consumos Hoje",value:consumptions.filter(c=>c.date===today).length,color:"from-pink-500 to-rose-500"},
-              {label:"Consumos no Mês",value:consumptions.filter(c=>c.date?.startsWith(format(new Date(),"yyyy-MM"))).length,color:"from-violet-500 to-indigo-500"},
-              {label:"Total de Registros",value:consumptions.length,color:"from-blue-500 to-cyan-500"},
+              {label:"No Período",value:filteredConsumptions.length,color:"from-pink-500 to-rose-500"},
+              {label:"Consumos Hoje",value:consumptions.filter(c=>c.date===today).length,color:"from-violet-500 to-indigo-500"},
+              {label:"Total Histórico",value:consumptions.length,color:"from-blue-500 to-cyan-500"},
             ].map(k=>(
               <div key={k.label} className={`bg-gradient-to-br ${k.color} rounded-2xl p-4 text-white shadow-md`}>
                 <p className="text-2xl font-black">{k.value}</p><p className="text-white/70 text-xs">{k.label}</p>
@@ -457,12 +478,12 @@ export default function ContractStockPage() {
 
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4">
-              <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><History className="w-4 h-4 text-blue-500"/>Registros de Consumo</h3>
-              {recentConsumptions.length === 0 ? (
-                <p className="text-center text-gray-400 py-8">Nenhum consumo registrado ainda</p>
+              <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><History className="w-4 h-4 text-blue-500"/>Registros de Consumo ({filterDateFrom} a {filterDateTo})</h3>
+              {filteredConsumptions.length === 0 ? (
+                <p className="text-center text-gray-400 py-8">Nenhum consumo no período selecionado</p>
               ) : (
                 <div className="space-y-2">
-                  {recentConsumptions.map(c => (
+                  {[...filteredConsumptions].sort((a,b)=>b.date?.localeCompare(a.date)).map(c => (
                     <div key={c.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                       <div className="w-9 h-9 bg-pink-100 rounded-xl flex items-center justify-center flex-shrink-0">
                         <TrendingDown className="w-4 h-4 text-pink-500"/>
@@ -483,6 +504,108 @@ export default function ContractStockPage() {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* ===== RELATÓRIOS ===== */}
+      {tab === "relatorios" && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Consumo por funcionário */}
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-4">
+                <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><Users className="w-4 h-4 text-violet-500"/>Consumo por Funcionário (período)</h3>
+                {employeeUsage.length === 0 ? <p className="text-gray-400 text-center py-6">Sem dados no período</p> : (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={employeeUsage} layout="vertical">
+                      <XAxis type="number" tick={{fontSize:10}}/>
+                      <YAxis type="category" dataKey="name" tick={{fontSize:10}} width={100}/>
+                      <Tooltip/>
+                      <Bar dataKey="total" name="Total consumido" fill="#8b5cf6" radius={4}/>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+                {employeeUsage.length > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    {employeeUsage.map((e, i) => (
+                      <div key={e.name} className="flex items-center gap-2 text-xs">
+                        <span className="w-5 h-5 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-bold text-[10px]">#{i+1}</span>
+                        <span className="flex-1 text-gray-700 dark:text-gray-300 truncate">{e.name}</span>
+                        <span className="text-gray-400">{e.count}x</span>
+                        <span className="font-bold text-violet-600">{e.total} un.</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Média diária por produto */}
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-4">
+                <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-blue-500"/>Média Diária de Consumo por Produto</h3>
+                {productAvg.length === 0 ? <p className="text-gray-400 text-center py-6">Sem dados no período</p> : (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={productAvg} layout="vertical">
+                      <XAxis type="number" tick={{fontSize:10}}/>
+                      <YAxis type="category" dataKey="name" tick={{fontSize:10}} width={110}/>
+                      <Tooltip/>
+                      <Bar dataKey="avg" name="Média/dia" fill="#3b82f6" radius={4}/>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Consumo por produto - total */}
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-4">
+                <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><Package className="w-4 h-4 text-green-500"/>Total Consumido por Produto (período)</h3>
+                {productAvg.length === 0 ? <p className="text-gray-400 text-center py-6">Sem dados</p> : (
+                  <div className="space-y-2">
+                    {productAvg.map((p, i) => (
+                      <div key={p.name} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{background:COLORS[i%COLORS.length]}}>#{i+1}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold truncate">{p.name}</p>
+                          <p className="text-xs text-gray-400">Média: {p.avg}/dia</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-black text-green-600">{p.total}</p>
+                          <p className="text-xs text-gray-400">unidades</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Consumo diário no período */}
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-4">
+                <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-pink-500"/>Consumo Diário (últimos 14 dias)</h3>
+                {(() => {
+                  const data14 = Array.from({length:14},(_,i)=>{
+                    const d = format(subDays(new Date(),13-i),"yyyy-MM-dd");
+                    return { date: format(subDays(new Date(),13-i),"dd/MM"), consumo: filteredConsumptions.filter(c=>c.date===d).reduce((s,c)=>s+c.quantity,0) };
+                  });
+                  return data14.every(d=>d.consumo===0)
+                    ? <p className="text-gray-400 text-center py-6">Sem consumos no período</p>
+                    : (
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={data14}>
+                          <XAxis dataKey="date" tick={{fontSize:9}}/>
+                          <YAxis tick={{fontSize:10}}/>
+                          <Tooltip/>
+                          <Bar dataKey="consumo" fill="#ec4899" radius={4}/>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
 
       {/* MODAL: Consumo */}
