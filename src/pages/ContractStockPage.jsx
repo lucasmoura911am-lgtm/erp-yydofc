@@ -273,8 +273,27 @@ export default function ContractStockPage() {
         </div>
       </div>
 
-      {/* Global Filters */}
-      <div className="flex flex-wrap gap-2 items-center bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
+      {/* Employee context banner */}
+      {!isAdmin && employeeData && (
+        <div className="flex items-center gap-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl p-3">
+          <span className="text-violet-500 text-lg">🏢</span>
+          <div>
+            <p className="text-sm font-semibold text-violet-800 dark:text-violet-300">
+              {employeeData.default_client_id
+                ? `Visualizando estoque do seu contrato`
+                : "Nenhum contrato vinculado ao seu perfil"}
+            </p>
+            <p className="text-xs text-violet-500">
+              {employeeData.default_client_id
+                ? "Você vê apenas os itens do seu posto de trabalho"
+                : "Peça ao administrador para vincular seu cliente/contrato no seu cadastro de funcionário"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Global Filters — admin only */}
+      {isAdmin && <div className="flex flex-wrap gap-2 items-center bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
         <Select value={filterClient} onValueChange={setFilterClient}>
           <SelectTrigger className="w-48"><SelectValue placeholder="Todos os clientes"/></SelectTrigger>
           <SelectContent><SelectItem value="all">Todos os clientes</SelectItem>{clients.map(c=><SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
@@ -292,7 +311,8 @@ export default function ContractStockPage() {
         {(filterClient !== "all" || filterContract !== "all") && (
           <Button size="sm" variant="ghost" onClick={() => { setFilterClient("all"); setFilterContract("all"); }} className="text-xs text-gray-400">Limpar filtros</Button>
         )}
-      </div>
+      </div>}
+
 
       {/* TABS */}
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit">
