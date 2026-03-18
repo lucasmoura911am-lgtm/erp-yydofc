@@ -411,47 +411,70 @@ export default function ManageTasks() {
               />
             </div>
 
+            {/* Allocation + Employee row — linked */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Lotação (Posto)</Label>
+              <div className="space-y-2 col-span-2">
+                <Label>Lotação (Posto) — selecione para vincular funcionário automaticamente</Label>
                 <Select
                   value={formData.allocation_id}
                   onValueChange={(value) => {
                     const alloc = allocations.find(a => a.id === value);
-                    setFormData({ ...formData, allocation_id: value, client_id: alloc?.client_id || "", employee_id: alloc?.employee_id || formData.employee_id });
+                    setFormData({
+                      ...formData,
+                      allocation_id: value,
+                      client_id: alloc?.client_id || formData.client_id,
+                      employee_id: alloc?.employee_id || formData.employee_id,
+                      location: formData.location || alloc?.post_location || "",
+                    });
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione a lotação" />
+                    <SelectValue placeholder="Selecione a lotação (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={null}>Sem lotação específica</SelectItem>
                     {allocations.map((a) => {
                       const cli = clients.find(c => c.id === a.client_id);
+                      const emp = allEmployees.find(e => e.id === a.employee_id);
                       return (
                         <SelectItem key={a.id} value={a.id}>
-                          {a.post_name}{cli ? ` — ${cli.name}` : ""}
+                          {a.post_name}{cli ? ` — ${cli.name}` : ""}{emp ? ` (${emp.full_name})` : ""}
                         </SelectItem>
                       );
                     })}
                   </SelectContent>
                 </Select>
+                {formData.allocation_id && (() => {
+                  const alloc = allocations.find(a => a.id === formData.allocation_id);
+                  const cli = clients.find(c => c.id === alloc?.client_id);
+                  const emp = allEmployees.find(e => e.id === alloc?.employee_id);
+                  return (
+                    <div className="flex items-center gap-2 text-xs text-purple-700 bg-purple-50 dark:bg-purple-900/20 rounded-lg px-3 py-1.5">
+                      <span>📌</span>
+                      <span>Vinculado a: <b>{emp?.full_name || "—"}</b> · {cli?.name || "—"} · {alloc?.post_name}</span>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="space-y-2">
                 <Label>Funcionário *</Label>
                 <Select
                   value={formData.employee_id}
-                  onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
+                  onValueChange={(value) => setFormData({ ...formData, employee_id: value, allocation_id: formData.allocation_id })}
                   required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees.map((emp) => (
+                    {allEmployees.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
                         {emp.full_name}
+                        {emp.default_client_id ? (() => {
+                          const cli = clients.find(c => c.id === emp.default_client_id);
+                          return cli ? ` — ${cli.name}` : "";
+                        })() : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
