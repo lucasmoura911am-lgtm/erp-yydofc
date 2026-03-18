@@ -62,6 +62,21 @@ export default function TaskActionDialog({ open, onClose, task, mode, onSuccess 
       };
     }
 
+    // Registra execução na entidade TaskExecution
+    try {
+      await base44.entities.TaskExecution.create({
+        task_id: task.id,
+        employee_id: task.employee_id,
+        company_id: task.company_id,
+        action: isStart ? "iniciada" : "concluida",
+        photo_url: photo,
+        observation: observation || "",
+        executed_at: now,
+      });
+    } catch {
+      // não bloqueia o fluxo principal se falhar
+    }
+
     onSuccess(updateData);
     setPhoto(null);
     setObservation("");
