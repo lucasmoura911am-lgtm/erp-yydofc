@@ -119,11 +119,10 @@ export default function PurchaseOrders() {
       };
       await base44.entities.PurchaseOrder.update(order.id, updates);
 
-      // On delivery: auto-add items to ContractStock
+      // On delivery: auto-add items to ContractStock + create ContractExpense
       if (toStatus === "entregue" && order.client_name) {
         for (const item of (order.items || [])) {
           if (!item.description) continue;
-          // Find matching contract stock
           const match = contractStocks.find(s =>
             s.client_name === order.client_name &&
             s.product?.toLowerCase() === item.description?.toLowerCase()
@@ -134,7 +133,6 @@ export default function PurchaseOrders() {
               last_replenishment_date: today,
             });
           } else {
-            // Create new contract stock entry
             await base44.entities.ContractStock.create({
               company_id: cid,
               client_name: order.client_name,
@@ -147,6 +145,25 @@ export default function PurchaseOrders() {
               last_replenishment_date: today,
             });
           }
+        }
+
+        // Create ContractExpense for total order value
+        if ((order.total_value || 0) > 0) {
+          const [yyyy, mm] = today.split("-");
+          await base44.entities.ContractExpense.create({
+            company_id: cid,
+            client_id: order.client_id || "",
+            client_name: order.client_name,
+            category: "compra",
+            description: `Pedido de Compra ${order.number || ""} — ${(order.items || []).map(i => i.description).filter(Boolean).join(", ")}`,
+            amount: order.total_value || 0,
+            date: today,
+            competence: `${mm}/${yyyy}`,
+            reference_id: order.id,
+            reference_type: "purchase_order",
+            created_by: user?.email || "",
+            notes: order.notes || ""
+          });
         }
       }
     },

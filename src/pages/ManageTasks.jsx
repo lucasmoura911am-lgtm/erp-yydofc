@@ -222,7 +222,7 @@ export default function ManageTasks() {
       client_id: formData.client_id || "",
       company_id: user.company_id,
       supervisor_email: user.email,
-      due_date: formData.due_date,
+      due_date: formData.due_date || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       scheduled_start_time: formData.scheduled_start_time || "",
       scheduled_end_time: formData.scheduled_end_time || "",
       scheduled_days: formData.scheduled_days || [],
