@@ -141,7 +141,7 @@ export default function AllocationCard({
               key={task.id}
               task={task}
               now={now}
-              onComplete={() => onCompleteTask(task.id)}
+              onComplete={() => onCompleteTask(task)}
             />
           ))
         )}
