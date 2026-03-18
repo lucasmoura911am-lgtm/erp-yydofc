@@ -6,6 +6,7 @@ import {
   LogOut,
   Menu,
   X,
+  ArrowRightLeft,
   Moon,
   Sun,
   ChevronDown,
