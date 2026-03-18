@@ -78,6 +78,7 @@ export const ALL_MODULES = [
   // ── Benefícios ───────────────────────────────────────────────
   { id: "benefit_configs", label: "Configurar Benefícios", url: "/BenefitConfigs", group: "Benefícios" },
   { id: "employee_benefits", label: "Gestão de Benefícios", url: "/EmployeeBenefits", group: "Benefícios" },
+  { id: "approved_benefit_orders", label: "Pedidos Aprovados", url: "/ApprovedBenefitOrders", group: "Benefícios" },
 
   // ── CRM ──────────────────────────────────────────────────────
   { id: "crm_dashboard", label: "Dashboard Comercial", url: "/CRMDashboard", group: "CRM Comercial" },
