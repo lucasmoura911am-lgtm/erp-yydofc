@@ -84,14 +84,24 @@ export default function FacilitiesKanban() {
     },
   });
 
-  const completeTaskMutation = useMutation({
-    mutationFn: (taskId) =>
-      base44.entities.Task.update(taskId, {
-        status: "concluida",
-        completed_at: new Date().toISOString(),
-      }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks_today"] }),
+  const updateTaskMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Task.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks_kanban"] });
+      queryClient.invalidateQueries({ queryKey: ["myTasks"] });
+      setTaskDialog({ open: false, task: null, mode: null });
+    },
   });
+
+  const handleKanbanTaskAction = (task) => {
+    // Se já em andamento → abrir para concluir; senão → iniciar
+    const mode = (task.status === "em_andamento" || task.status === "atrasada") ? "complete" : "start";
+    setTaskDialog({ open: true, task, mode });
+  };
+
+  const handleTaskActionSuccess = (updateData) => {
+    updateTaskMutation.mutate({ id: taskDialog.task.id, data: updateData });
+  };
 
   const employeeMap = useMemo(() => Object.fromEntries(employees.map(e => [e.id, e])), [employees]);
   const clientMap = useMemo(() => Object.fromEntries(clients.map(c => [c.id, c])), [clients]);
