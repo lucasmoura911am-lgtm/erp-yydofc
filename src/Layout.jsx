@@ -619,13 +619,18 @@ export default function Layout({ children }) {
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top bar */}
           <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm h-14 flex items-center px-4 gap-3">
-            {/* Toggle sidebar */}
+            {/* Toggle sidebar — desktop e mobile separados */}
             <button
-              onClick={() => { setSidebarOpen(p => !p); setMobileOpen(p => !p); }}
-              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => setSidebarOpen(p => !p)}
+              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors hidden lg:flex items-center"
             >
-              {sidebarOpen ? <PanelLeftClose className="w-5 h-5 lg:block hidden" /> : <PanelLeftOpen className="w-5 h-5 lg:block hidden" />}
-              <Menu className="w-5 h-5 lg:hidden" />
+              {sidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={() => setMobileOpen(p => !p)}
+              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors lg:hidden"
+            >
+              <Menu className="w-5 h-5" />
             </button>
 
             {/* Current page breadcrumb / title */}
