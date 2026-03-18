@@ -10,7 +10,6 @@ import { Eye, Shield } from "lucide-react";
 export default function SmartPayslipsDashboard() {
   const [user, setUser] = useState(null);
   const [search, setSearch] = useState("");
-
   const [openSign, setOpenSign] = useState(false);
   const [currentPayslip, setCurrentPayslip] = useState(null);
   const [photo, setPhoto] = useState(null);
@@ -25,7 +24,6 @@ export default function SmartPayslipsDashboard() {
     base44.auth.me().then(setUser);
   }, []);
 
-  // 🔒 QUERY SEGURA
   const { data: payslips = [] } = useQuery({
     queryKey: ["smart_payslips", user?.company_id, user?.email],
     queryFn: async () => {
@@ -57,7 +55,7 @@ export default function SmartPayslipsDashboard() {
     enabled: !!user?.company_id,
   });
 
-  // 📸 CAMERA
+  // CAMERA
   const startCamera = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     videoRef.current.srcObject = stream;
@@ -72,7 +70,7 @@ export default function SmartPayslipsDashboard() {
     setPhoto(canvas.toDataURL("image/png"));
   };
 
-  // ✍️ ASSINATURA
+  // ASSINATURA
   const startDraw = (e) => {
     isDrawing.current = true;
     draw(e);
@@ -108,7 +106,6 @@ export default function SmartPayslipsDashboard() {
     canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  // 🔥 FUNÇÕES AUX
   function dataURLtoFile(dataurl, filename) {
     let arr = dataurl.split(",");
     let mime = arr[0].match(/:(.*?);/)[1];
@@ -126,16 +123,13 @@ export default function SmartPayslipsDashboard() {
     return blank.toDataURL();
   }
 
-  // 🚀 ASSINAR COM COMPROVANTE
+  // ASSINAR
   const signMutation = useMutation({
     mutationFn: async () => {
       const canvas = signCanvasRef.current;
 
       if (!photo) return alert("Tire a foto");
-
-      if (canvas.toDataURL() === blankCanvas(canvas)) {
-        return alert("Desenhe a assinatura");
-      }
+      if (canvas.toDataURL() === blankCanvas(canvas)) return alert("Assine");
 
       const ip = await fetch("https://api.ipify.org?format=json")
         .then(r => r.json())
@@ -158,35 +152,26 @@ export default function SmartPayslipsDashboard() {
         file: dataURLtoFile(canvas.toDataURL(), "assinatura.png")
       });
 
-      // 📄 COMPROVANTE
       const html = `
         <html>
         <body style="font-family: Arial; padding:20px;">
           <h2>COMPROVANTE DE ASSINATURA DIGITAL</h2>
-
           <p><b>Usuário:</b> ${user.email}</p>
           <p><b>Data:</b> ${new Date().toLocaleString()}</p>
           <p><b>IP:</b> ${ip}</p>
           <p><b>Dispositivo:</b> ${device}</p>
           <p><b>Geo:</b> ${geo ? geo.latitude + "," + geo.longitude : "Não permitido"}</p>
-
-          <h3>Foto</h3>
-          <img src="${photo}" width="200"/>
-
-          <h3>Assinatura</h3>
-          <img src="${canvas.toDataURL()}" width="200"/>
-
-          <hr/>
-          <p>Documento gerado automaticamente.</p>
+          <h3>Foto</h3><img src="${photo}" width="200"/>
+          <h3>Assinatura</h3><img src="${canvas.toDataURL()}" width="200"/>
         </body>
         </html>
       `;
 
       const file = new File([html], "comprovante.html", { type: "text/html" });
 
-      const comprovanteUpload = await base44.integrations.Core.UploadFile({
-        file
-      });
+      const comprovanteUpload = await base44.integrations.Core.UploadFile({ file });
+
+      console.log("COMPROVANTE:", comprovanteUpload.file_url);
 
       return base44.entities.SmartPayslip.update(currentPayslip.id, {
         status_assinado: "assinado",
@@ -200,7 +185,6 @@ export default function SmartPayslipsDashboard() {
         comprovante_assinatura_url: comprovanteUpload.file_url
       });
     },
-
     onSuccess: () => {
       setOpenSign(false);
       setPhoto(null);
@@ -244,14 +228,40 @@ export default function SmartPayslipsDashboard() {
                   <Eye className="w-4 h-4" />
                 </Button>
 
+                {p.comprovante_assinatura_url && (
+                  <Button onClick={() => window.open(p.comprovante_assinatura_url)}>
+                    📄
+                  </Button>
+                )}
+
+                {isAdmin && (
+                  <label>
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+
+                        const upload = await base44.integrations.Core.UploadFile({ file });
+
+                        await base44.entities.SmartPayslip.update(p.id, {
+                          comprovante_assinatura_url: upload.file_url
+                        });
+
+                        queryClient.invalidateQueries(["smart_payslips"]);
+                      }}
+                    />
+                    <Button>Upload</Button>
+                  </label>
+                )}
+
                 {!isAdmin && p.status_assinado !== "assinado" && (
-                  <Button
-                    onClick={() => {
-                      setCurrentPayslip(p);
-                      setOpenSign(true);
-                      setTimeout(startCamera, 500);
-                    }}
-                  >
+                  <Button onClick={() => {
+                    setCurrentPayslip(p);
+                    setOpenSign(true);
+                    setTimeout(startCamera, 500);
+                  }}>
                     <Shield className="w-4 h-4" />
                     Assinar
                   </Button>
@@ -266,10 +276,9 @@ export default function SmartPayslipsDashboard() {
 
       {openSign && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
-
           <div className="bg-white p-6 rounded-xl w-full max-w-md space-y-4">
 
-            <h2 className="font-bold">Assinar Holerite</h2>
+            <h2>Assinar</h2>
 
             <video ref={videoRef} autoPlay className="w-full" />
 
@@ -296,9 +305,7 @@ export default function SmartPayslipsDashboard() {
               Confirmar Assinatura
             </Button>
 
-            <Button onClick={() => setOpenSign(false)}>
-              Cancelar
-            </Button>
+            <Button onClick={() => setOpenSign(false)}>Cancelar</Button>
 
           </div>
         </div>
