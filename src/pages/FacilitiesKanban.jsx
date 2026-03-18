@@ -15,6 +15,7 @@ export default function FacilitiesKanban() {
   const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [now, setNow] = useState(new Date());
+  const [taskDialog, setTaskDialog] = useState({ open: false, task: null, mode: null });
   const [filterClient, setFilterClient] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterSupervisor, setFilterSupervisor] = useState("all");
