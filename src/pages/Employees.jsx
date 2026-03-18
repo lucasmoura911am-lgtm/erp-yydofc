@@ -388,7 +388,13 @@ export default function Employees() {
       supervisor_email: "",
       status: "active",
       user_email: "",
-      photo_url: ""
+      photo_url: "",
+      shirt_size: "",
+      pants_size: "",
+      boot_size: "",
+      default_client_id: "",
+      default_contract_id: "",
+      current_allocation_id: ""
     });
     setEditingEmployee(null);
   };
@@ -477,7 +483,13 @@ export default function Employees() {
       supervisor_email: employee.supervisor_email || "",
       status: employee.status || "active",
       user_email: employee.user_email || "",
-      photo_url: employee.photo_url || ""
+      photo_url: employee.photo_url || "",
+      shirt_size: employee.shirt_size || "",
+      pants_size: employee.pants_size || "",
+      boot_size: employee.boot_size || "",
+      default_client_id: employee.default_client_id || "",
+      default_contract_id: employee.default_contract_id || "",
+      current_allocation_id: employee.current_allocation_id || ""
     });
     setDialogOpen(true);
   };
@@ -677,6 +689,8 @@ export default function Employees() {
               shifts={shifts}
               teams={teams}
               supervisors={supervisors}
+              allocations={allocations}
+              clients={clients}
             />
             
             {editingEmployee && (
