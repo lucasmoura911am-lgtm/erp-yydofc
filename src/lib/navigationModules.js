@@ -15,6 +15,7 @@ export const ALL_MODULES = [
 
   // ── Gestão de Pessoas ────────────────────────────────────────
   { id: "employees", label: "Funcionários", url: "/Employees", group: "Gestão de Pessoas" },
+  { id: "employee_life_report", label: "Vida do Funcionário", url: "/EmployeeLifeReport", group: "Gestão de Pessoas" },
   { id: "employee_folder", label: "Pasta dos Colaboradores", url: "/EmployeeFolder", group: "Gestão de Pessoas" },
   { id: "teams", label: "Times", url: "/Teams", group: "Gestão de Pessoas" },
   { id: "supervisors", label: "Supervisores", url: "/Supervisors", group: "Gestão de Pessoas" },
