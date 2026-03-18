@@ -327,9 +327,24 @@ export default function ManageTasks() {
                   </TableCell>
                   <TableCell>{getEmployeeName(task.employee_id)}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1 text-sm">
-                      <Calendar className="w-3 h-3" />
-                      {format(parseISO(task.due_date), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1 text-sm">
+                        <Calendar className="w-3 h-3" />
+                        {format(parseISO(task.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                      {(task.scheduled_start_time || task.scheduled_end_time) && (
+                        <div className="flex items-center gap-1 text-xs text-purple-600 font-medium">
+                          <Clock className="w-3 h-3" />
+                          {task.scheduled_start_time || "?"}{task.scheduled_end_time ? ` – ${task.scheduled_end_time}` : ""}
+                        </div>
+                      )}
+                      {task.scheduled_days?.length > 0 && (
+                        <div className="flex gap-0.5 flex-wrap mt-0.5">
+                          {task.scheduled_days.map(d => (
+                            <span key={d} className="text-[10px] px-1 py-0 bg-purple-100 text-purple-700 rounded font-medium capitalize">{d}</span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
