@@ -160,6 +160,18 @@ export default function Employees() {
     enabled: !!user?.company_id,
   });
 
+  const { data: allocations = [] } = useQuery({
+    queryKey: ['allocations', user?.company_id],
+    queryFn: () => user?.company_id ? base44.entities.Allocation.filter({ company_id: user.company_id, status: 'ativo' }) : [],
+    enabled: !!user?.company_id,
+  });
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients', user?.company_id],
+    queryFn: () => user?.company_id ? base44.entities.Client.filter({ company_id: user.company_id }) : [],
+    enabled: !!user?.company_id,
+  });
+
   const { data: allUsers = [] } = useQuery({
     queryKey: ['allUsers'],
     queryFn: () => base44.entities.User.list(),
