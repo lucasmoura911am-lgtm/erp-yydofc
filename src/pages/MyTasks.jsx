@@ -40,34 +40,23 @@ export default function MyTasks() {
   };
 
   const { data: myTasks = [], isLoading: loadingTasks, refetch } = useQuery({
-    queryKey: ["myTasks", employee?.id],
+    queryKey: QK.myTasks(employee?.id),
     queryFn: async () => {
       if (!employee?.id) return [];
 
+      // Fonte de verdade: employee_id
       const byEmployee = await base44.entities.Task.filter({ employee_id: employee.id });
 
-      const extra = [];
+      // Complementar com tasks vinculadas à lotação (sem duplicar)
+      let combined = [...byEmployee];
       if (employee.current_allocation_id) {
         const byAlloc = await base44.entities.Task.filter({ allocation_id: employee.current_allocation_id });
-        byAlloc.forEach(t => { if (!byEmployee.find(x => x.id === t.id)) extra.push(t); });
+        const existingIds = new Set(byEmployee.map(t => t.id));
+        byAlloc.forEach(t => { if (!existingIds.has(t.id)) combined.push(t); });
       }
 
-      const combined = [...byEmployee, ...extra];
-
-      // Include recurring scheduled for today
-      const dayNames = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
-      const todayDow = dayNames[new Date().getDay()];
-      combined.forEach(t => {
-        if (t.frequency === "diaria" || (t.frequency === "semanal" && t.scheduled_days?.includes(todayDow))) {
-          // already included if in byEmployee; just tag it
-        }
-      });
-
-      return combined.sort((a, b) => {
-        // Sort: atrasada first, then em_andamento, then pendente, then concluida
-        const order = { atrasada: 0, em_andamento: 1, pendente: 2, pausada: 3, concluida: 4 };
-        return (order[a.status] ?? 5) - (order[b.status] ?? 5);
-      });
+      const ORDER = { atrasada: 0, em_andamento: 1, pendente: 2, pausada: 3, concluida: 4 };
+      return combined.sort((a, b) => (ORDER[a.status] ?? 5) - (ORDER[b.status] ?? 5));
     },
     enabled: !!employee?.id,
     staleTime: 0,
