@@ -45,22 +45,60 @@ export default function ManagePayslips() {
     setUser(userData);
   };
 
+  // 🔒 PAYSLIPS COM CONTROLE DE ACESSO
   const { data: payslips = [] } = useQuery({
-    queryKey: ['allPayslips', user?.company_id],
-    queryFn: () => user?.company_id ? base44.entities.Payslip.filter({ company_id: user.company_id }, '-created_date') : [],
+    queryKey: ['payslips', user?.company_id, user?.email],
+    queryFn: async () => {
+      if (!user?.company_id) return [];
+
+      let employeeId = user.employee_id;
+
+      if (!employeeId) {
+        const employee = await base44.entities.Employee.filter({
+          company_id: user.company_id,
+          user_email: user.email
+        });
+
+        employeeId = employee?.[0]?.id;
+      }
+
+      // 👑 ADMIN
+      if (user.role === "admin") {
+        return base44.entities.Payslip.filter(
+          { company_id: user.company_id },
+          '-created_date'
+        );
+      }
+
+      // 👤 FUNCIONÁRIO
+      if (employeeId) {
+        return base44.entities.Payslip.filter(
+          {
+            company_id: user.company_id,
+            employee_id: employeeId
+          },
+          '-created_date'
+        );
+      }
+
+      return [];
+    },
     enabled: !!user?.company_id,
   });
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees', user?.company_id],
-    queryFn: () => user?.company_id ? base44.entities.Employee.filter({ company_id: user.company_id }) : [],
-    enabled: !!user?.company_id,
+    queryFn: () =>
+      user?.company_id
+        ? base44.entities.Employee.filter({ company_id: user.company_id })
+        : [],
+    enabled: !!user?.company_id && user?.role === "admin", // 🔒 só admin
   });
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Payslip.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['allPayslips']);
+      queryClient.invalidateQueries(['payslips']);
       setDialogOpen(false);
       resetForm();
     },
@@ -69,7 +107,7 @@ export default function ManagePayslips() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Payslip.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['allPayslips']);
+      queryClient.invalidateQueries(['payslips']);
     },
   });
 
@@ -90,7 +128,7 @@ export default function ManagePayslips() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.file) {
       alert("Selecione um arquivo");
       return;
@@ -98,8 +136,10 @@ export default function ManagePayslips() {
 
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: formData.file });
-      
+      const { file_url } = await base44.integrations.Core.UploadFile({
+        file: formData.file
+      });
+
       await createMutation.mutateAsync({
         employee_id: formData.employee_id,
         company_id: user.company_id,
@@ -123,40 +163,43 @@ export default function ManagePayslips() {
 
   const getEmployeeName = (id) => {
     const employee = employees.find(e => e.id === id);
-    return employee ? employee.full_name : "Desconhecido";
+    return employee ? employee.full_name : "Funcionário";
   };
 
   const filteredPayslips = payslips.filter(payslip => {
-    const employeeName = getEmployeeName(payslip.employee_id).toLowerCase();
     const competence = payslip.competence.toLowerCase();
     const search = searchTerm.toLowerCase();
-    return employeeName.includes(search) || competence.includes(search);
+    return competence.includes(search);
   });
+
+  const isAdmin = user?.role === "admin";
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Gestão de Holerites</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <h1 className="text-3xl font-bold">
+            Gestão de Holerites
+          </h1>
+          <p className="text-gray-500 mt-1">
             Faça upload dos contracheques dos funcionários
           </p>
         </div>
-        <Button
-          onClick={() => setDialogOpen(true)}
-          className="bg-gradient-to-r from-purple-600 to-blue-600"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Holerite
-        </Button>
+
+        {isAdmin && (
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Holerite
+          </Button>
+        )}
       </div>
 
       <Card>
         <CardContent className="pt-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input
-              placeholder="Buscar por funcionário ou competência..."
+              placeholder="Buscar por competência..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -167,28 +210,31 @@ export default function ManagePayslips() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Holerites Cadastrados ({filteredPayslips.length})</CardTitle>
+          <CardTitle>
+            Holerites ({filteredPayslips.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {filteredPayslips.map((payslip) => (
-              <div key={payslip.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">
-                      {getEmployeeName(payslip.employee_id)}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline">{payslip.competence}</Badge>
-                      <span className="text-xs text-gray-500">
-                        Upload por {payslip.uploaded_by}
-                      </span>
-                    </div>
+              <div
+                key={payslip.id}
+                className="flex items-center justify-between p-4 bg-gray-100 rounded-lg"
+              >
+                <div>
+                  <p className="font-semibold">
+                    {isAdmin
+                      ? getEmployeeName(payslip.employee_id)
+                      : "Seu holerite"}
+                  </p>
+
+                  <div className="flex gap-2 mt-1">
+                    <Badge variant="outline">
+                      {payslip.competence}
+                    </Badge>
                   </div>
                 </div>
+
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -198,14 +244,17 @@ export default function ManagePayslips() {
                     <FileText className="w-4 h-4 mr-1" />
                     Ver
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-600 border-red-600 hover:bg-red-50"
-                    onClick={() => handleDelete(payslip.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+
+                  {isAdmin && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-600"
+                      onClick={() => handleDelete(payslip.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -213,85 +262,60 @@ export default function ManagePayslips() {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Fazer Upload de Holerite</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Funcionário *</Label>
-              <Select
-                value={formData.employee_id}
-                onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o funcionário" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.full_name} - {emp.employee_number || "Sem matrícula"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      {isAdmin && (
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upload de Holerite</DialogTitle>
+            </DialogHeader>
 
-            <div className="space-y-2">
-              <Label>Competência (MM/YYYY) *</Label>
-              <Input
-                type="text"
-                placeholder="Ex: 01/2026"
-                pattern="(0[1-9]|1[0-2])\/[0-9]{4}"
-                value={formData.competence}
-                onChange={(e) => setFormData({ ...formData, competence: e.target.value })}
-                required
-              />
-            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label>Funcionário</Label>
+                <Select
+                  value={formData.employee_id}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, employee_id: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map(emp => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label>Arquivo do Holerite *</Label>
-              <Input
-                type="file"
-                onChange={handleFileChange}
-                accept=".pdf"
-                required
-              />
-              <p className="text-xs text-gray-500">Apenas arquivos PDF</p>
-            </div>
+              <div>
+                <Label>Competência</Label>
+                <Input
+                  value={formData.competence}
+                  onChange={(e) =>
+                    setFormData({ ...formData, competence: e.target.value })
+                  }
+                  placeholder="01/2026"
+                />
+              </div>
 
-            {formData.file && (
-              <Alert className="bg-green-50">
-                <AlertDescription className="text-green-800">
-                  ✓ Arquivo selecionado: {formData.file.name}
-                </AlertDescription>
-              </Alert>
-            )}
+              <div>
+                <Label>Arquivo</Label>
+                <Input type="file" onChange={handleFileChange} />
+              </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                className="bg-gradient-to-r from-purple-600 to-blue-600"
-                disabled={uploading}
-              >
-                {uploading ? (
-                  <>Fazendo Upload...</>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Fazer Upload
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+              <DialogFooter>
+                <Button type="submit" disabled={uploading}>
+                  {uploading ? "Enviando..." : "Enviar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
