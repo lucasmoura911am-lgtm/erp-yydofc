@@ -96,6 +96,7 @@ import ClientDocuments from './pages/ClientDocuments';
 import ClientTicketsManage from './pages/ClientTicketsManage';
 import SmartPayslipsDashboard from './pages/SmartPayslipsDashboard';
 import FacilitiesKanban from './pages/FacilitiesKanban';
+import PostCoveragePage from './pages/PostCoveragePage';
 import SmartPayslipsUpload from './pages/SmartPayslipsUpload';
 import MySmartPayslips from './pages/MySmartPayslips';
 
@@ -235,6 +236,7 @@ const AuthenticatedApp = () => {
       <Route path="/ContractStockPage" element={<LayoutWrapper currentPageName="ContractStockPage"><ContractStockPage /></LayoutWrapper>} />
       <Route path="/OperationsDashboard" element={<LayoutWrapper currentPageName="OperationsDashboard"><OperationsDashboard /></LayoutWrapper>} />
       <Route path="/FacilitiesKanban" element={<LayoutWrapper currentPageName="FacilitiesKanban"><FacilitiesKanban /></LayoutWrapper>} />
+      <Route path="/PostCoveragePage" element={<LayoutWrapper currentPageName="PostCoveragePage"><PostCoveragePage /></LayoutWrapper>} />
       <Route path="/ClientPortal" element={<ClientPortal />} />
       <Route path="/ClientDocuments" element={<LayoutWrapper currentPageName="ClientDocuments"><ClientDocuments /></LayoutWrapper>} />
       <Route path="/ClientTicketsManage" element={<LayoutWrapper currentPageName="ClientTicketsManage"><ClientTicketsManage /></LayoutWrapper>} />

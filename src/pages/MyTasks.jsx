@@ -39,11 +39,16 @@ export default function MyTasks() {
     const userData = await base44.auth.me();
     setUser(userData);
     
+    // Try by employee_id first, then by user_email
+    let empData = [];
     if (userData.employee_id) {
-      const employeeData = await base44.entities.Employee.filter({ id: userData.employee_id });
-      if (employeeData.length > 0) {
-        setEmployee(employeeData[0]);
-      }
+      empData = await base44.entities.Employee.filter({ id: userData.employee_id });
+    }
+    if (empData.length === 0 && userData.email) {
+      empData = await base44.entities.Employee.filter({ user_email: userData.email });
+    }
+    if (empData.length > 0) {
+      setEmployee(empData[0]);
     }
   };
 
