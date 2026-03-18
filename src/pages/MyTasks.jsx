@@ -67,7 +67,9 @@ export default function MyTasks() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Task.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["myTasks"] });
+      // Invalida tanto a view do funcionário quanto a do gestor
+      queryClient.invalidateQueries({ queryKey: QK.myTasks(employee?.id) });
+      queryClient.invalidateQueries({ queryKey: QK.tasks(employee?.company_id) });
       queryClient.invalidateQueries({ queryKey: ["tasks_kanban"] });
       setDialog({ open: false, task: null, mode: null });
     },
