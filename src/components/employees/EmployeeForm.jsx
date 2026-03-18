@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, FileText, Home, Briefcase, DollarSign, Calendar, Camera, Loader2 } from "lucide-react";
+import { User, FileText, Home, Briefcase, DollarSign, Calendar, Camera, Loader2, Factory } from "lucide-react";
 
 export default function EmployeeForm({ formData, setFormData, positions, departments, shifts, teams, supervisors }) {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
