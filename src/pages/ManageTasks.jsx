@@ -459,12 +459,14 @@ export default function ManageTasks() {
               </div>
 
               <div className="space-y-2">
-                <Label>Data e Hora Limite *</Label>
+                <Label className="flex items-center gap-1">
+                  Data de Referência
+                  <span className="text-xs font-normal text-gray-400 ml-1">(opcional para tarefas recorrentes)</span>
+                </Label>
                 <Input
                   type="datetime-local"
                   value={formData.due_date}
                   onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                  required
                 />
               </div>
 
