@@ -1,33 +1,33 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Play, CheckCircle, Camera, MapPin, Clock, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { format, parseISO, isPast } from "date-fns";
+import { Card, CardContent } from "@/components/ui/card";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import TaskCalendar from "../components/tasks/TaskCalendar";
+import { Clock, MapPin, Play, CheckCircle, AlertCircle, RefreshCw, ListTodo, CheckCircle2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import TaskActionDialog from "@/components/tasks/TaskActionDialog";
+
+const STATUS_LABEL = {
+  pendente: { label: "Pendente", color: "bg-gray-100 text-gray-700 border-gray-200" },
+  em_andamento: { label: "Em Andamento", color: "bg-blue-100 text-blue-700 border-blue-200" },
+  atrasada: { label: "Atrasada", color: "bg-red-100 text-red-700 border-red-200" },
+  concluida: { label: "Concluída", color: "bg-green-100 text-green-700 border-green-200" },
+  pausada: { label: "Pausada", color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
+};
+
+const PRIORITY_COLOR = {
+  baixa: "bg-blue-50 text-blue-600 border-blue-200",
+  media: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  alta: "bg-red-50 text-red-700 border-red-200",
+};
 
 export default function MyTasks() {
   const [user, setUser] = useState(null);
   const [employee, setEmployee] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogType, setDialogType] = useState(null); // 'start' or 'complete'
-  const [selectedTask, setSelectedTask] = useState(null);
-  const [photoToUpload, setPhotoToUpload] = useState(null);
-  const [observation, setObservation] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [loadingEmployee, setLoadingEmployee] = useState(true);
+  const [dialog, setDialog] = useState({ open: false, task: null, mode: null });
 
   const queryClient = useQueryClient();
 
@@ -36,10 +36,9 @@ export default function MyTasks() {
   }, []);
 
   const loadUserData = async () => {
+    setLoadingEmployee(true);
     const userData = await base44.auth.me();
     setUser(userData);
-    
-    // Try by employee_id first, then by user_email
     let empData = [];
     if (userData.employee_id) {
       empData = await base44.entities.Employee.filter({ id: userData.employee_id });
@@ -47,48 +46,39 @@ export default function MyTasks() {
     if (empData.length === 0 && userData.email) {
       empData = await base44.entities.Employee.filter({ user_email: userData.email });
     }
-    if (empData.length > 0) {
-      setEmployee(empData[0]);
-    }
+    if (empData.length > 0) setEmployee(empData[0]);
+    setLoadingEmployee(false);
   };
 
-  const { data: myTasks = [] } = useQuery({
-    queryKey: ['myTasks', employee?.id],
+  const { data: myTasks = [], isLoading: loadingTasks, refetch } = useQuery({
+    queryKey: ["myTasks", employee?.id],
     queryFn: async () => {
       if (!employee?.id) return [];
-      // Fetch all tasks for this employee (direct assignment or via allocation/client)
-      const allTasks = await base44.entities.Task.filter({ employee_id: employee.id });
 
-      // Also fetch tasks assigned to this employee's allocation or client if not already included
+      const byEmployee = await base44.entities.Task.filter({ employee_id: employee.id });
+
       const extra = [];
       if (employee.current_allocation_id) {
         const byAlloc = await base44.entities.Task.filter({ allocation_id: employee.current_allocation_id });
-        byAlloc.forEach(t => { if (!allTasks.find(x => x.id === t.id)) extra.push(t); });
-      }
-      if (employee.default_client_id) {
-        const byClient = await base44.entities.Task.filter({ client_id: employee.default_client_id, employee_id: employee.id });
-        byClient.forEach(t => { if (!allTasks.find(x => x.id === t.id) && !extra.find(x => x.id === t.id)) extra.push(t); });
+        byAlloc.forEach(t => { if (!byEmployee.find(x => x.id === t.id)) extra.push(t); });
       }
 
-      const combined = [...allTasks, ...extra];
+      const combined = [...byEmployee, ...extra];
 
-      // Include recurring tasks scheduled for today (diaria/semanal by day of week)
-      const todayDate = format(new Date(), "yyyy-MM-dd");
+      // Include recurring scheduled for today
       const dayNames = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
       const todayDow = dayNames[new Date().getDay()];
-
-      // Fetch recurring templates assigned to this employee
-      const recurring = await base44.entities.Task.filter({ employee_id: employee.id, is_template: false, frequency: "diaria" });
-      const recurringWeekly = await base44.entities.Task.filter({ employee_id: employee.id, is_template: false, frequency: "semanal" });
-      [...recurring, ...recurringWeekly].forEach(t => {
-        if (combined.find(x => x.id === t.id)) return;
-        const isScheduledToday =
-          t.frequency === "diaria" ||
-          (t.frequency === "semanal" && t.scheduled_days?.includes(todayDow));
-        if (isScheduledToday) combined.push(t);
+      combined.forEach(t => {
+        if (t.frequency === "diaria" || (t.frequency === "semanal" && t.scheduled_days?.includes(todayDow))) {
+          // already included if in byEmployee; just tag it
+        }
       });
 
-      return combined.sort((a, b) => (b.due_date || "").localeCompare(a.due_date || ""));
+      return combined.sort((a, b) => {
+        // Sort: atrasada first, then em_andamento, then pendente, then concluida
+        const order = { atrasada: 0, em_andamento: 1, pendente: 2, pausada: 3, concluida: 4 };
+        return (order[a.status] ?? 5) - (order[b.status] ?? 5);
+      });
     },
     enabled: !!employee?.id,
     staleTime: 0,
@@ -96,324 +86,259 @@ export default function MyTasks() {
     refetchOnMount: true,
   });
 
-  const updateTaskMutation = useMutation({
+  const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Task.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['myTasks']);
-      setDialogOpen(false);
-      resetForm();
+      queryClient.invalidateQueries({ queryKey: ["myTasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks_kanban"] });
+      setDialog({ open: false, task: null, mode: null });
     },
   });
 
-  const resetForm = () => {
-    setSelectedTask(null);
-    setDialogType(null);
-    setPhotoToUpload(null);
-    setObservation("");
+  const handleActionSuccess = (updateData) => {
+    updateMutation.mutate({ id: dialog.task.id, data: updateData });
   };
 
-  const handleStartClick = (task) => {
-    setSelectedTask(task);
-    setDialogType('start');
-    setDialogOpen(true);
-  };
+  const openDialog = (task, mode) => setDialog({ open: true, task, mode });
 
-  const handleCompleteClick = (task) => {
-    setSelectedTask(task);
-    setDialogType('complete');
-    setDialogOpen(true);
-  };
+  const pending = myTasks.filter(t => t.status === "pendente" || t.status === "pausada");
+  const inProgress = myTasks.filter(t => t.status === "em_andamento" || t.status === "atrasada");
+  const done = myTasks.filter(t => t.status === "concluida");
 
-  const handleStartSubmit = async () => {
-    if (!photoToUpload) {
-      alert('É obrigatório enviar a foto ANTES de iniciar!');
-      return;
-    }
+  const totalToday = myTasks.length;
+  const doneToday = done.length;
 
-    setUploading(true);
-    try {
-      const now = new Date().toISOString();
-      const newStatus = isPast(parseISO(selectedTask.due_date)) ? 'atrasada' : 'em_andamento';
-      
-      const updateData = {
-        title: selectedTask.title,
-        description: selectedTask.description,
-        employee_id: selectedTask.employee_id,
-        company_id: selectedTask.company_id,
-        supervisor_email: selectedTask.supervisor_email,
-        due_date: selectedTask.due_date,
-        location: selectedTask.location,
-        priority: selectedTask.priority,
-        frequency: selectedTask.frequency,
-        status: newStatus,
-        started_at: now,
-        photo_before_url: photoToUpload
-      };
-      
-      await updateTaskMutation.mutateAsync({
-        id: selectedTask.id,
-        data: updateData
-      });
-    } catch (error) {
-      console.error('Erro ao iniciar tarefa:', error);
-      alert('Erro ao iniciar tarefa: ' + (error.message || 'Erro desconhecido'));
-    } finally {
-      setUploading(false);
-    }
-  };
+  if (loadingEmployee) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+      </div>
+    );
+  }
 
-  const handleCompleteSubmit = async () => {
-    if (!photoToUpload) {
-      alert('É obrigatório enviar a foto DEPOIS de concluir!');
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const updateData = {
-        title: selectedTask.title,
-        description: selectedTask.description,
-        employee_id: selectedTask.employee_id,
-        company_id: selectedTask.company_id,
-        supervisor_email: selectedTask.supervisor_email,
-        due_date: selectedTask.due_date,
-        location: selectedTask.location,
-        priority: selectedTask.priority,
-        frequency: selectedTask.frequency,
-        status: 'concluida',
-        started_at: selectedTask.started_at,
-        completed_at: new Date().toISOString(),
-        photo_before_url: selectedTask.photo_before_url,
-        photo_after_url: photoToUpload,
-        observation: observation
-      };
-      
-      await updateTaskMutation.mutateAsync({
-        id: selectedTask.id,
-        data: updateData
-      });
-    } catch (error) {
-      console.error('Erro ao concluir tarefa:', error);
-      alert('Erro ao concluir tarefa: ' + (error.message || 'Erro desconhecido'));
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const pendingTasks = myTasks.filter(t => t.status === 'pendente' || t.status === 'em_andamento' || t.status === 'atrasada');
-  const completedTasks = myTasks.filter(t => t.status === 'concluida');
-
-  const statusColors = {
-    pendente: "bg-gray-100 text-gray-800",
-    em_andamento: "bg-blue-100 text-blue-800",
-    concluida: "bg-green-100 text-green-800",
-    atrasada: "bg-red-100 text-red-800"
-  };
-
-  const priorityColors = {
-    baixa: "bg-blue-100 text-blue-800",
-    media: "bg-yellow-100 text-yellow-800",
-    alta: "bg-red-100 text-red-800"
-  };
+  if (!employee) {
+    return (
+      <div className="p-6 text-center">
+        <AlertCircle className="w-12 h-12 mx-auto text-yellow-500 mb-3" />
+        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">Perfil não encontrado</h2>
+        <p className="text-sm text-gray-500 mt-1">Seu usuário ainda não está vinculado a um funcionário. Fale com o gestor.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Minhas Tarefas</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Execute e comprove suas atividades
-        </p>
-      </div>
-
-      {/* Calendar */}
-      <TaskCalendar tasks={myTasks} />
-
-      {/* Pending Tasks */}
-      <div>
-        <h2 className="text-xl font-bold mb-4">📋 Tarefas Pendentes ({pendingTasks.length})</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          {pendingTasks.map((task) => {
-            const isLate = isPast(parseISO(task.due_date)) && task.status !== 'concluida';
-            
-            return (
-              <Card key={task.id} className={`${isLate ? 'border-2 border-red-500' : ''}`}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg">{task.title}</CardTitle>
-                    <Badge variant="outline" className={priorityColors[task.priority]}>
-                      {task.priority}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {task.description && (
-                    <p className="text-sm text-gray-600">{task.description}</p>
-                  )}
-                  
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Clock className="w-4 h-4" />
-                    {format(parseISO(task.due_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                  </div>
-
-                  {task.location && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <MapPin className="w-4 h-4" />
-                      {task.location}
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 flex-wrap">
-                    <Badge variant="outline" className={statusColors[task.status]}>
-                      {task.status}
-                    </Badge>
-                    {task.frequency && task.frequency !== 'avulsa' && (
-                      <Badge variant="outline" className="bg-purple-100 text-purple-800">
-                        {task.frequency}
-                      </Badge>
-                    )}
-                  </div>
-
-                  {isLate && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        Tarefa atrasada! Execute o quanto antes.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  <div className="flex gap-2 pt-2">
-                    {task.status === 'pendente' && (
-                      <Button onClick={() => handleStartClick(task)} className="flex-1 bg-blue-600">
-                        <Play className="w-4 h-4 mr-2" />
-                        Iniciar
-                      </Button>
-                    )}
-                    {task.status === 'em_andamento' && (
-                      <Button onClick={() => handleCompleteClick(task)} className="flex-1 bg-green-600">
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Concluir
-                      </Button>
-                    )}
-                    {task.status === 'atrasada' && (
-                      <Button onClick={() => handleCompleteClick(task)} className="flex-1 bg-orange-600">
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Concluir Agora
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-4 sticky top-0 z-10">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <ListTodo className="w-5 h-5 text-purple-600" />
+              Minhas Tarefas
+            </h1>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={loadingTasks}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingTasks ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
         </div>
+
+        {/* Progress bar */}
+        {totalToday > 0 && (
+          <div className="mt-3">
+            <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <span>{doneToday}/{totalToday} tarefas concluídas</span>
+              <span>{Math.round((doneToday / totalToday) * 100)}%</span>
+            </div>
+            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-purple-500 to-green-500 rounded-full transition-all duration-500"
+                style={{ width: `${totalToday > 0 ? (doneToday / totalToday) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Completed Tasks */}
-      {completedTasks.length > 0 && (
-        <div>
-          <h2 className="text-xl font-bold mb-4 text-green-600">✅ Tarefas Concluídas ({completedTasks.length})</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            {completedTasks.slice(0, 6).map((task) => (
-              <Card key={task.id} className="bg-green-50 dark:bg-green-900/20">
-                <CardContent className="p-4">
-                  <p className="font-medium text-sm">{task.title}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Concluída em {format(parseISO(task.completed_at), "dd/MM/yyyy 'às' HH:mm")}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+      <div className="p-4 space-y-6 max-w-2xl mx-auto">
+
+        {/* Atrasadas + Em andamento */}
+        {inProgress.length > 0 && (
+          <section>
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
+              Em Execução ({inProgress.length})
+            </h2>
+            <div className="space-y-3">
+              {inProgress.map(task => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onStart={() => openDialog(task, "start")}
+                  onComplete={() => openDialog(task, "complete")}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Pendentes */}
+        {pending.length > 0 && (
+          <section>
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
+              Pendentes ({pending.length})
+            </h2>
+            <div className="space-y-3">
+              {pending.map(task => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onStart={() => openDialog(task, "start")}
+                  onComplete={() => openDialog(task, "complete")}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Concluídas */}
+        {done.length > 0 && (
+          <section>
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+              Concluídas hoje ({done.length})
+            </h2>
+            <div className="space-y-2">
+              {done.map(task => (
+                <TaskCard key={task.id} task={task} done />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {totalToday === 0 && !loadingTasks && (
+          <div className="text-center py-16 text-gray-400">
+            <CheckCircle2 className="w-14 h-14 mx-auto mb-3 opacity-30" />
+            <p className="text-base font-medium">Nenhuma tarefa para hoje</p>
+            <p className="text-sm mt-1">O gestor ainda não atribuiu tarefas para você.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Action Dialog */}
+      <TaskActionDialog
+        open={dialog.open}
+        onClose={() => setDialog({ open: false, task: null, mode: null })}
+        task={dialog.task}
+        mode={dialog.mode}
+        onSuccess={handleActionSuccess}
+      />
+    </div>
+  );
+}
+
+function TaskCard({ task, onStart, onComplete, done }) {
+  const statusCfg = STATUS_LABEL[task.status] || STATUS_LABEL.pendente;
+  const priorityCfg = PRIORITY_COLOR[task.priority] || PRIORITY_COLOR.media;
+  const isLate = task.status === "atrasada";
+
+  return (
+    <Card className={`${isLate ? "border-red-400 border-2" : ""} ${done ? "opacity-70" : ""}`}>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <p className={`font-semibold text-sm ${done ? "line-through text-gray-400" : "text-gray-900 dark:text-gray-100"}`}>
+              {task.title}
+            </p>
+            {task.description && (
+              <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{task.description}</p>
+            )}
+          </div>
+          <Badge variant="outline" className={`text-xs flex-shrink-0 ${priorityCfg}`}>
+            {task.priority}
+          </Badge>
+        </div>
+
+        <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+          {task.location && (
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3 h-3" /> {task.location}
+            </span>
+          )}
+          {(task.scheduled_start_time || task.scheduled_end_time) && (
+            <span className="flex items-center gap-1 text-purple-600 font-medium">
+              <Clock className="w-3 h-3" />
+              {task.scheduled_start_time || "?"}{task.scheduled_end_time ? ` – ${task.scheduled_end_time}` : ""}
+            </span>
+          )}
+          {task.due_date && (
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {format(parseISO(task.due_date), "dd/MM HH:mm")}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between">
+          <Badge variant="outline" className={`text-xs ${statusCfg.color}`}>
+            {statusCfg.label}
+          </Badge>
+
+          {/* Photos proof */}
+          <div className="flex gap-1">
+            {task.photo_before_url && (
+              <a href={task.photo_before_url} target="_blank" rel="noreferrer">
+                <img src={task.photo_before_url} alt="Antes" className="w-8 h-8 object-cover rounded border" title="Foto antes" />
+              </a>
+            )}
+            {task.photo_after_url && (
+              <a href={task.photo_after_url} target="_blank" rel="noreferrer">
+                <img src={task.photo_after_url} alt="Depois" className="w-8 h-8 object-cover rounded border" title="Foto depois" />
+              </a>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Photo Upload Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {dialogType === 'start' ? '📸 Iniciar Tarefa - Foto ANTES' : '✅ Concluir Tarefa - Foto DEPOIS'}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedTask && (
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="font-medium">{selectedTask.title}</p>
-                <p className="text-sm text-gray-500">{selectedTask.description}</p>
-              </div>
+        {!done && (
+          <div className="flex gap-2 pt-1">
+            {(task.status === "pendente" || task.status === "pausada") && (
+              <Button
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                onClick={onStart}
+              >
+                <Play className="w-4 h-4 mr-1.5" />
+                Iniciar
+              </Button>
+            )}
+            {(task.status === "em_andamento" || task.status === "atrasada") && (
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm"
+                onClick={onComplete}
+              >
+                <CheckCircle className="w-4 h-4 mr-1.5" />
+                {isLate ? "Concluir (atrasado)" : "Concluir"}
+              </Button>
+            )}
+          </div>
+        )}
 
-              <div className="space-y-2">
-                <Label>{dialogType === 'start' ? 'Foto ANTES de iniciar *' : 'Foto DEPOIS de executar *'}</Label>
-                <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                  {photoToUpload ? (
-                    <div className="space-y-2">
-                      <img src={photoToUpload} alt="Upload" className="w-full h-64 object-cover rounded" />
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setPhotoToUpload(null)}
-                      >
-                        Trocar Foto
-                      </Button>
-                    </div>
-                  ) : (
-                    <label className="cursor-pointer block">
-                      <Camera className="w-16 h-16 mx-auto text-gray-400 mb-3" />
-                      <p className="text-base font-medium text-gray-700">
-                        {dialogType === 'start' ? 'Tire uma foto do local ANTES' : 'Tire uma foto do trabalho CONCLUÍDO'}
-                      </p>
-                      <p className="text-sm text-gray-500 mt-1">Clique para usar a câmera</p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            try {
-                              const { file_url } = await base44.integrations.Core.UploadFile({ file });
-                              setPhotoToUpload(file_url);
-                            } catch (error) {
-                              alert('Erro ao fazer upload da foto');
-                            }
-                          }
-                        }}
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              {dialogType === 'complete' && (
-                <div className="space-y-2">
-                  <Label>Observação</Label>
-                  <Textarea
-                    value={observation}
-                    onChange={(e) => setObservation(e.target.value)}
-                    rows={3}
-                    placeholder="Adicione comentários sobre a execução..."
-                  />
-                </div>
-              )}
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={dialogType === 'start' ? handleStartSubmit : handleCompleteSubmit}
-                  disabled={!photoToUpload || uploading}
-                  className={dialogType === 'start' ? 'bg-blue-600' : 'bg-green-600'}
-                >
-                  {uploading ? 'Enviando...' : dialogType === 'start' ? '▶️ Iniciar Tarefa' : '✅ Concluir Tarefa'}
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+        {done && task.completed_at && (
+          <p className="text-xs text-green-600 flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" />
+            Concluída às {format(parseISO(task.completed_at), "HH:mm")}
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
