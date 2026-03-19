@@ -83,8 +83,10 @@ export default function FacilitiesKanban() {
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["tasks_kanban", user?.company_id, selectedDate, showScheduled],
-    queryFn: () => base44.entities.Task.filter({ company_id: user.company_id }),
-    enabled: !!user?.company_id,
+    queryFn: () => isAdmin
+      ? base44.entities.Task.filter({ company_id: user.company_id })
+      : base44.entities.Task.filter({ company_id: user.company_id, employee_id: employee?.id }),
+    enabled: !!user?.company_id && (isAdmin || !!employee?.id),
     refetchInterval: selectedDate === todayStr ? 60000 : false,
     select: (allTasks) => {
       if (!showScheduled) {
