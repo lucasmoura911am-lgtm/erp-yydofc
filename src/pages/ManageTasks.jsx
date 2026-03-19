@@ -36,13 +36,29 @@ export default function ManageTasks() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const qc = useQueryClient();
 
-  useEffect(() => { base44.auth.me().then(setUser); }, []);
+  const [employee, setEmployee] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(async (u) => {
+      setUser(u);
+      if (u.role !== "admin") {
+        try {
+          const emps = await base44.entities.Employee.filter({ company_id: u.company_id, user_email: u.email });
+          if (emps.length > 0) setEmployee(emps[0]);
+        } catch {}
+      }
+    });
+  }, []);
+
+  const isAdmin = user?.role === "admin";
 
   // ── Queries ──────────────────────────────────────────────────────────────
   const { data: tasks = [], isLoading: loadingTasks } = useQuery({
     queryKey: QK.tasks(user?.company_id),
-    queryFn: () => base44.entities.Task.filter({ company_id: user.company_id }, "-created_date"),
-    enabled: !!user?.company_id,
+    queryFn: () => isAdmin
+      ? base44.entities.Task.filter({ company_id: user.company_id }, "-created_date")
+      : base44.entities.Task.filter({ company_id: user.company_id, employee_id: employee.id }, "-created_date"),
+    enabled: !!user?.company_id && (isAdmin || !!employee?.id),
   });
 
   const { data: allEmployees = [] } = useQuery({
