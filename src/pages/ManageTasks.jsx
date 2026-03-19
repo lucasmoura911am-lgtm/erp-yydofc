@@ -248,27 +248,29 @@ export default function ManageTasks() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(task)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        {task.status === "pendente" && (
-                          <Button variant="ghost" size="icon" onClick={() => handleStatusChange(task.id, "pausada")}>
-                            <Pause className="w-4 h-4" />
+                      {isAdmin && (
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(task)}>
+                            <Edit className="w-4 h-4" />
                           </Button>
-                        )}
-                        {task.status === "pausada" && (
-                          <Button variant="ghost" size="icon" onClick={() => handleStatusChange(task.id, "pendente")}>
-                            <Play className="w-4 h-4" />
+                          {task.status === "pendente" && (
+                            <Button variant="ghost" size="icon" onClick={() => handleStatusChange(task.id, "pausada")}>
+                              <Pause className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {task.status === "pausada" && (
+                            <Button variant="ghost" size="icon" onClick={() => handleStatusChange(task.id, "pendente")}>
+                              <Play className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" onClick={() => handleStatusChange(task.id, "cancelada")}>
+                            <XCircle className="w-4 h-4 text-red-500" />
                           </Button>
-                        )}
-                        <Button variant="ghost" size="icon" onClick={() => handleStatusChange(task.id, "cancelada")}>
-                          <XCircle className="w-4 h-4 text-red-500" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(task.id)}>
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
+                          <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(task.id)}>
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
