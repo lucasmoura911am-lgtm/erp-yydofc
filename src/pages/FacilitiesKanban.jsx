@@ -29,15 +29,34 @@ export default function FacilitiesKanban() {
     return () => clearInterval(interval);
   }, []);
 
+  const [employee, setEmployee] = useState(null); // perfil do colaborador logado
+
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    base44.auth.me().then(async (u) => {
+      setUser(u);
+      if (u.role !== "admin") {
+        try {
+          const emps = await base44.entities.Employee.filter({ company_id: u.company_id, user_email: u.email });
+          if (emps.length > 0) setEmployee(emps[0]);
+        } catch {}
+      }
+    }).catch(() => {});
   }, []);
+
+  const isAdmin = user?.role === "admin";
 
   const { data: allocations = [] } = useQuery({
     queryKey: ["allocations", user?.company_id],
     queryFn: () => base44.entities.Allocation.filter({ company_id: user.company_id, status: "ativo" }),
     enabled: !!user?.company_id,
     refetchInterval: 60000,
+    // Colaborador vê apenas sua própria lotação
+    select: (data) => {
+      if (isAdmin) return data;
+      if (employee?.current_allocation_id) return data.filter(a => a.id === employee.current_allocation_id);
+      if (employee?.id) return data.filter(a => a.employee_id === employee.id);
+      return [];
+    },
   });
 
   const { data: employees = [] } = useQuery({
