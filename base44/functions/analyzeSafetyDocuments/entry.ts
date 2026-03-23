@@ -58,30 +58,28 @@ Deno.serve(async (req) => {
     }
   };
 
-  // Extrai texto do PDF usando ExtractDataFromUploadedFile
+  // Extrai texto: primeiro tenta ExtractDataFromUploadedFile (PDFs até 10MB)
+  // Se falhar (PDF grande), usa o arquivo diretamente via file_urls no LLM
   const extractTextFromFile = async (file_url) => {
     try {
-      // Tenta ExtractDataFromUploadedFile para PDFs grandes
       const extracted = await base44.asServiceRole.integrations.Core.ExtractDataFromUploadedFile({
         file_url,
         json_schema: {
           type: 'object',
           properties: {
-            content: { type: 'string', description: 'Todo o conteúdo textual do documento, incluindo tabelas e listas' },
+            content: { type: 'string', description: 'Todo o conteúdo textual do documento' },
           }
         }
       });
       if (extracted?.status === 'success' && extracted?.output) {
-        // Pode vir como string ou objeto
         const out = extracted.output;
-        if (typeof out === 'string') return out;
-        if (out?.content) return out.content;
-        return JSON.stringify(out);
+        if (typeof out === 'string' && out.length > 100) return out;
+        if (out?.content && out.content.length > 100) return out.content;
       }
     } catch (e) {
-      results.errors.push('ExtractText: ' + e.message);
+      console.log('ExtractText falhou (provavelmente PDF grande), usando file_urls direto:', e.message);
     }
-    return null;
+    return null; // null = usar file_urls direto no LLM
   };
 
   const BASE_SCHEMA = {
@@ -335,11 +333,18 @@ Responda APENAS com o JSON estruturado. Sem texto fora do JSON.`;
 - Identificar não conformidades com prazos legais
 - Criar plano de ação com prioridades baseadas no nível de risco`;
 
-        const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+        const pgrPrompt = textoExtraido
+          ? buildPrompt('PGR — Programa de Gerenciamento de Riscos (NR-01)', instrucoesPGR, textoExtraido.slice(0, 80000))
+          : buildPrompt('PGR — Programa de Gerenciamento de Riscos (NR-01)', instrucoesPGR, '[DOCUMENTO ANEXADO COMO PDF - leia e extraia todas as informações de riscos, setores, cargos, medidas de controle e plano de ação]');
+
+        const pgrPayload = {
           model: 'claude_sonnet_4_6',
-          prompt: buildPrompt('PGR — Programa de Gerenciamento de Riscos (NR-01)', instrucoesPGR, textoExtraido.slice(0, 80000)),
+          prompt: pgrPrompt,
           response_json_schema: BASE_SCHEMA,
-        });
+        };
+        if (!textoExtraido) pgrPayload.file_urls = [pgr_file_url];
+
+        const result = await base44.asServiceRole.integrations.Core.InvokeLLM(pgrPayload);
 
         console.log('[PGR] LLM retornou:', JSON.stringify(result).slice(0, 500));
         await persistResult(result, false);
@@ -369,11 +374,18 @@ Responda APENAS com o JSON estruturado. Sem texto fora do JSON.`;
 - No campo activity_type de cada ação use: admissional | periodico | demissional | treinamento | avaliacao_medica | retorno
 - No campo esocial_code coloque o código eSocial se identificável`;
 
-        const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+        const pcmsoPrompt = textoExtraido
+          ? buildPrompt('PCMSO — Programa de Controle Médico de Saúde Ocupacional (NR-07)', instrucoesPCMSO, textoExtraido.slice(0, 80000))
+          : buildPrompt('PCMSO — Programa de Controle Médico de Saúde Ocupacional (NR-07)', instrucoesPCMSO, '[DOCUMENTO ANEXADO COMO PDF - leia e extraia todos os exames, periodicidades, cargos e atividades de saúde ocupacional]');
+
+        const pcmsoPayload = {
           model: 'claude_sonnet_4_6',
-          prompt: buildPrompt('PCMSO — Programa de Controle Médico de Saúde Ocupacional (NR-07)', instrucoesPCMSO, textoExtraido.slice(0, 80000)),
+          prompt: pcmsoPrompt,
           response_json_schema: BASE_SCHEMA,
-        });
+        };
+        if (!textoExtraido) pcmsoPayload.file_urls = [pcmso_file_url];
+
+        const result = await base44.asServiceRole.integrations.Core.InvokeLLM(pcmsoPayload);
 
         console.log('[PCMSO] LLM retornou:', JSON.stringify(result).slice(0, 500));
         await persistResult(result, true);
