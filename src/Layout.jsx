@@ -258,6 +258,7 @@ export default function Layout({ children }) {
         title: "Seguraça do Trabalho",
         icon: ShieldCheck,
         items: [
+          { title: "Gestão NR-01", url: "/NR01Module", icon: ShieldCheck },
           { title: "Dashboard", url: "/SafetyDashboard", icon: ShieldCheck },
           { title: "Contratos e Programas", url: "/SafetyPrograms", icon: FileText },
           { title: "Inventário de Riscos", url: "/RiskInventoryPage", icon: AlertTriangle },
