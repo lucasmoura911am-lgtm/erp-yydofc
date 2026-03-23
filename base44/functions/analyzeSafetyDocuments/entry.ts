@@ -191,7 +191,9 @@ ${textoDocumento}
 Responda APENAS com o JSON estruturado. Sem texto fora do JSON.`;
 
   // Persiste os dados extraídos pelo LLM no banco de dados
-  const persistResult = async (result, isPCMSO) => {
+  const persistResult = async (rawResult, isPCMSO) => {
+    // O LLM às vezes envolve a resposta em {response: {...}}
+    const result = rawResult?.response || rawResult || {};
     const riscos = result?.riscos || [];
     const acoes = result?.acoes || [];
     const tarefas = result?.tarefas || [];
