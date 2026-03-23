@@ -128,34 +128,7 @@ export default function SafetyPrograms() {
     return <Badge className="bg-green-100 text-green-800">Válido</Badge>;
   };
 
-  const handleAnalyze = async (program) => {
-    if (!program.pgr_file_url && !program.pcmso_file_url) {
-      toast.error("Nenhum arquivo PGR ou PCMSO vinculado a este programa.");
-      return;
-    }
-    if (!confirm(`Analisar os documentos do contrato ${getContractLabel(program.contract_id)}?\n\nIsso irá:\n• Ler o PGR e criar os riscos e planos de ação\n• Ler o PCMSO e criar as atividades de saúde\n\nRegistros existentes NÃO serão apagados.`)) return;
 
-    setAnalyzing(program.id);
-    setAnalyzeResult(null);
-    try {
-      const res = await base44.functions.invoke('analyzeSafetyDocuments', {
-        program_id: program.id,
-        contract_id: program.contract_id,
-        company_id: program.company_id || user?.company_id,
-        pgr_file_url: program.pgr_file_url || null,
-        pcmso_file_url: program.pcmso_file_url || null,
-        responsible: program.safety_manager || '',
-      });
-      const data = res.data;
-      setAnalyzeResult(data);
-      qc.invalidateQueries(["safety_programs"]);
-      toast.success(data.message || 'Análise concluída!');
-    } catch (err) {
-      toast.error('Erro na análise: ' + err.message);
-    } finally {
-      setAnalyzing(null);
-    }
-  };
 
   // Contratos sem programa cadastrado
   const contractsWithProgram = programs.map(p => p.contract_id);
