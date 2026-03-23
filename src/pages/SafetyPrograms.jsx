@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldCheck, Plus, Edit, Upload, AlertTriangle, FileText, Download } from "lucide-react";
+import { ShieldCheck, Plus, Edit, Upload, AlertTriangle, FileText, Download, Sparkles, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, isBefore, addDays } from "date-fns";
 
@@ -19,6 +19,8 @@ export default function SafetyPrograms() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [uploading, setUploading] = useState({});
+  const [analyzing, setAnalyzing] = useState(null); // program_id being analyzed
+  const [analyzeResult, setAnalyzeResult] = useState(null);
   const [formData, setFormData] = useState({ contract_id: "", pgr_file_url: "", pcmso_file_url: "", pgr_validity: "", pcmso_validity: "", safety_manager: "", safety_manager_crea: "", observations: "" });
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
@@ -62,6 +64,35 @@ export default function SafetyPrograms() {
     return <Badge className="bg-green-100 text-green-800">Válido</Badge>;
   };
 
+  const handleAnalyze = async (program) => {
+    if (!program.pgr_file_url && !program.pcmso_file_url) {
+      toast.error("Nenhum arquivo PGR ou PCMSO vinculado a este programa.");
+      return;
+    }
+    if (!confirm(`Analisar os documentos do contrato ${getContractLabel(program.contract_id)}?\n\nIsso irá:\n• Ler o PGR e criar os riscos e planos de ação\n• Ler o PCMSO e criar as atividades de saúde\n\nRegistros existentes NÃO serão apagados.`)) return;
+
+    setAnalyzing(program.id);
+    setAnalyzeResult(null);
+    try {
+      const res = await base44.functions.invoke('analyzeSafetyDocuments', {
+        program_id: program.id,
+        contract_id: program.contract_id,
+        company_id: program.company_id || user?.company_id,
+        pgr_file_url: program.pgr_file_url || null,
+        pcmso_file_url: program.pcmso_file_url || null,
+        responsible: program.safety_manager || '',
+      });
+      const data = res.data;
+      setAnalyzeResult(data);
+      qc.invalidateQueries(["safety_programs"]);
+      toast.success(data.message || 'Análise concluída!');
+    } catch (err) {
+      toast.error('Erro na análise: ' + err.message);
+    } finally {
+      setAnalyzing(null);
+    }
+  };
+
   // Contratos sem programa cadastrado
   const contractsWithProgram = programs.map(p => p.contract_id);
   const contractsWithoutProgram = contracts.filter(c => !contractsWithProgram.includes(c.id));
@@ -100,8 +131,8 @@ export default function SafetyPrograms() {
                 <TableHead>PGR</TableHead>
                 <TableHead>PCMSO</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
+                </TableRow>
+                </TableHeader>
             <TableBody>
               {programs.length === 0 && (
                 <TableRow><TableCell colSpan={5} className="text-center text-gray-400 py-8">Nenhum programa cadastrado</TableCell></TableRow>
@@ -128,10 +159,25 @@ export default function SafetyPrograms() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}><Edit className="w-4 h-4" /></Button>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs border-purple-300 text-purple-700 hover:bg-purple-50"
+                        disabled={analyzing === p.id || (!p.pgr_file_url && !p.pcmso_file_url)}
+                        onClick={() => handleAnalyze(p)}
+                        title={(!p.pgr_file_url && !p.pcmso_file_url) ? 'Nenhum arquivo vinculado' : 'Analisar documentos com IA'}
+                      >
+                        {analyzing === p.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Sparkles className="w-3.5 h-3.5" />}
+                        {analyzing === p.id ? 'Analisando...' : 'Analisar IA'}
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}><Edit className="w-4 h-4" /></Button>
+                    </div>
                   </TableCell>
-                </TableRow>
-              ))}
+                  </TableRow>
+                  ))}
             </TableBody>
           </Table>
         </CardContent>
