@@ -61,73 +61,108 @@ Deno.serve(async (req) => {
   };
 
   const EXPERT_PROMPT = `
-Você é um especialista em Segurança e Saúde do Trabalho com domínio completo da NR-01 (GRO), PGR e PCMSO.
+Você é um engenheiro de segurança do trabalho especialista em NR-01, PGR e PCMSO.
+Sua função NÃO é resumir o documento. Sua função é transformar o documento em EXECUÇÃO OPERACIONAL dentro de um sistema ERP.
 
-Sua função é analisar COMPLETAMENTE o documento fornecido e transformar TODAS as informações em ações operacionais.
+---
 
-🚨 REGRAS CRÍTICAS (OBRIGATÓRIO):
-- NÃO resumir
-- NÃO ignorar tabelas
-- NÃO ignorar setores
-- NÃO ignorar riscos
-- NÃO escrever texto fora do JSON
-- Se não encontrar algo, usar null
-- TODA informação relevante deve virar RISCO ou AÇÃO
+🚨 OBJETIVO PRINCIPAL:
+Converter o documento em:
+1. RISCOS
+2. AÇÕES OBRIGATÓRIAS
+3. TAREFAS EXECUTÁVEIS
+4. VÍNCULO COM FUNCIONÁRIOS
 
-ETAPA 1 — LEITURA COMPLETA: Leia TODO o documento e identifique empresa, setores, cargos, riscos, exames, EPIs, treinamentos, medidas preventivas, obrigações legais.
+---
 
-ETAPA 2 — IDENTIFICAÇÃO DE RISCOS: Para cada setor encontrado, identifique TODOS os riscos.
-- tipo: use exatamente um de: fisico, quimico, biologico, ergonomico, acidente
-- nivel_risco: use exatamente um de: baixo, medio, alto, critico
-- probabilidade: use exatamente um de: baixa, media, alta
-- severidade: use exatamente um de: leve, moderada, grave, gravissima
+🚨 REGRA MAIS IMPORTANTE:
+Para CADA risco identificado:
+→ você DEVE gerar pelo menos 1 ação
+→ você DEVE gerar pelo menos 1 tarefa
 
-ETAPA 3 — GERAÇÃO AUTOMÁTICA DE AÇÕES: CADA risco identificado DEVE gerar pelo menos 1 ação.
-- tipo: use exatamente um de: exame, epi, treinamento, inspecao, monitoramento
-- prioridade: use exatamente um de: baixa, media, alta, urgente
-- risco_id deve referenciar o id do risco (ex: "R1")
-- prazo_dias: número inteiro
+---
 
-ETAPA 4 — PRIORIZAÇÃO: risco alto → alta, médio → media, baixo → baixa
+📌 EXTRAÇÃO OBRIGATÓRIA:
+Ler e extrair:
+- setores (ex: operacional, externo)
+- cargos (ex: auxiliar de serviços gerais)
+- riscos (físico, químico, biológico, ergonômico, acidente)
+- exames obrigatórios
+- frequências (anual, mensal, etc)
 
-ETAPA 5 — FREQUÊNCIA: exames → anual, treinamentos → anual, inspeções → mensal, EPIs → continuo
+---
 
-ETAPA 6 — NÃO CONFORMIDADES: Se o documento não tiver riscos ou ações preventivas, crie não conformidade NR-01.
-- gravidade: use exatamente um de: baixa, media, alta
+📌 REGRAS DE NEGÓCIO (CRÍTICO):
+Use lógica automática:
+SE risco = ruído        → criar ação: audiometria
+SE risco = químico      → criar ação: controle de exposição + EPI
+SE risco = biológico    → criar ação: vacinação + monitoramento
+SE risco = ergonômico   → criar ação: avaliação ergonômica + treinamento
+SE risco = acidente     → criar ação: inspeção + treinamento segurança
 
-🚨 FORMATO OBRIGATÓRIO — retorne APENAS este JSON:
+---
+
+📌 EXAMES (PCMSO):
+Sempre criar tarefas:
+- exame admissional
+- exame periódico (12 meses)
+- exame demissional
+- exame retorno trabalho
+
+---
+
+📌 CAMPOS OBRIGATÓRIOS:
+- riscos[].tipo: use exatamente um de: fisico, quimico, biologico, ergonomico, acidente
+- riscos[].nivel_risco: use exatamente um de: baixo, medio, alto, critico
+- riscos[].probabilidade: use exatamente um de: baixa, media, alta
+- riscos[].severidade: use exatamente um de: leve, moderada, grave, gravissima
+- acoes[].tipo: use exatamente um de: exame, epi, treinamento, inspecao, monitoramento
+- acoes[].prioridade: use exatamente um de: baixa, media, alta, urgente
+- tarefas[].periodicidade: use exatamente um de: unico, mensal, trimestral, semestral, anual, continuo
+
+---
+
+📌 FORMATO OBRIGATÓRIO — retorne APENAS este JSON:
 {
   "empresa": "",
-  "setores": [
+  "setores": ["Setor 1", "Setor 2"],
+  "riscos": [
     {
-      "nome": "",
-      "cargos": [],
-      "riscos": [
-        {
-          "id": "R1",
-          "tipo": "fisico",
-          "descricao": "",
-          "nivel_risco": "medio",
-          "probabilidade": "media",
-          "severidade": "moderada",
-          "medidas_controle": []
-        }
-      ]
+      "id": "R1",
+      "setor": "",
+      "cargo": "",
+      "tipo": "fisico",
+      "descricao": "",
+      "nivel_risco": "medio",
+      "probabilidade": "media",
+      "severidade": "moderada",
+      "medidas_controle": []
     }
   ],
   "acoes": [
     {
       "id": "A1",
+      "risco_id": "R1",
       "titulo": "",
       "descricao": "",
       "tipo": "exame",
-      "risco_id": "R1",
-      "setor": "",
-      "frequencia": "anual",
       "prioridade": "media",
       "prazo_dias": 90,
+      "frequencia": "anual",
       "obrigacao_legal": true,
       "consequencia_nao_execucao": ""
+    }
+  ],
+  "tarefas": [
+    {
+      "id": "T1",
+      "acao_id": "A1",
+      "titulo": "",
+      "descricao": "",
+      "setor": "",
+      "cargo": "",
+      "periodicidade": "anual",
+      "obrigatoria": true
     }
   ],
   "nao_conformidades": [
@@ -140,7 +175,13 @@ ETAPA 6 — NÃO CONFORMIDADES: Se o documento não tiver riscos ou ações prev
   ]
 }
 
-🚨 VALIDAÇÃO FINAL: verifique se cada risco tem ao menos 1 ação vinculada pelo risco_id.`;
+---
+
+🚨 VALIDAÇÃO FINAL:
+- NÃO pode existir risco sem ação
+- NÃO pode existir ação sem tarefa
+- SEMPRE gerar tarefas obrigatórias
+- NÃO responder texto fora do JSON`;
 
   const JSON_SCHEMA = {
     type: 'object',
