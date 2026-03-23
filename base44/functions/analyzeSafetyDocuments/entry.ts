@@ -1,10 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
+// Limite de upload: 20MB
+const MAX_SIZE = 20 * 1024 * 1024;
+
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   const user = await base44.auth.me();
   if (!user) return Response.json({ error: 'Não autenticado' }, { status: 401 });
-  if (user.role !== 'admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
 
   const { program_id, contract_id, company_id, pgr_file_url, pcmso_file_url, responsible } = await req.json();
 

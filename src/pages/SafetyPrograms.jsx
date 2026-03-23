@@ -31,8 +31,41 @@ export default function SafetyPrograms() {
   const { data: programs = [] } = useQuery({ queryKey: ["safety_programs"], queryFn: () => base44.entities.ContractSafetyProgram.list(), enabled: !!user });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => editing ? base44.entities.ContractSafetyProgram.update(editing.id, data) : base44.entities.ContractSafetyProgram.create({ ...data, company_id: user.company_id }),
-    onSuccess: () => { qc.invalidateQueries(["safety_programs"]); toast.success("Programa salvo!"); resetForm(); }
+    mutationFn: (data) => editing
+      ? base44.entities.ContractSafetyProgram.update(editing.id, data)
+      : base44.entities.ContractSafetyProgram.create({ ...data, company_id: user.company_id }),
+    onSuccess: async (savedProgram, variables) => {
+      qc.invalidateQueries(["safety_programs"]);
+      toast.success("Programa salvo!");
+      // Auto-analisar se há arquivos novos
+      const pgr = variables.pgr_file_url;
+      const pcmso = variables.pcmso_file_url;
+      const oldPgr = editing?.pgr_file_url;
+      const oldPcmso = editing?.pcmso_file_url;
+      const hasNewPgr = pgr && pgr !== oldPgr;
+      const hasNewPcmso = pcmso && pcmso !== oldPcmso;
+      if (hasNewPgr || hasNewPcmso) {
+        toast.info('Analisando documentos PGR/PCMSO com IA... Aguarde.');
+        setAnalyzing(savedProgram?.id || editing?.id || 'new');
+        try {
+          const res = await base44.functions.invoke('analyzeSafetyDocuments', {
+            program_id: savedProgram?.id || editing?.id,
+            contract_id: variables.contract_id,
+            company_id: user.company_id,
+            pgr_file_url: hasNewPgr ? pgr : null,
+            pcmso_file_url: hasNewPcmso ? pcmso : null,
+            responsible: variables.safety_manager || '',
+          });
+          setAnalyzeResult(res.data);
+          toast.success(res.data?.message || 'Análise concluída!');
+        } catch (err) {
+          toast.error('Erro na análise automática: ' + err.message);
+        } finally {
+          setAnalyzing(null);
+        }
+      }
+      resetForm();
+    }
   });
 
   const resetForm = () => { setFormData({ contract_id: "", pgr_file_url: "", pcmso_file_url: "", pgr_validity: "", pcmso_validity: "", safety_manager: "", safety_manager_crea: "", observations: "" }); setEditing(null); setDialogOpen(false); };
@@ -40,11 +73,16 @@ export default function SafetyPrograms() {
   const handleEdit = (p) => { setEditing(p); setFormData({ contract_id: p.contract_id, pgr_file_url: p.pgr_file_url || "", pcmso_file_url: p.pcmso_file_url || "", pgr_validity: p.pgr_validity || "", pcmso_validity: p.pcmso_validity || "", safety_manager: p.safety_manager || "", safety_manager_crea: p.safety_manager_crea || "", observations: p.observations || "" }); setDialogOpen(true); };
 
   const handleFileUpload = async (field, file) => {
+    // Limite de 20MB
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Arquivo muito grande. Máximo permitido: 20MB');
+      return;
+    }
     setUploading(u => ({ ...u, [field]: true }));
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     setFormData(f => ({ ...f, [field]: file_url }));
     setUploading(u => ({ ...u, [field]: false }));
-    toast.success("Arquivo enviado!");
+    toast.success("Arquivo enviado! O documento será analisado automaticamente ao salvar.");
   };
 
   const getContractLabel = (cid) => {
