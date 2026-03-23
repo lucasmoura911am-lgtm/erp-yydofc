@@ -102,6 +102,10 @@ import EmployeeLifeReport from './pages/EmployeeLifeReport';
 import ContractExpensesPage from './pages/ContractExpensesPage';
 import SmartPayslipsUpload from './pages/SmartPayslipsUpload';
 import MySmartPayslips from './pages/MySmartPayslips';
+import SSTExames from './pages/SSTExames';
+import SSTTreinamentos from './pages/SSTTreinamentos';
+import SSTVacinacao from './pages/SSTVacinacao';
+import SSTMatrizRisco from './pages/SSTMatrizRisco';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -249,6 +253,10 @@ const AuthenticatedApp = () => {
       <Route path="/ApprovedBenefitOrders" element={<LayoutWrapper currentPageName="ApprovedBenefitOrders"><ApprovedBenefitOrders /></LayoutWrapper>} />
       <Route path="/EmployeeLifeReport" element={<LayoutWrapper currentPageName="EmployeeLifeReport"><EmployeeLifeReport /></LayoutWrapper>} />
       <Route path="/ContractExpensesPage" element={<LayoutWrapper currentPageName="ContractExpensesPage"><ContractExpensesPage /></LayoutWrapper>} />
+      <Route path="/SSTExames" element={<LayoutWrapper currentPageName="SSTExames"><SSTExames /></LayoutWrapper>} />
+      <Route path="/SSTTreinamentos" element={<LayoutWrapper currentPageName="SSTTreinamentos"><SSTTreinamentos /></LayoutWrapper>} />
+      <Route path="/SSTVacinacao" element={<LayoutWrapper currentPageName="SSTVacinacao"><SSTVacinacao /></LayoutWrapper>} />
+      <Route path="/SSTMatrizRisco" element={<LayoutWrapper currentPageName="SSTMatrizRisco"><SSTMatrizRisco /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

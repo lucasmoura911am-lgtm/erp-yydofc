@@ -251,14 +251,18 @@ export default function Layout({ children }) {
       },
       {
         id: "safety",
-        title: "Segurança do Trabalho",
+        title: "Seguraça do Trabalho",
         icon: ShieldCheck,
         items: [
           { title: "Dashboard", url: "/SafetyDashboard", icon: ShieldCheck },
           { title: "Contratos e Programas", url: "/SafetyPrograms", icon: FileText },
           { title: "Inventário de Riscos", url: "/RiskInventoryPage", icon: AlertTriangle },
+          { title: "Matriz de Risco 5×5", url: "/SSTMatrizRisco", icon: Grid3X3 },
           { title: "Plano de Ação (PGR)", url: "/RiskActionPlanPage", icon: TrendingUp },
           { title: "Atividades de Saúde (PCMSO)", url: "/HealthActivitiesPage", icon: Activity },
+          { title: "Exames Ocupacionais", url: "/SSTExames", icon: Stethoscope },
+          { title: "Treinamentos SST", url: "/SSTTreinamentos", icon: BookOpen },
+          { title: "Vacinação", url: "/SSTVacinacao", icon: Heart },
           { title: "Relatórios", url: "/SafetyReports", icon: BarChart3 },
         ]
       },
