@@ -58,7 +58,28 @@ Deno.serve(async (req) => {
     }
   };
 
-  // Schema JSON alinhado com o formato do prompt (riscos PLANOS na raiz, não aninhados)
+  // Extrai texto do PDF usando ExtractDataFromUploadedFile (sem limite de tamanho como file_urls)
+  const extractTextFromFile = async (file_url) => {
+    try {
+      const extracted = await base44.asServiceRole.integrations.Core.ExtractDataFromUploadedFile({
+        file_url,
+        json_schema: {
+          type: 'object',
+          properties: {
+            content: { type: 'string', description: 'Todo o conteúdo textual do documento' },
+            sections: { type: 'array', items: { type: 'string' }, description: 'Seções ou capítulos identificados' },
+          }
+        }
+      });
+      if (extracted?.status === 'success' && extracted?.output?.content) {
+        return extracted.output.content;
+      }
+    } catch (e) {
+      results.errors.push('ExtractText: ' + e.message);
+    }
+    return null;
+  };
+
   const BASE_SCHEMA = {
     type: 'object',
     properties: {
@@ -97,7 +118,9 @@ Deno.serve(async (req) => {
             prioridade: { type: 'string' },
             prazo_dias: { type: 'number' },
             obrigacao_legal: { type: 'boolean' },
-            consequencia_nao_execucao: { type: 'string' }
+            consequencia_nao_execucao: { type: 'string' },
+            activity_type: { type: 'string' },
+            esocial_code: { type: 'string' }
           }
         }
       },
@@ -132,237 +155,94 @@ Deno.serve(async (req) => {
     }
   };
 
-  // Schema específico para PCMSO — inclui campo activity_type em acoes
-  const PCMSO_SCHEMA = JSON.parse(JSON.stringify(BASE_SCHEMA));
-  PCMSO_SCHEMA.properties.acoes.items.properties.activity_type = { type: 'string' };
-  PCMSO_SCHEMA.properties.acoes.items.properties.esocial_code = { type: 'string' };
-
-  const PROMPT_BASE = `
+  const buildPrompt = (tipoDoc, extraInstrucoes, textoDocumento) => `
 Você é um engenheiro de segurança do trabalho especialista em NR-01, PGR e PCMSO.
-Sua função NÃO é resumir o documento. Sua função é transformar o documento em EXECUÇÃO OPERACIONAL dentro de um sistema ERP.
+Sua função é transformar o documento em EXECUÇÃO OPERACIONAL dentro de um sistema ERP.
 
-🚨 OBJETIVO PRINCIPAL:
-Converter o documento em: RISCOS, AÇÕES OBRIGATÓRIAS, TAREFAS EXECUTÁVEIS.
+Tipo de documento: ${tipoDoc}
+${extraInstrucoes || ''}
 
-🚨 REGRA MAIS IMPORTANTE:
-- Para CADA risco identificado → gerar pelo menos 1 ação e pelo menos 1 tarefa
+🚨 REGRAS OBRIGATÓRIAS:
+- Para CADA risco identificado → gerar pelo menos 1 ação e 1 tarefa
 - NÃO pode existir risco sem ação, NÃO pode existir ação sem tarefa
-
-📌 EXTRAÇÃO OBRIGATÓRIA — Ler e extrair:
-- setores (lista de strings, ex: ["Operacional", "Administrativo"])
-- cargos por setor
-- riscos ocupacionais (físico, químico, biológico, ergonômico, acidente)
-- exames obrigatórios e suas frequências
-- medidas de controle existentes
+- Extraia TODOS os riscos do documento, não apenas os óbvios
+- Extraia TODOS os exames e atividades de saúde com periodicidade
 
 📌 REGRAS DE NEGÓCIO (aplique automaticamente):
-SE risco = ruído/vibração  → ação: audiometria + protetor auricular
+SE risco = ruído/vibração  → ação: audiometria + protetor auricular (EPI)
 SE risco = químico         → ação: controle de exposição + EPI específico
 SE risco = biológico       → ação: vacinação + monitoramento saúde
 SE risco = ergonômico      → ação: avaliação ergonômica + ginástica laboral
 SE risco = acidente        → ação: inspeção periódica + treinamento NR-35/NR-06
 
-📌 CAMPOS OBRIGATÓRIOS:
-- riscos[].tipo: exatamente um de: fisico, quimico, biologico, ergonomico, acidente
-- riscos[].nivel_risco: exatamente um de: baixo, medio, alto, critico
-- riscos[].probabilidade: exatamente um de: baixa, media, alta
-- riscos[].severidade: exatamente um de: leve, moderada, grave, gravissima
-- acoes[].tipo: exatamente um de: exame, epi, treinamento, inspecao, monitoramento
-- acoes[].prioridade: exatamente um de: baixa, media, alta, urgente
-- tarefas[].periodicidade: exatamente um de: unico, mensal, trimestral, semestral, anual, continuo
+📌 CAMPOS OBRIGATÓRIOS — use EXATAMENTE estes valores:
+- riscos[].tipo: fisico | quimico | biologico | ergonomico | acidente
+- riscos[].nivel_risco: baixo | medio | alto | critico
+- riscos[].probabilidade: baixa | media | alta
+- riscos[].severidade: leve | moderada | grave | gravissima
+- acoes[].tipo: exame | epi | treinamento | inspecao | monitoramento
+- acoes[].prioridade: baixa | media | alta | urgente
+- acoes[].frequencia: unico | mensal | trimestral | semestral | anual | continuo
+- tarefas[].periodicidade: unico | mensal | trimestral | semestral | anual | continuo
 
-🚨 FORMATO OBRIGATÓRIO — retorne APENAS este JSON (sem texto fora):
-{
-  "empresa": "nome da empresa",
-  "setores": ["Setor A", "Setor B"],
-  "riscos": [
-    { "id": "R1", "setor": "Operacional", "cargo": "Auxiliar", "tipo": "fisico", "descricao": "Exposição a ruído acima do NHO", "nivel_risco": "alto", "probabilidade": "alta", "severidade": "grave", "medidas_controle": ["Protetor auricular tipo concha"] }
-  ],
-  "acoes": [
-    { "id": "A1", "risco_id": "R1", "titulo": "Audiometria periódica", "descricao": "Realizar audiometria ocupacional anual", "tipo": "exame", "setor": "Operacional", "frequencia": "anual", "prioridade": "alta", "prazo_dias": 30, "obrigacao_legal": true, "consequencia_nao_execucao": "Auto de infração NR-07" }
-  ],
-  "tarefas": [
-    { "id": "T1", "acao_id": "A1", "titulo": "Agendar audiometria — Operacional", "descricao": "Agendar com clínica conveniada", "setor": "Operacional", "cargo": "Auxiliar", "periodicidade": "anual", "obrigatoria": true }
-  ],
-  "nao_conformidades": []
-}
+📄 DOCUMENTO A ANALISAR:
+${textoDocumento}
 
-🚨 VALIDAÇÃO FINAL antes de responder:
-- Existem setores? Se não, inferir do texto
-- Cada risco tem ao menos 1 ação com risco_id correto?
-- Cada ação tem ao menos 1 tarefa com acao_id correto?
-- Extraiu TODOS os riscos do documento, não apenas os mais óbvios?`;
+Responda APENAS com o JSON estruturado. Sem texto fora do JSON.`;
 
-  const PROMPT_PCMSO_EXTRA = `
+  // Persiste os dados extraídos pelo LLM no banco de dados
+  const persistResult = async (result, isPCMSO) => {
+    const riscos = result?.riscos || [];
+    const acoes = result?.acoes || [];
+    const tarefas = result?.tarefas || [];
+    const riskIdMap = {};
 
-📌 EXTRAÇÃO ESPECÍFICA PCMSO (NR-07):
-Identificar e extrair TODOS:
-1. Exames por cargo/função (admissional, periódico, demissional, retorno ao trabalho)
-2. Periodicidade de cada exame por risco associado
-3. Exames complementares (audiometria, espirometria, acuidade visual, laboratoriais, etc.)
-4. Médico coordenador e CRM se informado
-
-Adicione em cada ação do PCMSO:
-- activity_type: exatamente um de: admissional, periodico, demissional, treinamento, avaliacao_medica, retorno
-- esocial_code: código eSocial do exame se identificável`;
-
-  // ── ANÁLISE DO PGR ─────────────────────────────────────────────────────────
-  if (pgr_file_url) {
-    try {
-      const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-        model: 'claude_sonnet_4_6',
-        prompt: PROMPT_BASE + '\n\nTipo de documento: PGR — Programa de Gerenciamento de Riscos (NR-01).\nLeia 100% do documento incluindo tabelas, anexos e observações.',
-        file_urls: [pgr_file_url],
-        response_json_schema: BASE_SCHEMA,
+    // 1. Criar riscos
+    for (const risco of riscos) {
+      if (!risco.descricao && !risco.tipo) continue;
+      const created = await base44.asServiceRole.entities.RiskInventory.create({
+        contract_id, company_id,
+        department_id: findDept(risco.setor)?.id || '',
+        risk_name: risco.descricao || `${risco.tipo} — ${risco.setor || ''}`,
+        risk_type: norm(risco.tipo, VALID_RISK_TYPES, 'acidente'),
+        risk_description: risco.descricao || '',
+        risk_level: norm(risco.nivel_risco, VALID_LEVELS, 'medio'),
+        probability: norm(risco.probabilidade, VALID_PROB, 'media'),
+        severity: norm(risco.severidade, VALID_SEV, 'moderada'),
+        control_measures: Array.isArray(risco.medidas_controle) ? risco.medidas_controle.join('; ') : '',
+        active: true,
       });
-
-      const riscos = result?.riscos || [];
-      const acoes = result?.acoes || [];
-      const tarefas = result?.tarefas || [];
-      const riskIdMap = {};
-
-      // 1. Criar riscos no BD
-      for (const risco of riscos) {
-        if (!risco.descricao && !risco.tipo) continue;
-        const created = await base44.asServiceRole.entities.RiskInventory.create({
-          contract_id, company_id,
-          department_id: findDept(risco.setor)?.id || '',
-          risk_name: risco.descricao || `${risco.tipo} — ${risco.setor || ''}`,
-          risk_type: norm(risco.tipo, VALID_RISK_TYPES, 'acidente'),
-          risk_description: risco.descricao || '',
-          risk_level: norm(risco.nivel_risco, VALID_LEVELS, 'medio'),
-          probability: norm(risco.probabilidade, VALID_PROB, 'media'),
-          severity: norm(risco.severidade, VALID_SEV, 'moderada'),
-          control_measures: Array.isArray(risco.medidas_controle) ? risco.medidas_controle.join('; ') : '',
-          active: true,
-        });
-        results.risks_created++;
-        if (risco.id) riskIdMap[risco.id] = created.id;
-      }
-
-      // 2. Criar ações vinculadas
-      const acaoIdMap = {};
-      for (const acao of acoes) {
-        if (!acao.titulo && !acao.descricao) continue;
-        const priority = norm(acao.prioridade, VALID_PRIO, 'media');
-        const prazo = addDays(today, Number(acao.prazo_dias) || 90);
-        const created = await base44.asServiceRole.entities.RiskActionPlan.create({
-          risk_id: (acao.risco_id && riskIdMap[acao.risco_id]) || '',
-          company_id,
-          action_description: acao.titulo || acao.descricao,
-          responsible: responsible || 'Responsável SST',
-          deadline: prazo,
-          status: 'pendente',
-          priority,
-          notes: [acao.descricao, acao.consequencia_nao_execucao ? `Consequência: ${acao.consequencia_nao_execucao}` : ''].filter(Boolean).join('\n'),
-          category: norm(acao.tipo, VALID_CAT, 'outro'),
-          legal_obligation: acao.obrigacao_legal !== false,
-        });
-        results.actions_created++;
-        if (acao.id) acaoIdMap[acao.id] = created.id;
-        await linkEmployees(acao.setor, prazo, acao.titulo || acao.descricao);
-      }
-
-      // 3. Criar tarefas como HealthActivityPlan (reuso de entidade) ou RiskActionPlan filho
-      for (const tarefa of tarefas) {
-        if (!tarefa.titulo) continue;
-        await base44.asServiceRole.entities.HealthActivityPlan.create({
-          contract_id, company_id,
-          activity_name: tarefa.titulo,
-          activity_type: 'periodico',
-          frequency: norm(tarefa.periodicidade, VALID_FREQ, 'anual'),
-          description: [tarefa.descricao, tarefa.setor ? `Setor: ${tarefa.setor}` : '', tarefa.cargo ? `Cargo: ${tarefa.cargo}` : ''].filter(Boolean).join(' | '),
-          active: true,
-        });
-        results.health_plans_created++;
-        await linkEmployees(tarefa.setor, addDays(today, 180), tarefa.titulo);
-      }
-
-      // Fallback: se nenhuma ação foi gerada, criar 1 por risco automaticamente
-      if (acoes.length === 0) {
-        for (const risco of riscos) {
-          if (!risco.descricao && !risco.tipo) continue;
-          const lvl = norm(risco.nivel_risco, VALID_LEVELS, 'medio');
-          const priority = lvl === 'critico' ? 'urgente' : lvl === 'alto' ? 'alta' : 'media';
-          const prazo = addDays(today, lvl === 'critico' ? 30 : lvl === 'alto' ? 60 : 90);
-          await base44.asServiceRole.entities.RiskActionPlan.create({
-            risk_id: (risco.id && riskIdMap[risco.id]) || '',
-            company_id,
-            action_description: `Controlar: ${risco.descricao || risco.tipo} — Setor: ${risco.setor || ''}`,
-            responsible: responsible || 'Responsável SST',
-            deadline: prazo, status: 'pendente', priority,
-            notes: Array.isArray(risco.medidas_controle) ? risco.medidas_controle.join('; ') : '',
-            legal_obligation: true,
-          });
-          results.actions_created++;
-          await linkEmployees(risco.setor, prazo, risco.descricao || risco.tipo);
-        }
-      }
-
-      // Não conformidades
-      for (const nc of (result?.nao_conformidades || [])) {
-        if (!nc.descricao) continue;
-        const g = norm(nc.gravidade, ['baixa', 'media', 'alta'], 'media');
-        await base44.asServiceRole.entities.RiskActionPlan.create({
-          risk_id: '', company_id,
-          action_description: `[NÃO CONFORMIDADE NR-01] ${nc.descricao}`,
-          responsible: responsible || 'Responsável SST',
-          deadline: addDays(today, Number(nc.prazo_dias) || 30),
-          status: 'pendente',
-          priority: g === 'alta' ? 'urgente' : 'alta',
-          notes: nc.acao_corretiva || '',
-          legal_obligation: true,
-        });
-        results.non_conformities_created++;
-      }
-
-    } catch (err) {
-      results.errors.push(`PGR: ${err.message}`);
+      results.risks_created++;
+      if (risco.id) riskIdMap[risco.id] = created.id;
     }
-  }
 
-  // ── ANÁLISE DO PCMSO ───────────────────────────────────────────────────────
-  if (pcmso_file_url) {
-    try {
-      const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-        model: 'claude_sonnet_4_6',
-        prompt: PROMPT_BASE + PROMPT_PCMSO_EXTRA + '\n\nTipo de documento: PCMSO — Programa de Controle Médico de Saúde Ocupacional (NR-07).\nLeia 100% do documento incluindo tabelas de exames, periodicidades e cargos.',
-        file_urls: [pcmso_file_url],
-        response_json_schema: PCMSO_SCHEMA,
+    // 2. Criar ações / atividades
+    const acaoIdMap = {};
+    for (const acao of acoes) {
+      if (!acao.titulo && !acao.descricao) continue;
+      const priority = norm(acao.prioridade, VALID_PRIO, 'media');
+      const prazo = addDays(today, Number(acao.prazo_dias) || (isPCMSO ? 365 : 90));
+      const realRiskId = (acao.risco_id && riskIdMap[acao.risco_id]) || '';
+
+      // RiskActionPlan (rastreio)
+      const prefix = isPCMSO ? '[PCMSO] ' : '';
+      const created = await base44.asServiceRole.entities.RiskActionPlan.create({
+        risk_id: realRiskId,
+        company_id,
+        action_description: prefix + (acao.titulo || acao.descricao),
+        responsible: responsible || (isPCMSO ? 'Médico do Trabalho' : 'Responsável SST'),
+        deadline: prazo, status: 'pendente', priority,
+        notes: [acao.descricao, acao.consequencia_nao_execucao ? `Consequência: ${acao.consequencia_nao_execucao}` : ''].filter(Boolean).join('\n'),
+        category: norm(acao.tipo, VALID_CAT, 'exame'),
+        legal_obligation: acao.obrigacao_legal !== false,
       });
+      results.actions_created++;
+      if (acao.id) acaoIdMap[acao.id] = created.id;
 
-      const riscos = result?.riscos || [];
-      const acoes = result?.acoes || [];
-      const tarefas = result?.tarefas || [];
-      const riskIdMap = {};
-
-      // Criar riscos do PCMSO (podem ter riscos adicionais)
-      for (const risco of riscos) {
-        if (!risco.descricao && !risco.tipo) continue;
-        const created = await base44.asServiceRole.entities.RiskInventory.create({
-          contract_id, company_id,
-          department_id: findDept(risco.setor)?.id || '',
-          risk_name: risco.descricao || `${risco.tipo} — ${risco.setor || ''}`,
-          risk_type: norm(risco.tipo, VALID_RISK_TYPES, 'acidente'),
-          risk_description: risco.descricao || '',
-          risk_level: norm(risco.nivel_risco, VALID_LEVELS, 'medio'),
-          probability: norm(risco.probabilidade, VALID_PROB, 'media'),
-          severity: norm(risco.severidade, VALID_SEV, 'moderada'),
-          control_measures: Array.isArray(risco.medidas_controle) ? risco.medidas_controle.join('; ') : '',
-          active: true,
-        });
-        results.risks_created++;
-        if (risco.id) riskIdMap[risco.id] = created.id;
-      }
-
-      // Criar atividades de saúde (PCMSO) e também RiskActionPlan para rastreio
-      for (const acao of acoes) {
-        if (!acao.titulo && !acao.descricao) continue;
+      // HealthActivityPlan
+      if (isPCMSO || norm(acao.tipo, VALID_CAT, '') === 'exame') {
         const actType = norm(acao.activity_type, VALID_ACT, 'periodico');
         const frequency = norm(acao.frequencia, VALID_FREQ, 'anual');
-        const prazo = addDays(today, Number(acao.prazo_dias) || 365);
-
-        // Criar HealthActivityPlan
         await base44.asServiceRole.entities.HealthActivityPlan.create({
           contract_id, company_id,
           activity_name: acao.titulo || acao.descricao,
@@ -372,62 +252,135 @@ Adicione em cada ação do PCMSO:
           active: true,
         });
         results.health_plans_created++;
+      }
 
-        // Também criar ação no plano de ação para rastreio
-        const priority = norm(acao.prioridade, VALID_PRIO, 'media');
+      await linkEmployees(acao.setor, prazo, acao.titulo || acao.descricao);
+    }
+
+    // 3. Criar tarefas como HealthActivityPlan
+    for (const tarefa of tarefas) {
+      if (!tarefa.titulo) continue;
+      await base44.asServiceRole.entities.HealthActivityPlan.create({
+        contract_id, company_id,
+        activity_name: tarefa.titulo,
+        activity_type: 'periodico',
+        frequency: norm(tarefa.periodicidade, VALID_FREQ, 'anual'),
+        description: [tarefa.descricao, tarefa.setor ? `Setor: ${tarefa.setor}` : '', tarefa.cargo ? `Cargo: ${tarefa.cargo}` : ''].filter(Boolean).join(' | '),
+        active: true,
+      });
+      results.health_plans_created++;
+      await linkEmployees(tarefa.setor, addDays(today, 180), tarefa.titulo);
+    }
+
+    // Fallback: se nenhuma ação foi gerada, criar 1 por risco
+    if (acoes.length === 0 && riscos.length > 0) {
+      for (const risco of riscos) {
+        if (!risco.descricao && !risco.tipo) continue;
+        const lvl = norm(risco.nivel_risco, VALID_LEVELS, 'medio');
+        const priority = lvl === 'critico' ? 'urgente' : lvl === 'alto' ? 'alta' : 'media';
+        const prazo = addDays(today, lvl === 'critico' ? 30 : lvl === 'alto' ? 60 : 90);
         await base44.asServiceRole.entities.RiskActionPlan.create({
-          risk_id: (acao.risco_id && riskIdMap[acao.risco_id]) || '',
+          risk_id: (risco.id && riskIdMap[risco.id]) || '',
           company_id,
-          action_description: `[PCMSO] ${acao.titulo || acao.descricao}`,
-          responsible: responsible || 'Médico do Trabalho',
+          action_description: `Controlar: ${risco.descricao || risco.tipo} — Setor: ${risco.setor || ''}`,
+          responsible: responsible || 'Responsável SST',
           deadline: prazo, status: 'pendente', priority,
-          notes: [acao.descricao, acao.setor ? `Setor: ${acao.setor}` : '', acao.consequencia_nao_execucao || ''].filter(Boolean).join('\n'),
-          category: 'exame',
+          notes: Array.isArray(risco.medidas_controle) ? risco.medidas_controle.join('; ') : '',
           legal_obligation: true,
         });
         results.actions_created++;
-        await linkEmployees(acao.setor, prazo, acao.titulo || acao.descricao);
+        await linkEmployees(risco.setor, prazo, risco.descricao || risco.tipo);
       }
+    }
 
-      // Tarefas do PCMSO
-      for (const tarefa of tarefas) {
-        if (!tarefa.titulo) continue;
-        await base44.asServiceRole.entities.HealthActivityPlan.create({
-          contract_id, company_id,
-          activity_name: tarefa.titulo,
-          activity_type: 'periodico',
-          frequency: norm(tarefa.periodicidade, VALID_FREQ, 'anual'),
-          description: [tarefa.descricao, tarefa.setor ? `Setor: ${tarefa.setor}` : '', tarefa.cargo ? `Cargo: ${tarefa.cargo}` : ''].filter(Boolean).join(' | '),
-          active: true,
+    // Não conformidades
+    for (const nc of (result?.nao_conformidades || [])) {
+      if (!nc.descricao) continue;
+      const g = norm(nc.gravidade, ['baixa', 'media', 'alta'], 'media');
+      await base44.asServiceRole.entities.RiskActionPlan.create({
+        risk_id: '', company_id,
+        action_description: `[NÃO CONFORMIDADE] ${nc.descricao}`,
+        responsible: responsible || 'Responsável SST',
+        deadline: addDays(today, Number(nc.prazo_dias) || 30),
+        status: 'pendente',
+        priority: g === 'alta' ? 'urgente' : 'alta',
+        notes: nc.acao_corretiva || '',
+        legal_obligation: true,
+      });
+      results.non_conformities_created++;
+    }
+  };
+
+  // ── ANÁLISE DO PGR ─────────────────────────────────────────────────────────
+  if (pgr_file_url) {
+    try {
+      console.log('[PGR] Extraindo texto do arquivo...');
+      const textoExtraido = await extractTextFromFile(pgr_file_url);
+      
+      if (!textoExtraido) {
+        results.errors.push('PGR: Não foi possível extrair o conteúdo do arquivo. Verifique se é um PDF válido.');
+      } else {
+        console.log(`[PGR] Texto extraído: ${textoExtraido.length} caracteres. Enviando ao LLM...`);
+        
+        const instrucoesPGR = `
+📌 EXTRAÇÃO ESPECÍFICA PGR (NR-01):
+- Identificar TODOS os riscos por setor e cargo
+- Extrair medidas de controle existentes e propostas
+- Identificar não conformidades com prazos legais
+- Criar plano de ação com prioridades baseadas no nível de risco`;
+
+        const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+          model: 'claude_sonnet_4_6',
+          prompt: buildPrompt('PGR — Programa de Gerenciamento de Riscos (NR-01)', instrucoesPGR, textoExtraido.slice(0, 80000)),
+          response_json_schema: BASE_SCHEMA,
         });
-        results.health_plans_created++;
-      }
 
-      // Não conformidades PCMSO
-      for (const nc of (result?.nao_conformidades || [])) {
-        if (!nc.descricao) continue;
-        const g = norm(nc.gravidade, ['baixa', 'media', 'alta'], 'media');
-        await base44.asServiceRole.entities.RiskActionPlan.create({
-          risk_id: '', company_id,
-          action_description: `[NÃO CONFORMIDADE PCMSO] ${nc.descricao}`,
-          responsible: responsible || 'Responsável SST',
-          deadline: addDays(today, Number(nc.prazo_dias) || 30),
-          status: 'pendente',
-          priority: g === 'alta' ? 'urgente' : 'alta',
-          notes: nc.acao_corretiva || '',
-          legal_obligation: true,
-        });
-        results.non_conformities_created++;
+        console.log('[PGR] LLM retornou:', JSON.stringify(result).slice(0, 500));
+        await persistResult(result, false);
       }
-
     } catch (err) {
+      console.error('[PGR] Erro:', err.message);
+      results.errors.push(`PGR: ${err.message}`);
+    }
+  }
+
+  // ── ANÁLISE DO PCMSO ───────────────────────────────────────────────────────
+  if (pcmso_file_url) {
+    try {
+      console.log('[PCMSO] Extraindo texto do arquivo...');
+      const textoExtraido = await extractTextFromFile(pcmso_file_url);
+      
+      if (!textoExtraido) {
+        results.errors.push('PCMSO: Não foi possível extrair o conteúdo do arquivo. Verifique se é um PDF válido.');
+      } else {
+        console.log(`[PCMSO] Texto extraído: ${textoExtraido.length} caracteres. Enviando ao LLM...`);
+        
+        const instrucoesPCMSO = `
+📌 EXTRAÇÃO ESPECÍFICA PCMSO (NR-07):
+- Identificar TODOS os exames por cargo/função (admissional, periódico, demissional, retorno)
+- Extrair periodicidade de cada exame (anual, semestral, etc.)
+- Identificar exames complementares: audiometria, espirometria, acuidade visual, laboratoriais
+- No campo activity_type de cada ação use: admissional | periodico | demissional | treinamento | avaliacao_medica | retorno
+- No campo esocial_code coloque o código eSocial se identificável`;
+
+        const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+          model: 'claude_sonnet_4_6',
+          prompt: buildPrompt('PCMSO — Programa de Controle Médico de Saúde Ocupacional (NR-07)', instrucoesPCMSO, textoExtraido.slice(0, 80000)),
+          response_json_schema: BASE_SCHEMA,
+        });
+
+        console.log('[PCMSO] LLM retornou:', JSON.stringify(result).slice(0, 500));
+        await persistResult(result, true);
+      }
+    } catch (err) {
+      console.error('[PCMSO] Erro:', err.message);
       results.errors.push(`PCMSO: ${err.message}`);
     }
   }
 
   return Response.json({
     success: true,
-    message: `Análise concluída: ${results.risks_created} riscos, ${results.actions_created} ações, ${results.health_plans_created} atividades PCMSO/tarefas, ${results.non_conformities_created} não conformidades, ${results.employees_linked} vínculos.`,
+    message: `Análise concluída: ${results.risks_created} riscos, ${results.actions_created} ações, ${results.health_plans_created} atividades/tarefas, ${results.non_conformities_created} não conformidades, ${results.employees_linked} vínculos.`,
     ...results,
   });
 });
