@@ -58,21 +58,25 @@ Deno.serve(async (req) => {
     }
   };
 
-  // Extrai texto do PDF usando ExtractDataFromUploadedFile (sem limite de tamanho como file_urls)
+  // Extrai texto do PDF usando ExtractDataFromUploadedFile
   const extractTextFromFile = async (file_url) => {
     try {
+      // Tenta ExtractDataFromUploadedFile para PDFs grandes
       const extracted = await base44.asServiceRole.integrations.Core.ExtractDataFromUploadedFile({
         file_url,
         json_schema: {
           type: 'object',
           properties: {
-            content: { type: 'string', description: 'Todo o conteúdo textual do documento' },
-            sections: { type: 'array', items: { type: 'string' }, description: 'Seções ou capítulos identificados' },
+            content: { type: 'string', description: 'Todo o conteúdo textual do documento, incluindo tabelas e listas' },
           }
         }
       });
-      if (extracted?.status === 'success' && extracted?.output?.content) {
-        return extracted.output.content;
+      if (extracted?.status === 'success' && extracted?.output) {
+        // Pode vir como string ou objeto
+        const out = extracted.output;
+        if (typeof out === 'string') return out;
+        if (out?.content) return out.content;
+        return JSON.stringify(out);
       }
     } catch (e) {
       results.errors.push('ExtractText: ' + e.message);
