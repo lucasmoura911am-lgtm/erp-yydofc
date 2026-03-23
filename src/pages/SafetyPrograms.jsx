@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldCheck, Plus, Edit, Upload, AlertTriangle, FileText, Download, Sparkles, Loader2, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Plus, Edit, Trash2, AlertTriangle, FileText, Download, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, isBefore, addDays } from "date-fns";
 
@@ -19,8 +19,9 @@ export default function SafetyPrograms() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [uploading, setUploading] = useState({});
-  const [analyzing, setAnalyzing] = useState(null); // program_id being analyzed
+  const [analyzing, setAnalyzing] = useState(null);
   const [analyzeResult, setAnalyzeResult] = useState(null);
+  const [pendingAnalysis, setPendingAnalysis] = useState(null); // { pgr, pcmso, contract_id } para analisar após save
   const [formData, setFormData] = useState({ contract_id: "", pgr_file_url: "", pcmso_file_url: "", pgr_validity: "", pcmso_validity: "", safety_manager: "", safety_manager_crea: "", observations: "" });
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
@@ -37,43 +38,54 @@ export default function SafetyPrograms() {
     onSuccess: async (savedProgram, variables) => {
       qc.invalidateQueries(["safety_programs"]);
       toast.success("Programa salvo!");
-      // Auto-analisar se há arquivos novos
+      // Verifica se há arquivos novos para analisar
       const pgr = variables.pgr_file_url;
       const pcmso = variables.pcmso_file_url;
       const oldPgr = editing?.pgr_file_url;
       const oldPcmso = editing?.pcmso_file_url;
       const hasNewPgr = pgr && pgr !== oldPgr;
       const hasNewPcmso = pcmso && pcmso !== oldPcmso;
-      if (hasNewPgr || hasNewPcmso) {
-        toast.info('Analisando documentos PGR/PCMSO com IA... Aguarde.');
-        setAnalyzing(savedProgram?.id || editing?.id || 'new');
-        try {
-          const res = await base44.functions.invoke('analyzeSafetyDocuments', {
-            program_id: savedProgram?.id || editing?.id,
-            contract_id: variables.contract_id,
-            company_id: user.company_id,
-            pgr_file_url: hasNewPgr ? pgr : null,
-            pcmso_file_url: hasNewPcmso ? pcmso : null,
-            responsible: variables.safety_manager || '',
-          });
-          setAnalyzeResult(res.data);
-          toast.success(res.data?.message || 'Análise concluída!');
-        } catch (err) {
-          toast.error('Erro na análise automática: ' + err.message);
-        } finally {
-          setAnalyzing(null);
-        }
-      }
+      const programId = savedProgram?.id || editing?.id;
       resetForm();
+      if (hasNewPgr || hasNewPcmso) {
+        await runAnalysis({
+          program_id: programId,
+          contract_id: variables.contract_id,
+          company_id: user.company_id,
+          pgr_file_url: hasNewPgr ? pgr : null,
+          pcmso_file_url: hasNewPcmso ? pcmso : null,
+          responsible: variables.safety_manager || '',
+        }, programId);
+      }
     }
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.ContractSafetyProgram.delete(id),
+    onSuccess: () => { qc.invalidateQueries(["safety_programs"]); toast.success("Programa removido!"); }
+  });
+
+  const runAnalysis = async (payload, programId) => {
+    setAnalyzeResult(null);
+    setAnalyzing(programId);
+    toast.info('Lendo documentos PGR/PCMSO e criando registros... Aguarde.');
+    try {
+      const res = await base44.functions.invoke('analyzeSafetyDocuments', payload);
+      setAnalyzeResult(res.data);
+      qc.invalidateQueries(["safety_programs"]);
+      toast.success(res.data?.message || 'Leitura concluída!');
+    } catch (err) {
+      toast.error('Erro na leitura dos documentos: ' + err.message);
+    } finally {
+      setAnalyzing(null);
+    }
+  };
 
   const resetForm = () => { setFormData({ contract_id: "", pgr_file_url: "", pcmso_file_url: "", pgr_validity: "", pcmso_validity: "", safety_manager: "", safety_manager_crea: "", observations: "" }); setEditing(null); setDialogOpen(false); };
 
   const handleEdit = (p) => { setEditing(p); setFormData({ contract_id: p.contract_id, pgr_file_url: p.pgr_file_url || "", pcmso_file_url: p.pcmso_file_url || "", pgr_validity: p.pgr_validity || "", pcmso_validity: p.pcmso_validity || "", safety_manager: p.safety_manager || "", safety_manager_crea: p.safety_manager_crea || "", observations: p.observations || "" }); setDialogOpen(true); };
 
   const handleFileUpload = async (field, file) => {
-    // Limite de 20MB
     if (file.size > 20 * 1024 * 1024) {
       toast.error('Arquivo muito grande. Máximo permitido: 20MB');
       return;
@@ -82,7 +94,21 @@ export default function SafetyPrograms() {
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     setFormData(f => ({ ...f, [field]: file_url }));
     setUploading(u => ({ ...u, [field]: false }));
-    toast.success("Arquivo enviado! O documento será analisado automaticamente ao salvar.");
+    // Se estiver editando programa existente com contrato, analisar imediatamente
+    if (editing && editing.contract_id) {
+      const isPgr = field === 'pgr_file_url';
+      toast.success('Arquivo enviado! Iniciando leitura do documento...');
+      await runAnalysis({
+        program_id: editing.id,
+        contract_id: editing.contract_id,
+        company_id: editing.company_id || user.company_id,
+        pgr_file_url: isPgr ? file_url : null,
+        pcmso_file_url: !isPgr ? file_url : null,
+        responsible: editing.safety_manager || '',
+      }, editing.id);
+    } else {
+      toast.success('Arquivo enviado! Será processado ao salvar o programa.');
+    }
   };
 
   const getContractLabel = (cid) => {
@@ -197,21 +223,37 @@ export default function SafetyPrograms() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-1 items-center">
+                      {analyzing === p.id && (
+                        <span className="text-xs text-blue-600 flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Processando...
+                        </span>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
-                        className="gap-1.5 text-xs border-purple-300 text-purple-700 hover:bg-purple-50"
+                        className="gap-1 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
                         disabled={analyzing === p.id || (!p.pgr_file_url && !p.pcmso_file_url)}
-                        onClick={() => handleAnalyze(p)}
-                        title={(!p.pgr_file_url && !p.pcmso_file_url) ? 'Nenhum arquivo vinculado' : 'Analisar documentos com IA'}
+                        onClick={() => {
+                          if (!confirm(`Ler os documentos do contrato ${getContractLabel(p.contract_id)} e criar riscos/ações/atividades?\n\nRegistros existentes NÃO serão apagados.`)) return;
+                          runAnalysis({
+                            program_id: p.id,
+                            contract_id: p.contract_id,
+                            company_id: p.company_id || user.company_id,
+                            pgr_file_url: p.pgr_file_url || null,
+                            pcmso_file_url: p.pcmso_file_url || null,
+                            responsible: p.safety_manager || '',
+                          }, p.id);
+                        }}
+                        title={(!p.pgr_file_url && !p.pcmso_file_url) ? 'Nenhum arquivo vinculado' : 'Ler documentos e criar registros'}
                       >
-                        {analyzing === p.id
-                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : <Sparkles className="w-3.5 h-3.5" />}
-                        {analyzing === p.id ? 'Analisando...' : 'Analisar IA'}
+                        <FileText className="w-3.5 h-3.5" />
+                        {analyzing === p.id ? 'Lendo...' : 'Ler Docs'}
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}><Edit className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => { if (confirm('Excluir este programa?')) deleteMutation.mutate(p.id); }}>
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
                     </div>
                   </TableCell>
                   </TableRow>
