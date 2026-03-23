@@ -242,16 +242,13 @@ export default function SafetyPrograms() {
           <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="font-semibold text-green-800 text-sm">{analyzeResult.message}</p>
-            <div className="flex gap-4 mt-2 text-xs text-green-700">
-              <span>🔴 {analyzeResult.risks_created} riscos criados</span>
-              <span>📋 {analyzeResult.actions_created} ações criadas</span>
-              <span>🏥 {analyzeResult.health_plans_created} atividades PCMSO criadas</span>
+            <div className="flex flex-wrap gap-3 mt-2 text-xs text-green-700">
+              <span>⚠️ {analyzeResult.risks_created ?? 0} riscos criados</span>
+              <span>📋 {analyzeResult.actions_created ?? 0} ações criadas</span>
+              <span>🏥 {analyzeResult.health_plans_created ?? 0} atividades PCMSO</span>
+              <span>🚨 {analyzeResult.non_conformities_created ?? 0} não conformidades</span>
+              <span>👷 {analyzeResult.employees_linked ?? 0} vínculos com funcionários</span>
             </div>
-            {analyzeResult.errors?.length > 0 && (
-              <div className="mt-2 text-xs text-red-600">
-                {analyzeResult.errors.map((e, i) => <p key={i}>⚠️ {e}</p>)}
-              </div>
-            )}
             <p className="mt-2 text-xs text-green-600">Acesse "Inventário de Riscos", "Plano de Ação (PGR)" e "Atividades de Saúde (PCMSO)" para ver os registros gerados.</p>
           </div>
           <button className="text-green-600 hover:text-green-800 text-xs" onClick={() => setAnalyzeResult(null)}>✕</button>
