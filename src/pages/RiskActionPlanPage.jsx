@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Plus, Edit, Trash2 } from "lucide-react";
+import { TrendingUp, Plus, Edit, Trash2, CheckCircle, Paperclip } from "lucide-react";
+import ActionConclusionModal from "@/components/safety/ActionConclusionModal";
 import { toast } from "sonner";
 import { format, isBefore } from "date-fns";
 
@@ -28,6 +29,7 @@ export default function RiskActionPlanPage() {
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
   const [filterStatus, setFilterStatus] = useState("");
+  const [conclusionAction, setConclusionAction] = useState(null);
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
   const qc = useQueryClient();
@@ -94,11 +96,12 @@ export default function RiskActionPlanPage() {
                 <TableHead>Prazo</TableHead>
                 <TableHead>Prioridade</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Evidência</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">Nenhuma ação cadastrada</TableCell></TableRow>}
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {filtered.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-gray-400 py-8">Nenhuma ação cadastrada</TableCell></TableRow>}
               {filtered.map(a => (
                 <TableRow key={a.id} className={isOverdue(a) ? "bg-red-50" : ""}>
                   <TableCell>
@@ -115,7 +118,23 @@ export default function RiskActionPlanPage() {
                   </TableCell>
                   <TableCell><Badge className={PRIORITY_COLORS[a.priority]}>{PRIORITY_LABELS[a.priority]}</Badge></TableCell>
                   <TableCell><Badge className={STATUS_COLORS[a.status]}>{STATUS_LABELS[a.status]}</Badge></TableCell>
+                  <TableCell>
+                    {a.evidence_url ? (
+                      <a href={a.evidence_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-purple-600 hover:underline">
+                        <Paperclip className="w-3 h-3" /> Ver
+                      </a>
+                    ) : a.assinatura_url ? (
+                      <a href={a.assinatura_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
+                        <CheckCircle className="w-3 h-3" /> Assinado
+                      </a>
+                    ) : <span className="text-xs text-gray-300">—</span>}
+                  </TableCell>
                   <TableCell className="text-right">
+                    {a.status !== "concluido" && (
+                      <Button variant="ghost" size="icon" title="Concluir com assinatura" onClick={() => setConclusionAction(a)}>
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(a)}><Edit className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => { if (confirm("Excluir ação?")) deleteMutation.mutate(a.id); }}><Trash2 className="w-4 h-4 text-red-500" /></Button>
                   </TableCell>
@@ -193,6 +212,14 @@ export default function RiskActionPlanPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ActionConclusionModal
+        action={conclusionAction}
+        open={!!conclusionAction}
+        onClose={() => setConclusionAction(null)}
+        onSaved={() => qc.invalidateQueries(["actions"])}
+      />
     </div>
   );
+}
 }
