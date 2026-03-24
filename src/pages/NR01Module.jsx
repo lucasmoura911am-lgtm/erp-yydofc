@@ -16,6 +16,7 @@ import NR01ActionPlan from "@/components/nr01/NR01ActionPlan";
 import NR01Exams from "@/components/nr01/NR01Exams";
 import NR01Risks from "@/components/nr01/NR01Risks";
 import NR01Trainings from "@/components/nr01/NR01Trainings";
+import NR01Tasks from "@/components/nr01/NR01Tasks";
 import { differenceInDays, format, isBefore } from "date-fns";
 import { toast } from "sonner";
 
@@ -53,6 +54,9 @@ export default function NR01Module() {
   const { data: trainings = [] } = useQuery({
     queryKey: ["sst_treinamentos"], queryFn: () => base44.entities.SSTTreinamento.list(), enabled: !!user
   });
+  const { data: nr01Tasks = [] } = useQuery({
+    queryKey: ["nr01_tasks"], queryFn: () => base44.entities.TarefaNR01.list(), enabled: !!user
+  });
 
   const getContractLabel = (cid) => {
     const c = contracts.find(x => x.id === cid);
@@ -67,6 +71,7 @@ export default function NR01Module() {
   const filteredPlans = selectedContract ? healthPlans.filter(h => h.contract_id === selectedContract) : healthPlans;
   const filteredExams = selectedContract ? exams.filter(e => e.contract_id === selectedContract) : exams;
   const filteredTrainings = selectedContract ? trainings.filter(t => t.contract_id === selectedContract) : trainings;
+  const filteredTasks = selectedContract ? nr01Tasks.filter(t => t.contract_id === selectedContract) : nr01Tasks;
 
   const program = programs.find(p => p.contract_id === selectedContract);
 
@@ -77,6 +82,7 @@ export default function NR01Module() {
   const pctActions = totalActions > 0 ? Math.round((concludedActions / totalActions) * 100) : 0;
 
   const criticalRisks = filteredRisks.filter(r => r.risk_level === "critico" || r.risk_level === "alto");
+  const pendingTasks = filteredTasks.filter(t => t.status !== "concluida" && t.status !== "cancelada").length;
 
   const overdueExams = filteredExams.filter(e => e.status === "vencido").length;
   const upcomingExams = filteredExams.filter(e => e.status === "agendado").length;
@@ -144,6 +150,10 @@ export default function NR01Module() {
             <TabsTrigger value="exams" className="gap-2"><Activity className="w-4 h-4" />Exames (PCMSO)</TabsTrigger>
             <TabsTrigger value="risks" className="gap-2"><AlertTriangle className="w-4 h-4" />Inventário de Riscos</TabsTrigger>
             <TabsTrigger value="trainings" className="gap-2"><BookOpen className="w-4 h-4" />Treinamentos</TabsTrigger>
+            <TabsTrigger value="tasks" className="gap-2 relative">
+              <CheckCircle2 className="w-4 h-4" />Tarefas NR-01
+              {pendingTasks > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{pendingTasks > 9 ? '9+' : pendingTasks}</span>}
+            </TabsTrigger>
           </TabsList>
 
           {/* ─── DASHBOARD ─── */}
@@ -350,6 +360,15 @@ export default function NR01Module() {
               employees={employees}
               contracts={contracts}
               clients={clients}
+              selectedContract={selectedContract}
+            />
+          </TabsContent>
+
+          {/* ─── TAREFAS NR-01 ─── */}
+          <TabsContent value="tasks">
+            <NR01Tasks
+              user={user}
+              tasks={filteredTasks}
               selectedContract={selectedContract}
             />
           </TabsContent>
