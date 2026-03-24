@@ -67,26 +67,33 @@ export function calcWorkedMinutes(records) {
 /**
  * Resultado por dia:
  * {
- *   dateStr, workedMin, jornadaMin,
- *   extraMin, atrasoMin, faltaMin,
- *   label: "falta" | "atraso" | "extra" | "normal",
+ *   dateStr, dow, workedMin, jornadaMin,
+ *   extraMin, extra50Min, extra100Min,
+ *   atrasoMin, faltaMin,
+ *   label: "falta" | "atraso" | "extra" | "normal" | "folga",
  *   hasRecords
  * }
  */
 export function calcDayResult(dateStr, records, jornadaMin = 480) {
   const hasRecords = records.length > 0;
   const workedMin = calcWorkedMinutes(records);
+  const dow = new Date(dateStr + "T00:00:00").getDay(); // 0=Dom
 
   let extraMin = 0;
+  let extra50Min = 0;
+  let extra100Min = 0;
   let atrasoMin = 0;
   let faltaMin = 0;
   let label = "normal";
 
-  // Dia sem jornada prevista (folga / fora da escala)
+  // Dia sem jornada prevista (folga / domingo / fora da escala)
   if (jornadaMin === 0) {
     label = "folga";
-    if (workedMin > 0) extraMin = workedMin; // trabalhou em dia de folga = extra
-    return { dateStr, workedMin, jornadaMin, extraMin, atrasoMin, faltaMin, label, hasRecords };
+    if (workedMin > 0) {
+      extraMin = workedMin;
+      extra100Min = workedMin; // trabalhou em folga = 100%
+    }
+    return { dateStr, dow, workedMin, jornadaMin, extraMin, extra50Min, extra100Min, atrasoMin, faltaMin, label, hasRecords };
   }
 
   if (!hasRecords || workedMin === 0) {
@@ -96,6 +103,9 @@ export function calcDayResult(dateStr, records, jornadaMin = 480) {
     const saldo = workedMin - jornadaMin;
     if (saldo > 0) {
       extraMin = saldo;
+      // Domingo (dow=0) = 100%; demais = 50%
+      if (dow === 0) extra100Min = saldo;
+      else extra50Min = saldo;
       label = "extra";
     } else if (saldo < 0) {
       atrasoMin = Math.abs(saldo);
@@ -103,7 +113,44 @@ export function calcDayResult(dateStr, records, jornadaMin = 480) {
     }
   }
 
-  return { dateStr, workedMin, jornadaMin, extraMin, atrasoMin, faltaMin, label, hasRecords };
+  return { dateStr, dow, workedMin, jornadaMin, extraMin, extra50Min, extra100Min, atrasoMin, faltaMin, label, hasRecords };
+}
+
+/**
+ * Aplica regra de Interjornada (CLT Art. 66) ao array de dayResults.
+ * Intervalo mínimo entre jornadas = 11h (660 min).
+ * Horas trabalhadas dentro da violação de interjornada viram extra100.
+ * Modifica os objetos in-place e retorna o array.
+ */
+export function applyInterjornada(dayResults, recordsByDate) {
+  for (let i = 1; i < dayResults.length; i++) {
+    const prev = dayResults[i - 1];
+    const curr = dayResults[i];
+    if (!recordsByDate) continue;
+    const prevRecs = recordsByDate[prev.dateStr] || [];
+    const currRecs = recordsByDate[curr.dateStr] || [];
+    const prevSaida = prevRecs.find(r => r.type === "saida")?.timestamp;
+    const currEntrada = currRecs.find(r => r.type === "entrada")?.timestamp;
+    if (!prevSaida || !currEntrada) continue;
+    const saidaMin = toMinutes(prevSaida);
+    const entradaMin = toMinutes(currEntrada);
+    if (saidaMin === null || entradaMin === null) continue;
+    // Intervalo entre saída do dia anterior e entrada do dia atual
+    let intervalo = entradaMin + 1440 - saidaMin; // sempre positivo (dia seguinte)
+    if (intervalo >= 1440) intervalo -= 1440; // segurança
+    const MINIMO_INTERJORNADA = 660; // 11 horas
+    if (intervalo < MINIMO_INTERJORNADA) {
+      const violacaoMin = MINIMO_INTERJORNADA - intervalo;
+      // As horas trabalhadas dentro da violação passam a ser extra100
+      const horasViolacao = Math.min(violacaoMin, curr.workedMin);
+      if (horasViolacao > 0 && curr.label !== "falta") {
+        curr.extra100Min = (curr.extra100Min || 0) + horasViolacao;
+        curr.extra50Min = Math.max(0, (curr.extra50Min || 0) - horasViolacao);
+        curr.interjornadaMin = horasViolacao;
+      }
+    }
+  }
+  return dayResults;
 }
 
 /**
@@ -169,18 +216,25 @@ export function calcMonthlySummary(dayResults) {
   let totalWorkedMin = 0;
   let totalJornadaMin = 0;
   let totalExtraMin = 0;
+  let totalExtra50Min = 0;
+  let totalExtra100Min = 0;
   let totalAtrasoMin = 0;
   let totalFaltaMin = 0;
+  let totalInterjornadaMin = 0;
   let diasTrabalhados = 0;
   let diasFalta = 0;
   let diasAtraso = 0;
+  let diasInterjornada = 0;
 
   dayResults.forEach(d => {
     totalWorkedMin += d.workedMin;
     totalJornadaMin += d.jornadaMin;
     totalExtraMin += d.extraMin;
+    totalExtra50Min += d.extra50Min || 0;
+    totalExtra100Min += d.extra100Min || 0;
     totalAtrasoMin += d.atrasoMin;
     totalFaltaMin += d.faltaMin;
+    if (d.interjornadaMin > 0) { totalInterjornadaMin += d.interjornadaMin; diasInterjornada++; }
     if (d.workedMin > 0) diasTrabalhados++;
     if (d.label === "falta") diasFalta++;
     if (d.label === "atraso") diasAtraso++;
