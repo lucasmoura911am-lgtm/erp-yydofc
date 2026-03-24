@@ -51,6 +51,7 @@ export default function MonthlyTimeReport() {
     queryKey: ["shifts", user?.company_id],
     queryFn: () => base44.entities.Shift.filter({ company_id: user.company_id }),
     enabled: !!user?.company_id,
+    staleTime: 0,
   });
 
   const selectedEmp = employees.find(e => e.id === selectedEmployee);
@@ -273,7 +274,7 @@ export default function MonthlyTimeReport() {
                                 <span className={saldo >= 0 ? "text-green-600" : "text-orange-600"}>
                                   {formatSaldo(saldo)}
                                   {day.label === "folga" && day.workedMin > 0 && (
-                                    <span className="ml-1 text-xs font-normal text-emerald-600">(100%)</span>
+                                    <span className="ml-1 text-xs font-normal text-emerald-600">({overtimeConfig?.offDayRate ?? 100}%)</span>
                                   )}
                                 </span>
                               )}

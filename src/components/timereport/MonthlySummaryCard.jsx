@@ -68,19 +68,19 @@ export default function MonthlySummaryCard({ summary }) {
         {totalExtra50Min > 0 && (
           <Row
             icon={TrendingUp}
-            label="↳ HE 50% (dias úteis)"
+            label="↳ HE até 50% (dias úteis)"
             value={`+${formatMinutes(totalExtra50Min)}`}
             color="text-green-700"
-            badge="50%"
+            badge="≤50%"
           />
         )}
         {totalExtra100Min > 0 && (
           <Row
             icon={TrendingUp}
-            label="↳ HE 100% (domingos/folgas)"
+            label="↳ HE acima de 50% (domingos/folgas)"
             value={`+${formatMinutes(totalExtra100Min)}`}
             color="text-emerald-600"
-            badge="100%"
+            badge=">50%"
           />
         )}
         {totalInterjornadaMin > 0 && (
