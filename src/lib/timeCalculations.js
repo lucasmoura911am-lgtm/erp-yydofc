@@ -82,8 +82,14 @@ export function calcDayResult(dateStr, records, jornadaMin = 480) {
   let faltaMin = 0;
   let label = "normal";
 
+  // Dia sem jornada prevista (folga / fora da escala)
+  if (jornadaMin === 0) {
+    label = "folga";
+    if (workedMin > 0) extraMin = workedMin; // trabalhou em dia de folga = extra
+    return { dateStr, workedMin, jornadaMin, extraMin, atrasoMin, faltaMin, label, hasRecords };
+  }
+
   if (!hasRecords || workedMin === 0) {
-    // dia sem marcação = falta
     faltaMin = jornadaMin;
     label = "falta";
   } else {
@@ -106,12 +112,33 @@ export function calcDayResult(dateStr, records, jornadaMin = 480) {
  * Returns: totalDsrMin (number)
  */
 export function calcDSR(dayResults) {
-  // Agrupar por semana ISO (segunda a domingo)
+  const weeks = buildWeeks(dayResults);
+  let totalDsrMin = 0;
+  Object.values(weeks).forEach(weekDays => {
+    const dsr = calcWeekDSR(weekDays);
+    totalDsrMin += dsr;
+  });
+  return totalDsrMin;
+}
+
+/** Retorna map weekKey -> { dsrMin, sundayDateStr } para exibição por semana */
+export function calcWeeklyDSRMap(dayResults) {
+  const weeks = buildWeeks(dayResults);
+  const result = {};
+  Object.entries(weeks).forEach(([weekKey, weekDays]) => {
+    const dsr = calcWeekDSR(weekDays);
+    // Encontra o domingo da semana
+    const sunday = weekDays.find(d => d.dow === 0);
+    result[weekKey] = { dsrMin: dsr, sundayDateStr: sunday?.dateStr || null };
+  });
+  return result;
+}
+
+function buildWeeks(dayResults) {
   const weeks = {};
   dayResults.forEach(day => {
     const d = new Date(day.dateStr + "T00:00:00");
-    const dow = d.getDay(); // 0=dom, 1=seg ... 6=sab
-    // Semana começa na segunda; domingo fecha semana anterior
+    const dow = d.getDay();
     const mondayOffset = dow === 0 ? -6 : 1 - dow;
     const monday = new Date(d);
     monday.setDate(d.getDate() + mondayOffset);
@@ -119,24 +146,18 @@ export function calcDSR(dayResults) {
     if (!weeks[weekKey]) weeks[weekKey] = [];
     weeks[weekKey].push({ ...day, dow });
   });
+  return weeks;
+}
 
-  let totalDsrMin = 0;
-
-  Object.values(weeks).forEach(weekDays => {
-    // Dias úteis = segunda(1) a sábado(6)
-    const diasUteis = weekDays.filter(d => d.dow >= 1 && d.dow <= 6);
-    const diasUteisComTrabalho = diasUteis.filter(d => d.workedMin > 0 && d.jornadaMin > 0);
-    const totalHeSemana = diasUteisComTrabalho.reduce((s, d) => s + d.extraMin, 0);
-    const qtdDiasUteis = diasUteisComTrabalho.length;
-
-    if (qtdDiasUteis > 0 && totalHeSemana > 0) {
-      // DSR = média das horas extras por dia útil trabalhado (aplicada ao domingo)
-      const dsrSemana = Math.round(totalHeSemana / qtdDiasUteis);
-      totalDsrMin += dsrSemana;
-    }
-  });
-
-  return totalDsrMin;
+function calcWeekDSR(weekDays) {
+  const diasUteis = weekDays.filter(d => d.dow >= 1 && d.dow <= 6 && d.jornadaMin > 0);
+  const diasUteisComTrabalho = diasUteis.filter(d => d.workedMin > 0);
+  const totalHeSemana = diasUteisComTrabalho.reduce((s, d) => s + d.extraMin, 0);
+  const qtdDiasUteis = diasUteisComTrabalho.length;
+  if (qtdDiasUteis > 0 && totalHeSemana > 0) {
+    return Math.round(totalHeSemana / qtdDiasUteis);
+  }
+  return 0;
 }
 
 /**
