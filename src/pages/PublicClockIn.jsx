@@ -373,7 +373,7 @@ export default function PublicClockIn() {
       });
 
       if (recordType === 'saida') {
-        await updateHoursBank(employee.id, employee.company_id, timestamp);
+        await updateHoursBank(employee.id, employee.company_id, serverTime);
       }
 
       setStep("success");
