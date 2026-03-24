@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ALL_MODULES } from "@/lib/navigationModules";
+import NavigationCustomizer, { useNavigationOrder } from "@/components/navigation/NavigationCustomizer";
 import { base44 } from "@/api/base44Client";
 import {
   LogOut,
@@ -77,7 +78,8 @@ export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedModules, setExpandedModules] = useState({});
-  const [customRole, setCustomRole] = useState(null); // AccessRole object for non-admin users
+  const [customRole, setCustomRole] = useState(null);
+  const [customizerOpen, setCustomizerOpen] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -361,6 +363,20 @@ export default function Layout({ children }) {
         ]
       },
       {
+        id: "payroll_clt",
+        title: "Folha de Pagamento CLT",
+        icon: DollarSign,
+        items: [
+          { title: "Config. Trabalhista", url: "/CompanyLaborConfigPage", icon: Settings },
+          { title: "Regras CLT", url: "/LaborRulesPage", icon: Scale },
+          { title: "Eventos da Folha", url: "/PayrollEventsPage", icon: Zap },
+          { title: "Processamento de Folha", url: "/PayrollRunPage", icon: FileText },
+          { title: "Tabelas INSS/IRRF", url: "/TaxTablePage", icon: Table2 },
+          { title: "Comissões", url: "/CommissionsPage", icon: TrendingUp },
+          { title: "Descontos", url: "/DiscountRecordsPage", icon: TrendingDown },
+        ]
+      },
+      {
         id: "system",
         title: "Sistema",
         icon: Settings,
@@ -473,7 +489,9 @@ export default function Layout({ children }) {
     return employeeModules;
   };
 
-  const navigationModules = getNavigationModules();
+  const allModulesForOrder = getNavigationModules();
+  const { getOrderedModules, saveOrder, order, reset } = useNavigationOrder(allModulesForOrder);
+  const navigationModules = getOrderedModules(allModulesForOrder);
 
   const SidebarContent = ({ onLinkClick }) => (
     <div className="flex flex-col h-full">
@@ -561,6 +579,13 @@ export default function Layout({ children }) {
 
       {/* User + bottom actions */}
       <div className="border-t border-gray-200 dark:border-gray-800 p-3 space-y-1">
+        <button
+          onClick={() => setCustomizerOpen(true)}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        >
+          <Settings className="w-4 h-4 flex-shrink-0" />
+          {sidebarOpen && <span>Personalizar Menu</span>}
+        </button>
         <button
           onClick={() => setDarkMode(!darkMode)}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
