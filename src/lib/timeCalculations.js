@@ -187,7 +187,12 @@ export function calcMonthlySummary(dayResults) {
   });
 
   const saldoLiquidoMin = totalExtraMin - totalAtrasoMin;
-  const dsrMin = calcDSR(dayResults);
+
+  // DSR: calcula por semana — cada semana com HE gera 1 dia de DSR
+  const weeklyDsrMap = calcWeeklyDSRMap(dayResults);
+  const dsrWeeks = Object.values(weeklyDsrMap).filter(w => w.dsrMin > 0);
+  const dsrMin = dsrWeeks.reduce((s, w) => s + w.dsrMin, 0);
+  const dsrDias = dsrWeeks.length; // quantas semanas geraram DSR = quantos dias de DSR
 
   return {
     totalWorkedMin,
@@ -197,6 +202,7 @@ export function calcMonthlySummary(dayResults) {
     totalFaltaMin,
     saldoLiquidoMin,
     dsrMin,
+    dsrDias,
     diasTrabalhados,
     diasFalta,
     diasAtraso,

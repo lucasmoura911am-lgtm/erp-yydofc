@@ -27,6 +27,7 @@ export default function MonthlySummaryCard({ summary }) {
     totalFaltaMin,
     saldoLiquidoMin,
     dsrMin,
+    dsrDias,
     diasTrabalhados,
     diasFalta,
     diasAtraso,
@@ -74,13 +75,30 @@ export default function MonthlySummaryCard({ summary }) {
           color={totalFaltaMin > 0 ? "text-red-600" : "text-gray-500"}
           badge={diasFalta > 0 ? `${diasFalta} dia${diasFalta > 1 ? "s" : ""}` : undefined}
         />
-        <Row
-          icon={Zap}
-          label="DSR sobre Horas Extras (Lei 605/49)"
-          value={dsrMin > 0 ? `+${formatMinutes(dsrMin)}` : "00:00"}
-          color={dsrMin > 0 ? "text-purple-600" : "text-gray-500"}
-          badge={dsrMin > 0 ? "DSR" : undefined}
-        />
+        {/* DSR — dias e horas */}
+        <div className="py-2 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <Zap className="w-4 h-4 text-purple-600" />
+              <span>DSR sobre HE — Lei 605/49</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {dsrDias > 0 && (
+                <span className="text-xs border rounded px-1.5 py-0.5 border-purple-300 text-purple-600">
+                  {dsrDias} dia{dsrDias > 1 ? "s" : ""}
+                </span>
+              )}
+              <span className={`font-semibold text-sm ${dsrMin > 0 ? "text-purple-600" : "text-gray-500"}`}>
+                {dsrMin > 0 ? `+${formatMinutes(dsrMin)}` : "00:00"}
+              </span>
+            </div>
+          </div>
+          {dsrDias > 0 && (
+            <p className="text-xs text-gray-400 mt-0.5 ml-6">
+              {dsrDias} semana{dsrDias > 1 ? "s" : ""} com HE geraram adicional de DSR
+            </p>
+          )}
+        </div>
 
         {/* Saldo líquido em destaque */}
         <div className={`mt-3 rounded-lg border p-3 ${saldoBg}`}>
