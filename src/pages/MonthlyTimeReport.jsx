@@ -284,10 +284,6 @@ export default function MonthlyTimeReport() {
                       );
                     })}
                   </div>
-                        </div>
-                      );
-                    })}
-                  </div>
                 )}
               </CardContent>
             </Card>
