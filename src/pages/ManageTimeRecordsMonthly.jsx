@@ -189,6 +189,18 @@ export default function ManageTimeRecordsMonthly() {
     return new Set(shift.work_days.map(d => WORK_DAYS_MAP[d]).filter(d => d !== undefined));
   }, [selectedEmp, shifts]);
 
+  const overtimeConfig = useMemo(() => {
+    if (!selectedEmp?.shift_id) return null;
+    const shift = shifts.find(s => s.id === selectedEmp.shift_id);
+    if (!shift) return null;
+    const dayRates = new Map();
+    (shift.overtime_rules || []).forEach(r => {
+      const dow = WORK_DAYS_MAP[r.day];
+      if (dow !== undefined) dayRates.set(dow, r.rate);
+    });
+    return { dayRates, offDayRate: shift.overtime_offday_rate ?? 100 };
+  }, [selectedEmp, shifts]);
+
   const shiftJornadaMin = useMemo(() => {
     if (!selectedEmp?.shift_id) return 480;
     const shift = shifts.find(s => s.id === selectedEmp.shift_id);
