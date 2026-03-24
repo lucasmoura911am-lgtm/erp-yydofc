@@ -202,7 +202,7 @@ export default function ManageTimeRecordsMonthly() {
   }, [selectedEmp, shifts]);
 
   const { monthlySummary, dsrBySunday } = useMemo(() => {
-    if (!selectedEmployee || days.length === 0) return { monthlySummary: null, dsrBySunday: {} };
+    if (!selectedEmployee || days.length === 0) return { monthlySummary: null, dsrBySunday: {}, dayResultMap: {} };
     const defaultWorkDays = new Set([1,2,3,4,5]);
     const workDays = shiftWorkDays || defaultWorkDays;
     const listByDate = {};
