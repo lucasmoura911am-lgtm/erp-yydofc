@@ -143,7 +143,7 @@ export default function MonthlyTimeReport() {
 
     const summary = calcMonthlySummary(dayResults);
     return { days: dayResults, summary, dsrBySunday };
-  }, [timeRecords, selectedEmployee, currentMonth, shiftWorkDays, shiftJornadaMin]);
+  }, [timeRecords, selectedEmployee, currentMonth, shiftWorkDays, shiftJornadaMin, overtimeConfig]);
 
   const recordsMap = useMemo(() => {
     const m = {};
