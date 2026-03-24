@@ -93,7 +93,7 @@ export default function MonthlyTimeReport() {
       const dow = WORK_DAYS_MAP[r.day];
       if (dow !== undefined) dayRates.set(dow, r.rate);
     });
-    return { dayRates, offDayRate: shift.overtime_offday_rate ?? 100 };
+    return { dayRates, offDayRate: shift.overtime_offday_rate ?? null };
   }, [selectedEmp, shifts]);
 
   const shiftJornadaMin = useMemo(() => {
