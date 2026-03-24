@@ -73,117 +73,73 @@ async function extractDataFromDocuments({ pgrFileUrl, pcmsoFileUrl, contractId, 
     throw new Error("Nenhum documento pôde ser lido.");
   }
 
-  // 2. Prompt instruindo extração em JSON puro
+  // 2. Prompt de extração
   contentBlocks.push({
     type: "text",
-    text: `Leia cuidadosamente os documentos PGR e/ou PCMSO acima e extraia TODAS as informações relevantes.
+    text: `Você é um motor de análise documental especializado em SST (Segurança do Trabalho) no Brasil.
 
-Retorne APENAS um objeto JSON válido, sem texto antes ou depois, sem blocos de código markdown, sem explicações. Estrutura:
+Sua tarefa é:
+1. Ler completamente os documentos fornecidos (PGR e PCMSO).
+2. Identificar TODOS os riscos ocupacionais, exames médicos e obrigações legais.
+3. Gerar automaticamente um PLANO DE AÇÃO com atividades obrigatórias.
+
+REGRAS CRÍTICAS:
+- NÃO RESUMA
+- NÃO IGNORE NENHUMA INFORMAÇÃO
+- NÃO INVENTE DADOS
+- SE NÃO ENCONTRAR DADOS, RETORNE "NAO_ENCONTRADO"
+- LEIA 100% DO DOCUMENTO
+
+Para cada item encontrado, identifique:
+TIPO: RISCO_OCUPACIONAL | EXAME_MEDICO | ACAO_PREVENTIVA | ACAO_CORRETIVA
+
+CAMPOS OBRIGATÓRIOS por item:
+- titulo
+- descricao
+- setor (ou "NAO_ENCONTRADO")
+- funcao (ou "NAO_ENCONTRADO")
+- risco (se aplicável)
+- nivel_risco (baixo, medio, alto ou NAO_ENCONTRADO)
+- exame (se aplicável)
+- periodicidade (ex: anual, semestral, admissional, etc)
+- norma (NR correspondente se houver)
+- obrigatorio (true/false)
+
+Com base nos dados extraídos, crie atividades no formato:
+- nome
+- descricao
+- responsavel (SEMPRE "SEGURANCA_DO_TRABALHO" se não estiver claro)
+- prazo_dias (alto=7, medio=15, baixo=30)
+- prioridade (alta, media, baixa)
+
+Resposta OBRIGATÓRIA em JSON puro, sem texto fora do JSON, sem markdown:
 
 {
-  "empresa": {
-    "razao_social": "",
-    "cnpj": "",
-    "empresa_contratante": "",
-    "grau_risco": "",
-    "cnae": "",
-    "endereco": ""
-  },
-  "pgr": {
-    "responsavel_tecnico": "",
-    "crea": "",
-    "inicio_validade": "",
-    "revisar_ate": "",
-    "iqct_geral": ""
-  },
-  "pcmso": {
-    "medico_responsavel": "",
-    "crm": "",
-    "rqe": "",
-    "inicio_validade": "",
-    "revisar_ate": ""
-  },
-  "ambientes": [
-    { "nome": "", "descricao": "" }
+  "itens_extraidos": [
+    {
+      "tipo": "",
+      "titulo": "",
+      "descricao": "",
+      "setor": "",
+      "funcao": "",
+      "risco": "",
+      "nivel_risco": "",
+      "exame": "",
+      "periodicidade": "",
+      "norma": "",
+      "obrigatorio": true
+    }
   ],
-  "cargos": [
+  "atividades": [
     {
       "nome": "",
-      "cbo": "",
-      "atividades": "",
-      "iqct": "",
-      "num_empregados": ""
-    }
-  ],
-  "riscos": [
-    {
-      "cargo": "",
-      "categoria": "mecanico|ergonomico|fisico|quimico|biologico",
-      "agente": "",
-      "exposicao": "",
-      "probabilidade": "",
-      "probabilidade_nivel": 0,
-      "severidade": "",
-      "severidade_nivel": 0,
-      "nivel_risco": "trivial|toleravel|moderado|substancial|intoleravel",
-      "possíveis_danos": "",
-      "controle_necessario": true,
-      "epis_obrigatorios": ""
-    }
-  ],
-  "plano_acao": [
-    {
       "descricao": "",
-      "mes_previsto": "",
-      "ano_previsto": "",
-      "periodicidade": "unica|mensal|trimestral|semestral|anual",
-      "tipo": "treinamento|orientacao|elaboracao|controle|monitoramento|outro",
-      "nivel_prioridade": "alta|media|baixa"
-    }
-  ],
-  "exames_por_cargo": [
-    {
-      "cargo": "",
-      "exames": [
-        {
-          "nome": "",
-          "codigo_esocial": "",
-          "admissional": true,
-          "periodico": true,
-          "demissional": false,
-          "retorno_trabalho": false,
-          "mudanca_risco": true,
-          "periodicidade_meses": 12,
-          "observacoes": ""
-        }
-      ]
-    }
-  ],
-  "treinamentos_exigidos": [
-    {
-      "nr_referencia": "",
-      "descricao": "",
-      "periodicidade": "",
-      "cargo_aplicavel": "todos|especifico",
-      "cargos_especificos": ""
-    }
-  ],
-  "vacinacao": [
-    {
-      "vacina": "",
-      "periodicidade": "",
-      "grupo_risco": ""
+      "responsavel": "SEGURANCA_DO_TRABALHO",
+      "prazo_dias": 0,
+      "prioridade": ""
     }
   ]
-}
-
-IMPORTANTE:
-- Extraia TODAS as ações do plano de ação, sem exceção
-- Extraia TODOS os riscos de TODOS os cargos
-- Extraia TODOS os exames de TODOS os cargos
-- Para riscos SUBSTANCIAL e INTOLERAVEL, marque controle_necessario como true
-- Preencha os campos com as informações exatas do documento
-- Se um campo não existir no documento, use string vazia ou false`
+}`
   });
 
   // 3. Chama Claude API
@@ -231,156 +187,135 @@ async function saveExtractedData(extracted, { contractId, companyId, programId }
     errors: []
   };
 
-  // Salva riscos
-  if (extracted.riscos?.length > 0) {
-    for (const risco of extracted.riscos) {
-      try {
-        await base44.entities.RiskInventory.create({
-          contract_id: contractId,
-          company_id: companyId,
-          cargo: risco.cargo,
-          categoria: risco.categoria,
-          agente: risco.agente,
-          exposicao: risco.exposicao,
-          probabilidade: risco.probabilidade,
-          probabilidade_nivel: risco.probabilidade_nivel,
-          severidade: risco.severidade,
-          severidade_nivel: risco.severidade_nivel,
-          risk_level: mapRiskLevel(risco.nivel_risco),
-          nivel_risco: risco.nivel_risco,
-          possiveis_danos: risco.possíveis_danos || risco.possiveis_danos,
-          controle_necessario: risco.controle_necessario,
-          epis_obrigatorios: risco.epis_obrigatorios,
-          status: risco.controle_necessario ? "pendente" : "controlado",
-          source: "pgr_upload"
-        });
-        results.risks_created++;
-      } catch (e) {
-        results.errors.push(`Risco "${risco.agente}": ${e.message}`);
-      }
+  const itens = extracted.itens_extraidos || [];
+  const atividades = extracted.atividades || [];
+  const today = new Date();
+
+  // Riscos ocupacionais → RiskInventory
+  for (const item of itens.filter(i => i.tipo === "RISCO_OCUPACIONAL")) {
+    try {
+      await base44.entities.RiskInventory.create({
+        contract_id: contractId,
+        company_id: companyId,
+        risk_name: item.titulo,
+        risk_description: item.descricao,
+        risk_type: mapRiskType(item.risco),
+        risk_level: mapRiskLevel(item.nivel_risco),
+        control_measures: [item.norma, item.setor !== "NAO_ENCONTRADO" ? `Setor: ${item.setor}` : ""].filter(Boolean).join(" | "),
+        active: true,
+      });
+      results.risks_created++;
+    } catch (e) {
+      results.errors.push(`Risco "${item.titulo?.slice(0, 40)}": ${e.message}`);
     }
   }
 
-  // Salva ações do plano
-  if (extracted.plano_acao?.length > 0) {
-    for (const acao of extracted.plano_acao) {
-      try {
-        // Calcula deadline aproximado
-        let deadline = null;
-        if (acao.mes_previsto && acao.ano_previsto) {
-          const meses = {
-            "janeiro": "01", "fevereiro": "02", "março": "03", "abril": "04",
-            "maio": "05", "junho": "06", "julho": "07", "agosto": "08",
-            "setembro": "09", "outubro": "10", "novembro": "11", "dezembro": "12",
-            "jan": "01", "fev": "02", "mar": "03", "abr": "04",
-            "mai": "05", "jun": "06", "jul": "07", "ago": "08",
-            "set": "09", "out": "10", "nov": "11", "dez": "12"
-          };
-          const mes = meses[acao.mes_previsto.toLowerCase()] || "01";
-          deadline = `${acao.ano_previsto}-${mes}-01`;
-        }
+  // Exames médicos → SSTExame
+  for (const item of itens.filter(i => i.tipo === "EXAME_MEDICO")) {
+    try {
+      await base44.entities.SSTExame.create({
+        contract_id: contractId,
+        company_id: companyId,
+        employee_id: "template",
+        tipo: mapExamTipo(item.periodicidade),
+        exam_name: item.exame || item.titulo,
+        status: "pendente",
+        observations: [item.descricao, item.setor !== "NAO_ENCONTRADO" ? `Setor: ${item.setor}` : "", item.funcao !== "NAO_ENCONTRADO" ? `Função: ${item.funcao}` : "", item.norma ? `Norma: ${item.norma}` : ""].filter(Boolean).join(" | ")
+      });
+      results.exams_created++;
+    } catch (e) { /* ignorar */ }
+  }
 
-        await base44.entities.RiskActionPlan.create({
-          contract_id: contractId,
-          company_id: companyId,
-          description: acao.descricao,
-          deadline,
-          mes_previsto: acao.mes_previsto,
-          ano_previsto: acao.ano_previsto,
-          periodicidade: acao.periodicidade,
-          tipo: acao.tipo,
-          priority: acao.nivel_prioridade,
-          status: "pendente",
-          source: "pgr_upload"
-        });
-        results.actions_created++;
-      } catch (e) {
-        results.errors.push(`Ação "${acao.descricao?.slice(0, 40)}": ${e.message}`);
-      }
+  // Ações preventivas/corretivas → RiskActionPlan
+  for (const item of itens.filter(i => i.tipo === "ACAO_PREVENTIVA" || i.tipo === "ACAO_CORRETIVA")) {
+    try {
+      const prazo = item.nivel_risco === "alto" ? 7 : item.nivel_risco === "medio" ? 15 : 30;
+      const deadline = new Date(today);
+      deadline.setDate(deadline.getDate() + prazo);
+      await base44.entities.RiskActionPlan.create({
+        contract_id: contractId,
+        company_id: companyId,
+        action_description: item.titulo,
+        responsible: "Responsável SST",
+        deadline: deadline.toISOString().split("T")[0],
+        status: "pendente",
+        priority: item.nivel_risco === "alto" ? "urgente" : item.nivel_risco === "medio" ? "alta" : "media",
+        notes: [item.descricao, item.setor !== "NAO_ENCONTRADO" ? `Setor: ${item.setor}` : "", item.norma ? `Norma: ${item.norma}` : ""].filter(Boolean).join(" | "),
+        legal_obligation: item.obrigatorio !== false,
+        category: item.tipo === "ACAO_CORRETIVA" ? "inspecao" : "monitoramento"
+      });
+      results.actions_created++;
+    } catch (e) {
+      results.errors.push(`Ação "${item.titulo?.slice(0, 40)}": ${e.message}`);
     }
   }
 
-  // Salva planos de saúde / exames por cargo (PCMSO)
-  if (extracted.exames_por_cargo?.length > 0) {
-    for (const plano of extracted.exames_por_cargo) {
-      try {
-        const hp = await base44.entities.HealthActivityPlan.create({
-          contract_id: contractId,
-          company_id: companyId,
-          cargo: plano.cargo,
-          exames: plano.exames,
-          total_exames: plano.exames?.length || 0,
-          source: "pcmso_upload"
-        });
-        results.health_plans_created++;
-
-        // Cria registros individuais de exame (SSTExame) se a entidade existir
-        if (plano.exames?.length > 0) {
-          for (const exame of plano.exames) {
-            try {
-              await base44.entities.SSTExame.create({
-                contract_id: contractId,
-                company_id: companyId,
-                cargo: plano.cargo,
-                nome_exame: exame.nome,
-                codigo_esocial: exame.codigo_esocial,
-                admissional: exame.admissional,
-                periodico: exame.periodico,
-                demissional: exame.demissional,
-                retorno_trabalho: exame.retorno_trabalho,
-                mudanca_risco: exame.mudanca_risco,
-                periodicidade_meses: exame.periodicidade_meses || 12,
-                observacoes: exame.observacoes,
-                status: "pendente",
-                source: "pcmso_upload"
-              });
-              results.exams_created++;
-            } catch (e) {
-              // SSTExame pode não existir, ignorar silenciosamente
-            }
-          }
-        }
-      } catch (e) {
-        results.errors.push(`Plano cargo "${plano.cargo}": ${e.message}`);
-      }
+  // Atividades geradas pela IA → RiskActionPlan
+  for (const atv of atividades) {
+    try {
+      const deadline = new Date(today);
+      deadline.setDate(deadline.getDate() + (Number(atv.prazo_dias) || 30));
+      await base44.entities.RiskActionPlan.create({
+        contract_id: contractId,
+        company_id: companyId,
+        action_description: atv.nome,
+        responsible: atv.responsavel || "SEGURANCA_DO_TRABALHO",
+        deadline: deadline.toISOString().split("T")[0],
+        status: "pendente",
+        priority: atv.prioridade === "alta" ? "urgente" : atv.prioridade || "media",
+        notes: atv.descricao || "",
+        legal_obligation: true
+      });
+      results.actions_created++;
+    } catch (e) {
+      results.errors.push(`Atividade "${atv.nome?.slice(0, 40)}": ${e.message}`);
     }
   }
 
-  // Salva treinamentos exigidos
-  if (extracted.treinamentos_exigidos?.length > 0) {
-    for (const trein of extracted.treinamentos_exigidos) {
-      try {
-        await base44.entities.SSTTreinamento.create({
-          contract_id: contractId,
-          company_id: companyId,
-          nr_referencia: trein.nr_referencia,
-          descricao: trein.descricao,
-          periodicidade: trein.periodicidade,
-          cargo_aplicavel: trein.cargo_aplicavel,
-          cargos_especificos: trein.cargos_especificos,
-          status: "pendente",
-          source: "pgr_pcmso_upload"
-        });
-        results.trainings_created++;
-      } catch (e) {
-        // Entidade pode não existir
-      }
-    }
+  // Treinamentos → SSTTreinamento
+  for (const item of itens.filter(i => i.norma && i.titulo?.toLowerCase().includes("treinamento"))) {
+    try {
+      await base44.entities.SSTTreinamento.create({
+        contract_id: contractId,
+        company_id: companyId,
+        title: item.titulo,
+        tipo: "inicial",
+        nr_referencia: item.norma,
+        status: "agendado",
+        observations: item.descricao
+      });
+      results.trainings_created++;
+    } catch (e) { /* ignorar */ }
   }
 
   return results;
 }
 
-// helper: mapeia nível de risco para campo risk_level
 function mapRiskLevel(nivel) {
-  const map = {
-    "trivial": "trivial",
-    "toleravel": "baixo",
-    "moderado": "medio",
-    "substancial": "alto",
-    "intoleravel": "critico"
-  };
-  return map[nivel?.toLowerCase()] || "medio";
+  if (!nivel || nivel === "NAO_ENCONTRADO") return "medio";
+  const n = nivel.toLowerCase();
+  if (n === "alto") return "alto";
+  if (n === "baixo") return "baixo";
+  return "medio";
+}
+
+function mapRiskType(risco) {
+  if (!risco) return "acidente";
+  const r = risco.toLowerCase();
+  if (r.includes("quim")) return "quimico";
+  if (r.includes("bio")) return "biologico";
+  if (r.includes("ergo") || r.includes("postur")) return "ergonomico";
+  if (r.includes("fis") || r.includes("ruido") || r.includes("calor") || r.includes("vibr")) return "fisico";
+  return "acidente";
+}
+
+function mapExamTipo(periodicidade) {
+  if (!periodicidade) return "periodico";
+  const p = periodicidade.toLowerCase();
+  if (p.includes("admiss")) return "admissional";
+  if (p.includes("demiss")) return "demissional";
+  if (p.includes("retorno")) return "retorno";
+  return "periodico";
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -505,17 +440,16 @@ export default function NR01UploadFlow({ user, contracts, clients, programs, onP
         programId: program_id
       });
 
+      const totalItens = extracted.itens_extraidos?.length || 0;
       setAnalyzeResult({
-        message: `Extração concluída para ${extracted.empresa?.razao_social || "a empresa"}`,
+        message: `${totalItens} itens extraídos do documento`,
         risks_created: saveResults.risks_created,
         actions_created: saveResults.actions_created,
-        health_plans_created: saveResults.health_plans_created,
         exams_created: saveResults.exams_created,
         trainings_created: saveResults.trainings_created,
         errors: saveResults.errors,
-        empresa: extracted.empresa,
-        total_cargos: extracted.cargos?.length || 0,
-        total_riscos_raw: extracted.riscos?.length || 0
+        total_itens: totalItens,
+        total_atividades: extracted.atividades?.length || 0
       });
 
       // Invalida todos os caches
