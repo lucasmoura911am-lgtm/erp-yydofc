@@ -227,7 +227,7 @@ export default function ManageTimeRecordsMonthly() {
       const dow = date.getDay();
       const recs = listByDate[dateStr] || [];
       const jornada = workDays.has(dow) ? shiftJornadaMin : 0;
-      return { ...calcDayResult(dateStr, recs, jornada), dow };
+      return { ...calcDayResult(dateStr, recs, jornada, overtimeConfig), dow };
     });
     applyInterjornada(dayResults, listByDate);
     const weeklyDsrMap = calcWeeklyDSRMap(dayResults);
