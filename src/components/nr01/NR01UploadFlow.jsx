@@ -631,16 +631,7 @@ export default function NR01UploadFlow({ user, contracts, clients, programs, onP
                 </div>
               </div>
 
-              {/* Dados da empresa extraídos */}
-              {analyzeResult.empresa && (
-                <div className="bg-gray-50 border rounded-lg p-3 text-sm space-y-1">
-                  <p className="font-medium text-gray-700">Empresa identificada:</p>
-                  <p className="text-gray-600">{analyzeResult.empresa.razao_social} — CNPJ: {analyzeResult.empresa.cnpj}</p>
-                  {analyzeResult.empresa.empresa_contratante && (
-                    <p className="text-gray-500 text-xs">Contratante: {analyzeResult.empresa.empresa_contratante}</p>
-                  )}
-                </div>
-              )}
+
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
