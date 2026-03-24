@@ -13,6 +13,8 @@ import {
   ChevronDown,
   ChevronRight,
   LayoutDashboard,
+  Scale,
+  Table2,
   Clock,
   Users,
   Building2,
@@ -632,6 +634,14 @@ export default function Layout({ children }) {
 
   return (
     <div className={darkMode ? "dark" : ""}>
+      <NavigationCustomizer
+        open={customizerOpen}
+        onClose={() => setCustomizerOpen(false)}
+        modules={getNavigationModules()}
+        order={order}
+        saveOrder={saveOrder}
+        reset={reset}
+      />
       <div className="min-h-screen flex bg-gray-50 dark:bg-gray-950">
 
         {/* Desktop Sidebar */}
