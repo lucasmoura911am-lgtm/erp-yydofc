@@ -23,14 +23,18 @@ export default function MonthlySummaryCard({ summary }) {
   const {
     totalWorkedMin,
     totalExtraMin,
+    totalExtra50Min = 0,
+    totalExtra100Min = 0,
     totalAtrasoMin,
     totalFaltaMin,
+    totalInterjornadaMin = 0,
     saldoLiquidoMin,
     dsrMin,
     dsrDias,
     diasTrabalhados,
     diasFalta,
     diasAtraso,
+    diasInterjornada = 0,
   } = summary;
 
   const saldoColor = saldoLiquidoMin > 0
@@ -57,11 +61,37 @@ export default function MonthlySummaryCard({ summary }) {
         <Row icon={Clock} label="Total Horas Trabalhadas" value={formatMinutes(totalWorkedMin)} color="text-blue-600" />
         <Row
           icon={TrendingUp}
-          label="Horas Extras"
+          label="Horas Extras (Total)"
           value={totalExtraMin > 0 ? `+${formatMinutes(totalExtraMin)}` : "00:00"}
           color="text-green-600"
-          badge={totalExtraMin > 0 ? "50%" : undefined}
         />
+        {totalExtra50Min > 0 && (
+          <Row
+            icon={TrendingUp}
+            label="↳ HE 50% (dias úteis)"
+            value={`+${formatMinutes(totalExtra50Min)}`}
+            color="text-green-700"
+            badge="50%"
+          />
+        )}
+        {totalExtra100Min > 0 && (
+          <Row
+            icon={TrendingUp}
+            label="↳ HE 100% (domingos/folgas)"
+            value={`+${formatMinutes(totalExtra100Min)}`}
+            color="text-emerald-600"
+            badge="100%"
+          />
+        )}
+        {totalInterjornadaMin > 0 && (
+          <Row
+            icon={AlertTriangle}
+            label={`Interjornada <11h (${diasInterjornada} dia${diasInterjornada > 1 ? "s" : ""})`}
+            value={`+${formatMinutes(totalInterjornadaMin)}`}
+            color="text-amber-600"
+            badge="100%"
+          />
+        )}
         <Row
           icon={TrendingDown}
           label="Atrasos / Déficit de Jornada"
