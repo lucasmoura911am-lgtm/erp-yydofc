@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Save, Trash2, ChevronLeft, ChevronRight, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import MonthlySummaryCard from "@/components/timereport/MonthlySummaryCard";
+import { calcDayResult, calcMonthlySummary, calcWeeklyDSRMap } from "@/lib/timeCalculations";
 import {
   Select,
   SelectContent,
@@ -172,6 +174,52 @@ export default function ManageTimeRecordsMonthly() {
 
   const selectedEmp = employees.find(e => e.id === selectedEmployee);
 
+  const { data: shifts = [] } = useQuery({
+    queryKey: ["shifts", user?.company_id],
+    queryFn: () => base44.entities.Shift.filter({ company_id: user.company_id }),
+    enabled: !!user?.company_id,
+  });
+
+  const WORK_DAYS_MAP = { sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6 };
+
+  const shiftWorkDays = useMemo(() => {
+    if (!selectedEmp?.shift_id) return null;
+    const shift = shifts.find(s => s.id === selectedEmp.shift_id);
+    if (!shift?.work_days?.length) return null;
+    return new Set(shift.work_days.map(d => WORK_DAYS_MAP[d]).filter(d => d !== undefined));
+  }, [selectedEmp, shifts]);
+
+  const shiftJornadaMin = useMemo(() => {
+    if (!selectedEmp?.shift_id) return 480;
+    const shift = shifts.find(s => s.id === selectedEmp.shift_id);
+    if (!shift?.start_time || !shift?.end_time) return 480;
+    const [sh, sm] = shift.start_time.split(":").map(Number);
+    const [eh, em] = shift.end_time.split(":").map(Number);
+    let total = (eh*60+em) - (sh*60+sm);
+    if (total < 0) total += 1440;
+    total -= (shift.break_minutes || 60);
+    return Math.max(total, 0);
+  }, [selectedEmp, shifts]);
+
+  const monthlySummary = useMemo(() => {
+    if (!selectedEmployee || days.length === 0) return null;
+    const defaultWorkDays = new Set([1,2,3,4,5]);
+    const workDays = shiftWorkDays || defaultWorkDays;
+    const listByDate = {};
+    timeRecords.forEach(r => {
+      const day = r.timestamp?.substring(0, 10);
+      if (!listByDate[day]) listByDate[day] = [];
+      listByDate[day].push(r);
+    });
+    const dayResults = days.map(({ date, dateStr }) => {
+      const dow = date.getDay();
+      const recs = listByDate[dateStr] || [];
+      const jornada = workDays.has(dow) ? shiftJornadaMin : 0;
+      return { ...calcDayResult(dateStr, recs, jornada), dow };
+    });
+    return calcMonthlySummary(dayResults);
+  }, [days, timeRecords, selectedEmployee, shiftWorkDays, shiftJornadaMin]);
+
   const hasDayRecords = (dateStr) => Object.keys(recordsMap[dateStr] || {}).length > 0;
   const isDayEdited = (dateStr) => {
     const cur = edits[dateStr] || {};
@@ -229,6 +277,10 @@ export default function ManageTimeRecordsMonthly() {
             <p className="text-gray-500">Selecione um funcionário para começar</p>
           </CardContent>
         </Card>
+      )}
+
+      {selectedEmployee && monthlySummary && (
+        <MonthlySummaryCard summary={monthlySummary} />
       )}
 
       {selectedEmployee && (
