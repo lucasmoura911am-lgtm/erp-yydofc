@@ -1,0 +1,183 @@
+/**
+ * Biblioteca de cálculos de ponto — padrão CLT / Lei 605/49
+ * Todas as operações internas em MINUTOS; exibição em HH:MM
+ */
+
+/** Converte "HH:MM:SS" ou timestamp ISO para minutos desde 00:00 */
+export function toMinutes(timestamp) {
+  if (!timestamp) return null;
+  const d = new Date(timestamp);
+  if (isNaN(d)) return null;
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+/** Formata minutos absolutos em "HH:MM" */
+export function formatMinutes(totalMinutes) {
+  const abs = Math.abs(totalMinutes);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** Formata saldo (positivo/negativo) em "+HH:MM" / "-HH:MM" / "00:00" */
+export function formatSaldo(minutes) {
+  if (minutes === 0) return "00:00";
+  const sign = minutes > 0 ? "+" : "-";
+  return `${sign}${formatMinutes(minutes)}`;
+}
+
+/**
+ * Calcula os minutos trabalhados no dia a partir dos registros do dia.
+ * records = array de TimeRecord do dia, cada um com { type, timestamp }
+ * Suporta múltiplos pares entrada/saída mas usa a estrutura padrão:
+ * entrada → pausa → retorno → saida
+ */
+export function calcWorkedMinutes(records) {
+  const byType = {};
+  records.forEach(r => { byType[r.type] = r; });
+
+  const entrada = byType["entrada"]?.timestamp;
+  const pausa = byType["pausa"]?.timestamp;
+  const retorno = byType["retorno"]?.timestamp;
+  const saida = byType["saida"]?.timestamp;
+
+  if (!entrada || !saida) return 0;
+
+  const entMin = toMinutes(entrada);
+  const saiMin = toMinutes(saida);
+  if (entMin === null || saiMin === null) return 0;
+
+  let total = saiMin - entMin;
+  if (total < 0) total += 1440; // virada de meia-noite
+
+  // Desconta intervalo se tiver pausa+retorno
+  if (pausa && retorno) {
+    const pauMin = toMinutes(pausa);
+    const retMin = toMinutes(retorno);
+    if (pauMin !== null && retMin !== null) {
+      let intervalo = retMin - pauMin;
+      if (intervalo < 0) intervalo += 1440;
+      total -= intervalo;
+    }
+  }
+
+  return Math.max(0, total);
+}
+
+/**
+ * Resultado por dia:
+ * {
+ *   dateStr, workedMin, jornadaMin,
+ *   extraMin, atrasoMin, faltaMin,
+ *   label: "falta" | "atraso" | "extra" | "normal",
+ *   hasRecords
+ * }
+ */
+export function calcDayResult(dateStr, records, jornadaMin = 480) {
+  const hasRecords = records.length > 0;
+  const workedMin = calcWorkedMinutes(records);
+
+  let extraMin = 0;
+  let atrasoMin = 0;
+  let faltaMin = 0;
+  let label = "normal";
+
+  if (!hasRecords || workedMin === 0) {
+    // dia sem marcação = falta
+    faltaMin = jornadaMin;
+    label = "falta";
+  } else {
+    const saldo = workedMin - jornadaMin;
+    if (saldo > 0) {
+      extraMin = saldo;
+      label = "extra";
+    } else if (saldo < 0) {
+      atrasoMin = Math.abs(saldo);
+      label = "atraso";
+    }
+  }
+
+  return { dateStr, workedMin, jornadaMin, extraMin, atrasoMin, faltaMin, label, hasRecords };
+}
+
+/**
+ * Calcula DSR sobre horas extras por semana — Lei 605/49
+ * dayResults: array de calcDayResult() para o mês inteiro
+ * Returns: totalDsrMin (number)
+ */
+export function calcDSR(dayResults) {
+  // Agrupar por semana ISO (segunda a domingo)
+  const weeks = {};
+  dayResults.forEach(day => {
+    const d = new Date(day.dateStr + "T00:00:00");
+    const dow = d.getDay(); // 0=dom, 1=seg ... 6=sab
+    // Semana começa na segunda; domingo fecha semana anterior
+    const mondayOffset = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + mondayOffset);
+    const weekKey = monday.toISOString().substring(0, 10);
+    if (!weeks[weekKey]) weeks[weekKey] = [];
+    weeks[weekKey].push({ ...day, dow });
+  });
+
+  let totalDsrMin = 0;
+
+  Object.values(weeks).forEach(weekDays => {
+    // Dias úteis = segunda(1) a sábado(6)
+    const diasUteis = weekDays.filter(d => d.dow >= 1 && d.dow <= 6);
+    const diasUteisComTrabalho = diasUteis.filter(d => d.workedMin > 0 && d.jornadaMin > 0);
+    const totalHeSemana = diasUteisComTrabalho.reduce((s, d) => s + d.extraMin, 0);
+    const qtdDiasUteis = diasUteisComTrabalho.length;
+
+    if (qtdDiasUteis > 0 && totalHeSemana > 0) {
+      // DSR = média das horas extras por dia útil trabalhado (aplicada ao domingo)
+      const dsrSemana = Math.round(totalHeSemana / qtdDiasUteis);
+      totalDsrMin += dsrSemana;
+    }
+  });
+
+  return totalDsrMin;
+}
+
+/**
+ * Resumo mensal completo
+ * dayResults: array de calcDayResult()
+ * Returns objeto com todos os totais em minutos
+ */
+export function calcMonthlySummary(dayResults) {
+  let totalWorkedMin = 0;
+  let totalJornadaMin = 0;
+  let totalExtraMin = 0;
+  let totalAtrasoMin = 0;
+  let totalFaltaMin = 0;
+  let diasTrabalhados = 0;
+  let diasFalta = 0;
+  let diasAtraso = 0;
+
+  dayResults.forEach(d => {
+    totalWorkedMin += d.workedMin;
+    totalJornadaMin += d.jornadaMin;
+    totalExtraMin += d.extraMin;
+    totalAtrasoMin += d.atrasoMin;
+    totalFaltaMin += d.faltaMin;
+    if (d.workedMin > 0) diasTrabalhados++;
+    if (d.label === "falta") diasFalta++;
+    if (d.label === "atraso") diasAtraso++;
+  });
+
+  const saldoLiquidoMin = totalExtraMin - totalAtrasoMin;
+  const dsrMin = calcDSR(dayResults);
+
+  return {
+    totalWorkedMin,
+    totalJornadaMin,
+    totalExtraMin,
+    totalAtrasoMin,
+    totalFaltaMin,
+    saldoLiquidoMin,
+    dsrMin,
+    diasTrabalhados,
+    diasFalta,
+    diasAtraso,
+  };
+}
