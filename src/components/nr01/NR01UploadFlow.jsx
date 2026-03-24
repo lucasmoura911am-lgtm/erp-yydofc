@@ -644,17 +644,19 @@ export default function NR01UploadFlow({ user, contracts, clients, programs, onP
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
+                  { label: "Itens extraídos", val: analyzeResult.total_itens, color: "blue" },
                   { label: "Riscos mapeados", val: analyzeResult.risks_created, color: "orange" },
-                  { label: "Ações do plano", val: analyzeResult.actions_created, color: "blue" },
-                  { label: "Planos PCMSO", val: analyzeResult.health_plans_created, color: "green" },
-                  { label: "Exames criados", val: analyzeResult.exams_created, color: "teal" },
-                  { label: "Treinamentos", val: analyzeResult.trainings_created, color: "purple" },
-                  { label: "Cargos", val: analyzeResult.total_cargos, color: "gray" },
+                  { label: "Ações criadas", val: analyzeResult.actions_created, color: "green" },
+                  { label: "Exames criados", val: analyzeResult.exams_created, color: "purple" },
+                  { label: "Treinamentos", val: analyzeResult.trainings_created, color: "indigo" },
+                  { label: "Atividades IA", val: analyzeResult.total_atividades, color: "teal" },
                 ].map(item => (
                   <div key={item.label} className="bg-gray-50 border rounded-lg p-3 text-center">
                     <div className={`text-2xl font-bold text-${item.color}-600`}>{item.val ?? 0}</div>
                     <div className="text-xs text-gray-500 mt-0.5">{item.label}</div>
                   </div>
+                ))}
+              </div>
                 ))}
               </div>
 
