@@ -201,8 +201,8 @@ export default function ManageTimeRecordsMonthly() {
     return Math.max(total, 0);
   }, [selectedEmp, shifts]);
 
-  const monthlySummary = useMemo(() => {
-    if (!selectedEmployee || days.length === 0) return null;
+  const { monthlySummary, dsrBySunday } = useMemo(() => {
+    if (!selectedEmployee || days.length === 0) return { monthlySummary: null, dsrBySunday: {} };
     const defaultWorkDays = new Set([1,2,3,4,5]);
     const workDays = shiftWorkDays || defaultWorkDays;
     const listByDate = {};
@@ -217,7 +217,12 @@ export default function ManageTimeRecordsMonthly() {
       const jornada = workDays.has(dow) ? shiftJornadaMin : 0;
       return { ...calcDayResult(dateStr, recs, jornada), dow };
     });
-    return calcMonthlySummary(dayResults);
+    const weeklyDsrMap = calcWeeklyDSRMap(dayResults);
+    const dsrBySunday = {};
+    Object.values(weeklyDsrMap).forEach(({ dsrMin, sundayDateStr }) => {
+      if (sundayDateStr && dsrMin > 0) dsrBySunday[sundayDateStr] = dsrMin;
+    });
+    return { monthlySummary: calcMonthlySummary(dayResults), dsrBySunday };
   }, [days, timeRecords, selectedEmployee, shiftWorkDays, shiftJornadaMin]);
 
   const hasDayRecords = (dateStr) => Object.keys(recordsMap[dateStr] || {}).length > 0;
@@ -315,14 +320,11 @@ export default function ManageTimeRecordsMonthly() {
               {days.map(({ date, dateStr }) => {
                 const weekend = isWeekend(date);
                 const hasRec = hasDayRecords(dateStr);
-                const edited = isDayEdited(dateStr);
-                const saving = savingDays[dateStr];
-                const saved = savedDays[dateStr];
-                const dayEdits = edits[dateStr] || {};
+                const dsrMin = dsrBySunday[dateStr];
 
                 return (
+                  <React.Fragment key={dateStr}>
                   <div
-                    key={dateStr}
                     className={`px-4 py-2 ${weekend ? "bg-gray-50/60 dark:bg-gray-900/40" : ""} ${edited ? "bg-yellow-50/50 dark:bg-yellow-900/10" : ""}`}
                   >
                     {/* Mobile label */}
@@ -395,6 +397,17 @@ export default function ManageTimeRecordsMonthly() {
                       </div>
                     </div>
                   </div>
+                  {dsrMin && (
+                    <div className="grid grid-cols-[90px_1fr_1fr_1fr_1fr_100px] gap-2 px-4 py-1.5 text-xs items-center bg-purple-50 dark:bg-purple-900/20 border-b border-purple-100 dark:border-purple-800">
+                      <div className="col-span-5 text-purple-700 dark:text-purple-300 font-medium">
+                        DSR sobre HE — Lei 605/49
+                      </div>
+                      <div className="font-semibold text-purple-700 dark:text-purple-300">
+                        +{formatMinutes(dsrMin)}
+                      </div>
+                    </div>
+                  )}
+                  </React.Fragment>
                 );
               })}
             </div>
