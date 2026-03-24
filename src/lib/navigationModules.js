@@ -62,12 +62,17 @@ export const ALL_MODULES = [
   { id: "epi_deliveries", label: "Entrega de EPIs", url: "/EPIDeliveries", group: "EPI" },
   { id: "epi_records", label: "Fichas de EPI", url: "/EPIRecords", group: "EPI" },
 
-  // ── Segurança ────────────────────────────────────────────────
+  // ── Segurança do Trabalho ────────────────────────────────────
+  { id: "nr01_module", label: "Gestão NR-01", url: "/NR01Module", group: "Segurança do Trabalho" },
   { id: "safety_dashboard", label: "Dashboard Segurança", url: "/SafetyDashboard", group: "Segurança do Trabalho" },
   { id: "safety_programs", label: "Contratos e Programas", url: "/SafetyPrograms", group: "Segurança do Trabalho" },
   { id: "risk_inventory", label: "Inventário de Riscos", url: "/RiskInventoryPage", group: "Segurança do Trabalho" },
+  { id: "sst_matriz_risco", label: "Matriz de Risco 5×5", url: "/SSTMatrizRisco", group: "Segurança do Trabalho" },
   { id: "risk_action_plan", label: "Plano de Ação (PGR)", url: "/RiskActionPlanPage", group: "Segurança do Trabalho" },
   { id: "health_activities", label: "Atividades de Saúde (PCMSO)", url: "/HealthActivitiesPage", group: "Segurança do Trabalho" },
+  { id: "sst_exames", label: "Exames Ocupacionais", url: "/SSTExames", group: "Segurança do Trabalho" },
+  { id: "sst_treinamentos", label: "Treinamentos SST", url: "/SSTTreinamentos", group: "Segurança do Trabalho" },
+  { id: "sst_vacinacao", label: "Vacinação", url: "/SSTVacinacao", group: "Segurança do Trabalho" },
   { id: "safety_reports", label: "Relatórios Segurança", url: "/SafetyReports", group: "Segurança do Trabalho" },
 
   // ── Documentos ───────────────────────────────────────────────
