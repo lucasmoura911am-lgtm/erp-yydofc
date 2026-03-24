@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Save, Trash2, ChevronLeft, ChevronRight, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import MonthlySummaryCard from "@/components/timereport/MonthlySummaryCard";
-import { calcDayResult, calcMonthlySummary, calcWeeklyDSRMap, formatMinutes } from "@/lib/timeCalculations";
+import { calcDayResult, calcMonthlySummary, calcWeeklyDSRMap, applyInterjornada, formatMinutes } from "@/lib/timeCalculations";
 import {
   Select,
   SelectContent,
@@ -217,14 +217,20 @@ export default function ManageTimeRecordsMonthly() {
       const jornada = workDays.has(dow) ? shiftJornadaMin : 0;
       return { ...calcDayResult(dateStr, recs, jornada), dow };
     });
+    applyInterjornada(dayResults, listByDate);
     const weeklyDsrMap = calcWeeklyDSRMap(dayResults);
     const dsrBySunday = {};
     Object.values(weeklyDsrMap).forEach(({ dsrMin, sundayDateStr }) => {
       if (sundayDateStr && dsrMin > 0) dsrBySunday[sundayDateStr] = dsrMin;
     });
-    return { monthlySummary: calcMonthlySummary(dayResults), dsrBySunday };
+    const summary = calcMonthlySummary(dayResults);
+    // Map dayResult by dateStr for badge lookup
+    const dayResultMap = {};
+    dayResults.forEach(d => { dayResultMap[d.dateStr] = d; });
+    return { monthlySummary: summary, dsrBySunday, dayResultMap };
   }, [days, timeRecords, selectedEmployee, shiftWorkDays, shiftJornadaMin]);
 
+  const { dayResultMap = {} } = { dayResultMap: (typeof monthlySummary !== 'undefined' ? undefined : undefined) } || {};
   const hasDayRecords = (dateStr) => Object.keys(recordsMap[dateStr] || {}).length > 0;
   const isDayEdited = (dateStr) => {
     const cur = edits[dateStr] || {};
@@ -325,6 +331,9 @@ export default function ManageTimeRecordsMonthly() {
                 const saved = savedDays[dateStr];
                 const dayEdits = edits[dateStr] || {};
                 const dsrMin = dsrBySunday[dateStr];
+                // Dia fora da escala mas com registros = HE 100%
+                const dayResult = dayResultMap[dateStr];
+                const isOffWithWork = dayResult?.label === "folga" && dayResult?.workedMin > 0;
 
                 return (
                   <React.Fragment key={dateStr}>
