@@ -231,79 +231,91 @@ export default function MonthlyTimeReport() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 overflow-x-auto">
-                <div className="grid grid-cols-[60px_45px_65px_65px_65px_65px_80px] gap-1 px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 dark:bg-gray-900 border-b">
+                <div className="grid grid-cols-[60px_45px_65px_65px_65px_65px_90px] gap-1 px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 dark:bg-gray-900 border-b">
                   <div>Data</div>
                   <div>Dia</div>
                   <div>Entrada</div>
                   <div>Pausa</div>
                   <div>Retorno</div>
                   <div>Saída</div>
-                  <div>Saldo</div>
+                  <div>Saldo / HE</div>
                 </div>
 
                 {isLoading ? (
                   <div className="py-12 text-center text-gray-400 text-sm">Carregando registros...</div>
                 ) : (
                   <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {days.map(day => {
-                     const recs = recordsMap[day.dateStr] || [];
-                     const saldo = day.extraMin > 0 ? day.extraMin : -day.atrasoMin;
-                     // "folga com trabalho" deve mostrar horários e HE, não esconder
-                     const isOffNoWork = day.label === "folga" && day.workedMin === 0;
-                     const isOff = isOffNoWork;
-                     const style = day.label === "folga" && day.workedMin > 0
-                       ? DAY_TYPE_STYLE.extra
-                       : (DAY_TYPE_STYLE[day.label] || DAY_TYPE_STYLE.normal);
-                     const dsrMin = dsrBySunday[day.dateStr];
+                     {days.map(day => {
+                      const recs = recordsMap[day.dateStr] || [];
+                      const saldo = day.extraMin > 0 ? day.extraMin : -day.atrasoMin;
+                      const isOff = day.label === "folga" && day.workedMin === 0;
+                      const style = day.label === "folga" && day.workedMin > 0
+                        ? DAY_TYPE_STYLE.extra
+                        : (DAY_TYPE_STYLE[day.label] || DAY_TYPE_STYLE.normal);
+                      const dsrMin = dsrBySunday[day.dateStr];
+                      const hasInterjornada = day.interjornadaMin > 0;
 
-                      return (
-                        <React.Fragment key={day.dateStr}>
-                          <div className={`grid grid-cols-[60px_45px_65px_65px_65px_65px_80px] gap-1 px-3 py-1.5 text-xs items-center ${style}`}>
-                            <div className="font-medium">{format(day.date, "dd/MM")}</div>
-                            <div className="text-gray-500">{DOW_LABEL[day.dow]}</div>
-                            <div>{isOff ? "" : getTime(recs, "entrada")}</div>
-                            <div>{isOff ? "" : getTime(recs, "pausa")}</div>
-                            <div>{isOff ? "" : getTime(recs, "retorno")}</div>
-                            <div>{isOff ? "" : getTime(recs, "saida")}</div>
-                            <div className="font-semibold">
+                       return (
+                         <React.Fragment key={day.dateStr}>
+                           <div className={`grid grid-cols-[60px_45px_65px_65px_65px_65px_90px] gap-1 px-3 py-1.5 text-xs items-center ${style} ${hasInterjornada ? "border-l-2 border-amber-400" : ""}`}>
+                             <div className="font-medium">{format(day.date, "dd/MM")}</div>
+                             <div className="text-gray-500">{DOW_LABEL[day.dow]}</div>
+                             <div>{isOff ? "" : getTime(recs, "entrada")}</div>
+                             <div>{isOff ? "" : getTime(recs, "pausa")}</div>
+                             <div>{isOff ? "" : getTime(recs, "retorno")}</div>
+                             <div>{isOff ? "" : getTime(recs, "saida")}</div>
+                             <div className="font-semibold">
                                {isOff ? (
-                                <span className="font-normal">FOLGA</span>
-                              ) : day.label === "falta" ? (
-                                <span className="text-red-600">FALTA</span>
-                              ) : (
-                                <span className={saldo >= 0 ? "text-green-600" : "text-orange-600"}>
-                                  {formatSaldo(saldo)}
-                                  {saldo > 0 && (() => {
-                                    const has50 = day.extra50Min > 0;
-                                    const has100 = day.extra100Min > 0;
-                                    if (has50 && has100) return <span className="ml-1 text-xs font-normal opacity-75">(misto)</span>;
-                                    if (has100) return <span className="ml-1 text-xs font-normal text-emerald-600">(100%)</span>;
-                                    if (has50) return <span className="ml-1 text-xs font-normal opacity-75">(50%)</span>;
-                                    // taxa personalizada diferente de 50/100
-                                    const rates = Object.keys(day.extraRateMap || {});
-                                    if (rates.length === 1 && rates[0] !== "50" && rates[0] !== "100") {
-                                      return <span className="ml-1 text-xs font-normal opacity-75">({rates[0]}%)</span>;
-                                    }
-                                    return null;
-                                  })()}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          {dsrMin && (
-                            <div className="grid grid-cols-[60px_45px_65px_65px_65px_65px_80px] gap-1 px-3 py-1 text-xs items-center bg-purple-50 dark:bg-purple-900/20">
-                              <div className="col-span-6 text-purple-700 dark:text-purple-300 font-medium">
-                                DSR sobre HE — Lei 605/49
-                              </div>
-                              <div className="font-semibold text-purple-700 dark:text-purple-300">
-                                +{formatMinutes(dsrMin)}
-                              </div>
-                            </div>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
+                                 <span className="font-normal">FOLGA</span>
+                               ) : day.label === "falta" ? (
+                                 <span className="text-red-600">FALTA</span>
+                               ) : (
+                                 <div className="flex flex-col gap-0.5">
+                                   <span className={saldo >= 0 ? "text-green-600" : "text-orange-600"}>
+                                     {formatSaldo(saldo)}
+                                   </span>
+                                   {saldo > 0 && (() => {
+                                     const has50 = day.extra50Min > 0;
+                                     const has100 = day.extra100Min > 0;
+                                     if (has50 && has100) return (
+                                       <span className="text-[10px] font-normal text-gray-500">
+                                         {formatMinutes(day.extra50Min)} 50% + {formatMinutes(day.extra100Min)} 100%
+                                       </span>
+                                     );
+                                     if (has100) return <span className="text-[10px] font-normal text-emerald-600">100%</span>;
+                                     if (has50) return <span className="text-[10px] font-normal text-gray-400">50%</span>;
+                                     const rates = Object.keys(day.extraRateMap || {});
+                                     if (rates.length === 1) return <span className="text-[10px] font-normal text-gray-400">{rates[0]}%</span>;
+                                     return null;
+                                   })()}
+                                 </div>
+                               )}
+                             </div>
+                           </div>
+                           {hasInterjornada && (
+                             <div className="grid grid-cols-[60px_45px_65px_65px_65px_65px_90px] gap-1 px-3 py-1 text-xs items-center bg-amber-50 dark:bg-amber-900/20">
+                               <div className="col-span-6 text-amber-700 dark:text-amber-300 font-medium">
+                                 ⚠ Interjornada insuficiente — intervalo: {formatMinutes(day.interjornadaIntervaloMin ?? 0)} (mín 11:00) → {formatMinutes(day.interjornadaMin)} em 100%
+                               </div>
+                               <div className="font-semibold text-amber-700 dark:text-amber-300">
+                                 100%
+                               </div>
+                             </div>
+                           )}
+                           {dsrMin && (
+                             <div className="grid grid-cols-[60px_45px_65px_65px_65px_65px_90px] gap-1 px-3 py-1 text-xs items-center bg-purple-50 dark:bg-purple-900/20">
+                               <div className="col-span-6 text-purple-700 dark:text-purple-300 font-medium">
+                                 DSR sobre HE — Lei 605/49
+                               </div>
+                               <div className="font-semibold text-purple-700 dark:text-purple-300">
+                                 +{formatMinutes(dsrMin)}
+                               </div>
+                             </div>
+                           )}
+                         </React.Fragment>
+                       );
+                     })}
+                   </div>
                 )}
               </CardContent>
             </Card>

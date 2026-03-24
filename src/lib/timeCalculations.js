@@ -159,21 +159,23 @@ export function applyInterjornada(dayResults, recordsByDate) {
     const prevSaida = prevRecs.find(r => r.type === "saida")?.timestamp;
     const currEntrada = currRecs.find(r => r.type === "entrada")?.timestamp;
     if (!prevSaida || !currEntrada) continue;
-    const saidaMin = toMinutes(prevSaida);
-    const entradaMin = toMinutes(currEntrada);
-    if (saidaMin === null || entradaMin === null) continue;
-    // Intervalo entre saída do dia anterior e entrada do dia atual
-    let intervalo = entradaMin + 1440 - saidaMin; // sempre positivo (dia seguinte)
-    if (intervalo >= 1440) intervalo -= 1440; // segurança
+
+    // Usa timestamps reais para calcular o intervalo entre jornadas
+    const saidaDate = new Date(prevSaida);
+    const entradaDate = new Date(currEntrada);
+    const intervaloMs = entradaDate - saidaDate;
+    if (intervaloMs < 0) continue; // dados inconsistentes
+    const intervaloMin = Math.floor(intervaloMs / 60000);
+
     const MINIMO_INTERJORNADA = 660; // 11 horas
-    if (intervalo < MINIMO_INTERJORNADA) {
-      const violacaoMin = MINIMO_INTERJORNADA - intervalo;
-      // As horas trabalhadas dentro da violação passam a ser extra100
+    if (intervaloMin < MINIMO_INTERJORNADA) {
+      const violacaoMin = MINIMO_INTERJORNADA - intervaloMin;
       const horasViolacao = Math.min(violacaoMin, curr.workedMin);
       if (horasViolacao > 0 && curr.label !== "falta") {
         curr.extra100Min = (curr.extra100Min || 0) + horasViolacao;
         curr.extra50Min = Math.max(0, (curr.extra50Min || 0) - horasViolacao);
         curr.interjornadaMin = horasViolacao;
+        curr.interjornadaIntervaloMin = intervaloMin; // intervalo real para exibição
       }
     }
   }
