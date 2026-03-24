@@ -201,7 +201,7 @@ export default function ManageTimeRecordsMonthly() {
     return Math.max(total, 0);
   }, [selectedEmp, shifts]);
 
-  const { monthlySummary, dsrBySunday } = useMemo(() => {
+  const { monthlySummary, dsrBySunday, dayResultMap } = useMemo(() => {
     if (!selectedEmployee || days.length === 0) return { monthlySummary: null, dsrBySunday: {}, dayResultMap: {} };
     const defaultWorkDays = new Set([1,2,3,4,5]);
     const workDays = shiftWorkDays || defaultWorkDays;
