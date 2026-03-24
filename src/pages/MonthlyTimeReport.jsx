@@ -1,12 +1,11 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { format, getDaysInMonth, isWeekend, subMonths, addMonths } from "date-fns";
+import { format, getDaysInMonth, subMonths, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar, FileText, Printer } from "lucide-react";
 import MonthlySummaryCard from "@/components/timereport/MonthlySummaryCard";
@@ -33,7 +32,7 @@ const DAY_TYPE_STYLE = {
 };
 
 export default function MonthlyTimeReport() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = React.useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -47,14 +46,13 @@ export default function MonthlyTimeReport() {
     enabled: !!user?.company_id,
   });
 
-  const selectedEmp = employees.find(e => e.id === selectedEmployee);
-
   const { data: shifts = [] } = useQuery({
     queryKey: ["shifts", user?.company_id],
     queryFn: () => base44.entities.Shift.filter({ company_id: user.company_id }),
     enabled: !!user?.company_id,
   });
 
+  const selectedEmp = employees.find(e => e.id === selectedEmployee);
   const monthKey = format(currentMonth, "yyyy-MM");
 
   const { data: timeRecords = [], isLoading } = useQuery({
@@ -76,9 +74,8 @@ export default function MonthlyTimeReport() {
     enabled: !!user?.company_id && !!selectedEmployee,
   });
 
-  // Dias de trabalho da escala do funcionário (array de DOW números 0-6)
   const shiftWorkDays = useMemo(() => {
-    if (!selectedEmp?.shift_id) return null; // null = usar padrão seg-sex
+    if (!selectedEmp?.shift_id) return null;
     const shift = shifts.find(s => s.id === selectedEmp.shift_id);
     if (!shift?.work_days?.length) return null;
     return new Set(shift.work_days.map(d => WORK_DAYS_MAP[d]).filter(d => d !== undefined));
@@ -96,11 +93,10 @@ export default function MonthlyTimeReport() {
     return Math.max(total, 0);
   }, [selectedEmp, shifts]);
 
-  const { days, summary, weeklyDsrMap } = useMemo(() => {
-    if (!selectedEmployee) return { days: [], summary: null, weeklyDsrMap: {} };
+  const { days, summary, dsrBySunday } = useMemo(() => {
+    if (!selectedEmployee) return { days: [], summary: null, dsrBySunday: {} };
 
     const count = getDaysInMonth(currentMonth);
-
     const recordsMap = {};
     timeRecords.forEach(r => {
       const day = r.timestamp?.substring(0, 10);
@@ -108,7 +104,6 @@ export default function MonthlyTimeReport() {
       recordsMap[day].push(r);
     });
 
-    // Padrão: seg-sex se não tiver escala
     const defaultWorkDays = new Set([1, 2, 3, 4, 5]);
     const workDays = shiftWorkDays || defaultWorkDays;
 
@@ -118,22 +113,20 @@ export default function MonthlyTimeReport() {
       const dateStr = format(d, "yyyy-MM-dd");
       const dow = d.getDay();
       const recs = recordsMap[dateStr] || [];
-
-      // Jornada = 0 se não é dia de trabalho da escala
       const jornada = workDays.has(dow) ? shiftJornadaMin : 0;
       const result = calcDayResult(dateStr, recs, jornada);
       dayResults.push({ ...result, dow, date: d });
     }
 
     const weeklyDsrMap = calcWeeklyDSRMap(dayResults);
-    const summary = calcMonthlySummary(dayResults);
-    return { days: dayResults, summary, weeklyDsrMap };
-  }, [timeRecords, selectedEmployee, currentMonth, shiftWorkDays, shiftJornadaMin]);
+    const dsrBySunday = {};
+    Object.values(weeklyDsrMap).forEach(({ dsrMin, sundayDateStr }) => {
+      if (sundayDateStr && dsrMin > 0) dsrBySunday[sundayDateStr] = dsrMin;
+    });
 
-  const getTimeFromRecords = (records, type) => {
-    const r = records?.find(r => r.type === type);
-    return r ? r.timestamp?.substring(11, 16) : "--:--";
-  };
+    const summary = calcMonthlySummary(dayResults);
+    return { days: dayResults, summary, dsrBySunday };
+  }, [timeRecords, selectedEmployee, currentMonth, shiftWorkDays, shiftJornadaMin]);
 
   const recordsMap = useMemo(() => {
     const m = {};
@@ -145,14 +138,10 @@ export default function MonthlyTimeReport() {
     return m;
   }, [timeRecords]);
 
-  // Mapa de domingo -> dsrMin para exibir linha de DSR na tabela
-  const dsrBySunday = useMemo(() => {
-    const m = {};
-    Object.values(weeklyDsrMap || {}).forEach(({ dsrMin, sundayDateStr }) => {
-      if (sundayDateStr && dsrMin > 0) m[sundayDateStr] = dsrMin;
-    });
-    return m;
-  }, [weeklyDsrMap]);
+  const getTime = (recs, type) => {
+    const r = recs?.find(r => r.type === type);
+    return r ? r.timestamp?.substring(11, 16) : "--:--";
+  };
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -165,7 +154,6 @@ export default function MonthlyTimeReport() {
         </p>
       </div>
 
-      {/* Filtros */}
       <Card>
         <CardContent className="pt-4">
           <div className="flex flex-col md:flex-row gap-4 items-end">
@@ -216,7 +204,6 @@ export default function MonthlyTimeReport() {
 
       {selectedEmployee && (
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Tabela de dias */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader className="pb-2">
@@ -226,7 +213,6 @@ export default function MonthlyTimeReport() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 overflow-x-auto">
-                {/* Header */}
                 <div className="grid grid-cols-[60px_45px_65px_65px_65px_65px_80px] gap-1 px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 dark:bg-gray-900 border-b">
                   <div>Data</div>
                   <div>Dia</div>
@@ -245,9 +231,7 @@ export default function MonthlyTimeReport() {
                       const recs = recordsMap[day.dateStr] || [];
                       const saldo = day.extraMin > 0 ? day.extraMin : -day.atrasoMin;
                       const isOff = day.label === "folga";
-                      const style = isOff
-                        ? DAY_TYPE_STYLE.folga
-                        : DAY_TYPE_STYLE[day.label] || DAY_TYPE_STYLE.normal;
+                      const style = DAY_TYPE_STYLE[day.label] || DAY_TYPE_STYLE.normal;
                       const dsrMin = dsrBySunday[day.dateStr];
 
                       return (
@@ -255,13 +239,13 @@ export default function MonthlyTimeReport() {
                           <div className={`grid grid-cols-[60px_45px_65px_65px_65px_65px_80px] gap-1 px-3 py-1.5 text-xs items-center ${style}`}>
                             <div className="font-medium">{format(day.date, "dd/MM")}</div>
                             <div className="text-gray-500">{DOW_LABEL[day.dow]}</div>
-                            <div>{isOff ? "" : getTimeFromRecords(recs, "entrada")}</div>
-                            <div>{isOff ? "" : getTimeFromRecords(recs, "pausa")}</div>
-                            <div>{isOff ? "" : getTimeFromRecords(recs, "retorno")}</div>
-                            <div>{isOff ? "" : getTimeFromRecords(recs, "saida")}</div>
+                            <div>{isOff ? "" : getTime(recs, "entrada")}</div>
+                            <div>{isOff ? "" : getTime(recs, "pausa")}</div>
+                            <div>{isOff ? "" : getTime(recs, "retorno")}</div>
+                            <div>{isOff ? "" : getTime(recs, "saida")}</div>
                             <div className="font-semibold">
                               {isOff ? (
-                                <span className="text-gray-400 font-normal">FOLGA</span>
+                                <span className="font-normal">FOLGA</span>
                               ) : day.label === "falta" ? (
                                 <span className="text-red-600">FALTA</span>
                               ) : (
@@ -271,13 +255,14 @@ export default function MonthlyTimeReport() {
                               )}
                             </div>
                           </div>
-                          {/* Linha de DSR após o domingo com extras */}
                           {dsrMin && (
-                            <div className="grid grid-cols-[60px_45px_65px_65px_65px_65px_80px] gap-1 px-3 py-1 text-xs items-center bg-purple-50 dark:bg-purple-900/20 border-b border-purple-100 dark:border-purple-800">
+                            <div className="grid grid-cols-[60px_45px_65px_65px_65px_65px_80px] gap-1 px-3 py-1 text-xs items-center bg-purple-50 dark:bg-purple-900/20">
                               <div className="col-span-6 text-purple-700 dark:text-purple-300 font-medium">
                                 DSR sobre HE — Lei 605/49
                               </div>
-                              <div className="font-semibold text-purple-700 dark:text-purple-300">+{formatMinutes(dsrMin)}</div>
+                              <div className="font-semibold text-purple-700 dark:text-purple-300">
+                                +{formatMinutes(dsrMin)}
+                              </div>
                             </div>
                           )}
                         </React.Fragment>
@@ -289,7 +274,6 @@ export default function MonthlyTimeReport() {
             </Card>
           </div>
 
-          {/* Resumo lateral */}
           <div>
             <MonthlySummaryCard summary={summary} />
           </div>
