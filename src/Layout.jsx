@@ -164,7 +164,8 @@ export default function Layout({ children }) {
         icon: Clock,
         items: [
           { title: "Registros de Ponto", url: "/TimeRecords", icon: Clock },
-          { title: "Gestão de Pontos", url: "/ManageTimeRecordsSimple", icon: Edit3 },
+          { title: "Gestão de Pontos (dia)", url: "/ManageTimeRecordsSimple", icon: Edit3 },
+          { title: "Gestão Mensal de Pontos", url: "/ManageTimeRecordsMonthly", icon: Calendar },
           { title: "Banco de Horas", url: "/HoursBank", icon: Clock },
           { title: "Folha de Ponto Assinada", url: "/ManageSignedTimeReports", icon: FileText },
         ]
