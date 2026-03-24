@@ -109,6 +109,7 @@ import SSTMatrizRisco from './pages/SSTMatrizRisco';
 import NR01Module from './pages/NR01Module';
 import ManageTimeRecordsMonthly from './pages/ManageTimeRecordsMonthly';
 import MonthlyTimeReport from './pages/MonthlyTimeReport';
+import PublicLanding from './pages/PublicLanding';
 import LaborRulesPage from './pages/LaborRulesPage';
 import TaxTablePage from './pages/TaxTablePage';
 import PayrollRunPage from './pages/PayrollRunPage';
@@ -255,6 +256,7 @@ const AuthenticatedApp = () => {
       <Route path="/FacilitiesKanban" element={<LayoutWrapper currentPageName="FacilitiesKanban"><FacilitiesKanban /></LayoutWrapper>} />
       <Route path="/PostCoveragePage" element={<LayoutWrapper currentPageName="PostCoveragePage"><PostCoveragePage /></LayoutWrapper>} />
       <Route path="/ClientPortal" element={<ClientPortal />} />
+      <Route path="/PublicLanding" element={<PublicLanding />} />
       <Route path="/ClientDocuments" element={<LayoutWrapper currentPageName="ClientDocuments"><ClientDocuments /></LayoutWrapper>} />
       <Route path="/ClientTicketsManage" element={<LayoutWrapper currentPageName="ClientTicketsManage"><ClientTicketsManage /></LayoutWrapper>} />
       <Route path="/SmartPayslipsDashboard" element={<LayoutWrapper currentPageName="SmartPayslipsDashboard"><SmartPayslipsDashboard /></LayoutWrapper>} />
