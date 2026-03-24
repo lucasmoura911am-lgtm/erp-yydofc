@@ -252,13 +252,17 @@ export function calcMonthlySummary(dayResults) {
     totalWorkedMin,
     totalJornadaMin,
     totalExtraMin,
+    totalExtra50Min,
+    totalExtra100Min,
     totalAtrasoMin,
     totalFaltaMin,
+    totalInterjornadaMin,
     saldoLiquidoMin,
     dsrMin,
     dsrDias,
     diasTrabalhados,
     diasFalta,
     diasAtraso,
+    diasInterjornada,
   };
 }
