@@ -128,7 +128,7 @@ export default function MonthlyTimeReport() {
       const dow = d.getDay();
       const recs = recordsMap[dateStr] || [];
       const jornada = workDays.has(dow) ? shiftJornadaMin : 0;
-      const result = calcDayResult(dateStr, recs, jornada);
+      const result = calcDayResult(dateStr, recs, jornada, overtimeConfig);
       dayResults.push({ ...result, dow, date: d });
     }
 
