@@ -69,12 +69,17 @@ export function calcWorkedMinutes(records) {
  * {
  *   dateStr, dow, workedMin, jornadaMin,
  *   extraMin, extra50Min, extra100Min,
+ *   extraRateMap: { [rate]: minutes } — breakdown por taxa personalizada,
  *   atrasoMin, faltaMin,
  *   label: "falta" | "atraso" | "extra" | "normal" | "folga",
  *   hasRecords
  * }
+ *
+ * overtimeConfig: { dayRates: Map<dow, rate>, offDayRate: number }
+ *   - dayRates: taxas por dia da semana (dow 0-6) para dias de trabalho
+ *   - offDayRate: taxa para dias fora da escala (padrão 100)
  */
-export function calcDayResult(dateStr, records, jornadaMin = 480) {
+export function calcDayResult(dateStr, records, jornadaMin = 480, overtimeConfig = null) {
   const hasRecords = records.length > 0;
   const workedMin = calcWorkedMinutes(records);
   const dow = new Date(dateStr + "T00:00:00").getDay(); // 0=Dom
@@ -82,18 +87,27 @@ export function calcDayResult(dateStr, records, jornadaMin = 480) {
   let extraMin = 0;
   let extra50Min = 0;
   let extra100Min = 0;
+  const extraRateMap = {};
   let atrasoMin = 0;
   let faltaMin = 0;
   let label = "normal";
 
-  // Dia sem jornada prevista (folga / domingo / fora da escala)
+  // Helper: aplica taxa ao extra
+  const applyRate = (minutes, rate) => {
+    extraRateMap[rate] = (extraRateMap[rate] || 0) + minutes;
+    if (rate <= 50) extra50Min += minutes;
+    else extra100Min += minutes;
+  };
+
+  // Dia sem jornada prevista (folga / fora da escala)
   if (jornadaMin === 0) {
     label = "folga";
     if (workedMin > 0) {
       extraMin = workedMin;
-      extra100Min = workedMin; // trabalhou em folga = 100%
+      const offRate = overtimeConfig?.offDayRate ?? 100;
+      applyRate(workedMin, offRate);
     }
-    return { dateStr, dow, workedMin, jornadaMin, extraMin, extra50Min, extra100Min, atrasoMin, faltaMin, label, hasRecords };
+    return { dateStr, dow, workedMin, jornadaMin, extraMin, extra50Min, extra100Min, extraRateMap, atrasoMin, faltaMin, label, hasRecords };
   }
 
   if (!hasRecords || workedMin === 0) {
@@ -103,9 +117,14 @@ export function calcDayResult(dateStr, records, jornadaMin = 480) {
     const saldo = workedMin - jornadaMin;
     if (saldo > 0) {
       extraMin = saldo;
-      // Domingo (dow=0) = 100%; demais = 50%
-      if (dow === 0) extra100Min = saldo;
-      else extra50Min = saldo;
+      // Taxa configurada para o dia, ou padrão: Domingo=100%, demais=50%
+      let rate = 50;
+      if (overtimeConfig?.dayRates?.has(dow)) {
+        rate = overtimeConfig.dayRates.get(dow);
+      } else if (dow === 0) {
+        rate = 100;
+      }
+      applyRate(saldo, rate);
       label = "extra";
     } else if (saldo < 0) {
       atrasoMin = Math.abs(saldo);
@@ -113,7 +132,7 @@ export function calcDayResult(dateStr, records, jornadaMin = 480) {
     }
   }
 
-  return { dateStr, dow, workedMin, jornadaMin, extraMin, extra50Min, extra100Min, atrasoMin, faltaMin, label, hasRecords };
+  return { dateStr, dow, workedMin, jornadaMin, extraMin, extra50Min, extra100Min, extraRateMap, atrasoMin, faltaMin, label, hasRecords };
 }
 
 /**
