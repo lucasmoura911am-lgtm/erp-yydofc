@@ -230,7 +230,6 @@ export default function ManageTimeRecordsMonthly() {
     return { monthlySummary: summary, dsrBySunday, dayResultMap };
   }, [days, timeRecords, selectedEmployee, shiftWorkDays, shiftJornadaMin]);
 
-  const { dayResultMap = {} } = { dayResultMap: (typeof monthlySummary !== 'undefined' ? undefined : undefined) } || {};
   const hasDayRecords = (dateStr) => Object.keys(recordsMap[dateStr] || {}).length > 0;
   const isDayEdited = (dateStr) => {
     const cur = edits[dateStr] || {};
@@ -332,7 +331,7 @@ export default function ManageTimeRecordsMonthly() {
                 const dayEdits = edits[dateStr] || {};
                 const dsrMin = dsrBySunday[dateStr];
                 // Dia fora da escala mas com registros = HE 100%
-                const dayResult = dayResultMap[dateStr];
+                const dayResult = (monthlySummary && dayResultMap) ? dayResultMap[dateStr] : null;
                 const isOffWithWork = dayResult?.label === "folga" && dayResult?.workedMin > 0;
 
                 return (
@@ -347,6 +346,7 @@ export default function ManageTimeRecordsMonthly() {
                           {format(date, "EEE dd/MM", { locale: ptBR })}
                         </span>
                         {weekend && <Badge variant="outline" className="text-xs py-0 px-1">fim de semana</Badge>}
+                        {isOffWithWork && <Badge className="text-xs py-0 px-1 bg-emerald-100 text-emerald-700 border-emerald-200">HE 100%</Badge>}
                         {hasRec && !edited && <CheckCircle className="w-3.5 h-3.5 text-green-500" />}
                         {edited && <AlertCircle className="w-3.5 h-3.5 text-yellow-500" />}
                       </div>
@@ -377,6 +377,7 @@ export default function ManageTimeRecordsMonthly() {
                         {hasRec && !edited && <CheckCircle className="w-3 h-3 text-green-500" />}
                         {edited && <AlertCircle className="w-3 h-3 text-yellow-500" />}
                         {saved && !edited && <CheckCircle className="w-3 h-3 text-blue-500" />}
+                        {isOffWithWork && <Badge className="text-xs py-0 px-1 bg-emerald-100 text-emerald-700 border-emerald-200">HE 100%</Badge>}
                       </div>
 
                       {TYPES.map(t => (
