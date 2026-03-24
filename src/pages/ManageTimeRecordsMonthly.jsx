@@ -240,7 +240,7 @@ export default function ManageTimeRecordsMonthly() {
     const dayResultMap = {};
     dayResults.forEach(d => { dayResultMap[d.dateStr] = d; });
     return { monthlySummary: summary, dsrBySunday, dayResultMap };
-  }, [days, timeRecords, selectedEmployee, shiftWorkDays, shiftJornadaMin]);
+  }, [days, timeRecords, selectedEmployee, shiftWorkDays, shiftJornadaMin, overtimeConfig]);
 
   const hasDayRecords = (dateStr) => Object.keys(recordsMap[dateStr] || {}).length > 0;
   const isDayEdited = (dateStr) => {
