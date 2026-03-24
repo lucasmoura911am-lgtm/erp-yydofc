@@ -320,6 +320,10 @@ export default function ManageTimeRecordsMonthly() {
               {days.map(({ date, dateStr }) => {
                 const weekend = isWeekend(date);
                 const hasRec = hasDayRecords(dateStr);
+                const edited = isDayEdited(dateStr);
+                const saving = savingDays[dateStr];
+                const saved = savedDays[dateStr];
+                const dayEdits = edits[dateStr] || {};
                 const dsrMin = dsrBySunday[dateStr];
 
                 return (
