@@ -108,6 +108,7 @@ import SSTVacinacao from './pages/SSTVacinacao';
 import SSTMatrizRisco from './pages/SSTMatrizRisco';
 import NR01Module from './pages/NR01Module';
 import ManageTimeRecordsMonthly from './pages/ManageTimeRecordsMonthly';
+import MonthlyTimeReport from './pages/MonthlyTimeReport';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -261,6 +262,7 @@ const AuthenticatedApp = () => {
       <Route path="/SSTMatrizRisco" element={<LayoutWrapper currentPageName="SSTMatrizRisco"><SSTMatrizRisco /></LayoutWrapper>} />
       <Route path="/NR01Module" element={<LayoutWrapper currentPageName="NR01Module"><NR01Module /></LayoutWrapper>} />
       <Route path="/ManageTimeRecordsMonthly" element={<LayoutWrapper currentPageName="ManageTimeRecordsMonthly"><ManageTimeRecordsMonthly /></LayoutWrapper>} />
+      <Route path="/MonthlyTimeReport" element={<LayoutWrapper currentPageName="MonthlyTimeReport"><MonthlyTimeReport /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
