@@ -109,6 +109,13 @@ import SSTMatrizRisco from './pages/SSTMatrizRisco';
 import NR01Module from './pages/NR01Module';
 import ManageTimeRecordsMonthly from './pages/ManageTimeRecordsMonthly';
 import MonthlyTimeReport from './pages/MonthlyTimeReport';
+import LaborRulesPage from './pages/LaborRulesPage';
+import TaxTablePage from './pages/TaxTablePage';
+import PayrollRunPage from './pages/PayrollRunPage';
+import PayrollEventsPage from './pages/PayrollEventsPage';
+import CompanyLaborConfigPage from './pages/CompanyLaborConfigPage';
+import CommissionsPage from './pages/CommissionsPage';
+import DiscountRecordsPage from './pages/DiscountRecordsPage';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -263,6 +270,13 @@ const AuthenticatedApp = () => {
       <Route path="/NR01Module" element={<LayoutWrapper currentPageName="NR01Module"><NR01Module /></LayoutWrapper>} />
       <Route path="/ManageTimeRecordsMonthly" element={<LayoutWrapper currentPageName="ManageTimeRecordsMonthly"><ManageTimeRecordsMonthly /></LayoutWrapper>} />
       <Route path="/MonthlyTimeReport" element={<LayoutWrapper currentPageName="MonthlyTimeReport"><MonthlyTimeReport /></LayoutWrapper>} />
+      <Route path="/LaborRulesPage" element={<LayoutWrapper currentPageName="LaborRulesPage"><LaborRulesPage /></LayoutWrapper>} />
+      <Route path="/TaxTablePage" element={<LayoutWrapper currentPageName="TaxTablePage"><TaxTablePage /></LayoutWrapper>} />
+      <Route path="/PayrollRunPage" element={<LayoutWrapper currentPageName="PayrollRunPage"><PayrollRunPage /></LayoutWrapper>} />
+      <Route path="/PayrollEventsPage" element={<LayoutWrapper currentPageName="PayrollEventsPage"><PayrollEventsPage /></LayoutWrapper>} />
+      <Route path="/CompanyLaborConfigPage" element={<LayoutWrapper currentPageName="CompanyLaborConfigPage"><CompanyLaborConfigPage /></LayoutWrapper>} />
+      <Route path="/CommissionsPage" element={<LayoutWrapper currentPageName="CommissionsPage"><CommissionsPage /></LayoutWrapper>} />
+      <Route path="/DiscountRecordsPage" element={<LayoutWrapper currentPageName="DiscountRecordsPage"><DiscountRecordsPage /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
