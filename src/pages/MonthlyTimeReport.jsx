@@ -13,6 +13,7 @@ import {
   calcDayResult,
   calcMonthlySummary,
   calcWeeklyDSRMap,
+  applyInterjornada,
   formatMinutes,
   formatSaldo,
 } from "@/lib/timeCalculations";
@@ -72,6 +73,7 @@ export default function MonthlyTimeReport() {
       });
     },
     enabled: !!user?.company_id && !!selectedEmployee,
+    staleTime: 0,
   });
 
   const shiftWorkDays = useMemo(() => {
@@ -117,6 +119,9 @@ export default function MonthlyTimeReport() {
       const result = calcDayResult(dateStr, recs, jornada);
       dayResults.push({ ...result, dow, date: d });
     }
+
+    // Aplica regra de interjornada (CLT Art. 66)
+    applyInterjornada(dayResults, recordsMap);
 
     const weeklyDsrMap = calcWeeklyDSRMap(dayResults);
     const dsrBySunday = {};
