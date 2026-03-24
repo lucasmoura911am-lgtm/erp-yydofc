@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Save, Trash2, ChevronLeft, ChevronRight, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import MonthlySummaryCard from "@/components/timereport/MonthlySummaryCard";
-import { calcDayResult, calcMonthlySummary, calcWeeklyDSRMap } from "@/lib/timeCalculations";
+import { calcDayResult, calcMonthlySummary, calcWeeklyDSRMap, formatMinutes } from "@/lib/timeCalculations";
 import {
   Select,
   SelectContent,
