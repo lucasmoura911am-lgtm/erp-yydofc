@@ -9,7 +9,8 @@ export const ALL_MODULES = [
 
   // ── Controle de Ponto ────────────────────────────────────────
   { id: "time_records", label: "Registros de Ponto", url: "/TimeRecords", group: "Controle de Ponto" },
-  { id: "manage_time_records", label: "Gestão de Pontos", url: "/ManageTimeRecordsSimple", group: "Controle de Ponto" },
+  { id: "manage_time_records", label: "Gestão de Pontos (dia)", url: "/ManageTimeRecordsSimple", group: "Controle de Ponto" },
+  { id: "manage_time_records_monthly", label: "Gestão Mensal de Pontos", url: "/ManageTimeRecordsMonthly", group: "Controle de Ponto" },
   { id: "hours_bank", label: "Banco de Horas", url: "/HoursBank", group: "Controle de Ponto" },
   { id: "signed_time_reports", label: "Folha de Ponto Assinada", url: "/ManageSignedTimeReports", group: "Controle de Ponto" },
 
