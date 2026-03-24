@@ -273,9 +273,19 @@ export default function MonthlyTimeReport() {
                               ) : (
                                 <span className={saldo >= 0 ? "text-green-600" : "text-orange-600"}>
                                   {formatSaldo(saldo)}
-                                  {day.label === "folga" && day.workedMin > 0 && (
-                                    <span className="ml-1 text-xs font-normal text-emerald-600">({overtimeConfig?.offDayRate ?? 100}%)</span>
-                                  )}
+                                  {saldo > 0 && (() => {
+                                    const has50 = day.extra50Min > 0;
+                                    const has100 = day.extra100Min > 0;
+                                    if (has50 && has100) return <span className="ml-1 text-xs font-normal opacity-75">(misto)</span>;
+                                    if (has100) return <span className="ml-1 text-xs font-normal text-emerald-600">(100%)</span>;
+                                    if (has50) return <span className="ml-1 text-xs font-normal opacity-75">(50%)</span>;
+                                    // taxa personalizada diferente de 50/100
+                                    const rates = Object.keys(day.extraRateMap || {});
+                                    if (rates.length === 1 && rates[0] !== "50" && rates[0] !== "100") {
+                                      return <span className="ml-1 text-xs font-normal opacity-75">({rates[0]}%)</span>;
+                                    }
+                                    return null;
+                                  })()}
                                 </span>
                               )}
                             </div>

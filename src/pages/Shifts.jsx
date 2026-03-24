@@ -43,7 +43,8 @@ export default function Shifts() {
     tolerance_minutes: 15,
     work_days: [],
     overtime_rules: DEFAULT_OVERTIME,
-    overtime_offday_rate: 100,
+    overtime_offday_rate: null, // null = usar taxa do dia configurado
+    use_custom_offday_rate: false,
   });
 
   const queryClient = useQueryClient();
@@ -88,26 +89,32 @@ export default function Shifts() {
       tolerance_minutes: 15,
       work_days: [],
       overtime_rules: DEFAULT_OVERTIME,
-      overtime_offday_rate: 100,
+      overtime_offday_rate: null,
+      use_custom_offday_rate: false,
     });
     setEditingShift(null);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const data = { ...formData, company_id: user.company_id };
+    const data = {
+      ...formData,
+      company_id: user.company_id,
+      overtime_offday_rate: formData.use_custom_offday_rate ? (formData.overtime_offday_rate ?? 100) : null,
+    };
+    delete data.use_custom_offday_rate;
     if (editingShift) updateMutation.mutate({ id: editingShift.id, data });
     else createMutation.mutate(data);
   };
 
   const handleEdit = (shift) => {
     setEditingShift(shift);
-    // Merge existing overtime_rules with defaults (ensure all days are present)
     const existingRules = shift.overtime_rules || [];
     const mergedRules = DEFAULT_OVERTIME.map(def => {
       const found = existingRules.find(r => r.day === def.day);
       return found ? { ...found } : { ...def };
     });
+    const hasCustomOffday = shift.overtime_offday_rate != null;
     setFormData({
       name: shift.name || "",
       start_time: shift.start_time || "08:00",
@@ -117,6 +124,7 @@ export default function Shifts() {
       work_days: shift.work_days || [],
       overtime_rules: mergedRules,
       overtime_offday_rate: shift.overtime_offday_rate ?? 100,
+      use_custom_offday_rate: hasCustomOffday,
     });
     setDialogOpen(true);
   };
@@ -216,8 +224,8 @@ export default function Shifts() {
                     </Badge>
                   );
                 })}
-                <Badge variant="outline" className="text-xs px-1.5 py-0 border-orange-300 text-orange-700 bg-orange-50">
-                  Folga: {shift.overtime_offday_rate ?? 100}%
+                <Badge variant="outline" className={`text-xs px-1.5 py-0 ${shift.overtime_offday_rate != null ? "border-orange-300 text-orange-700 bg-orange-50" : "border-gray-200 text-gray-400"}`}>
+                  Folga: {shift.overtime_offday_rate != null ? `${shift.overtime_offday_rate}%` : "por dia"}
                 </Badge>
               </div>
             </CardContent>
@@ -325,23 +333,32 @@ export default function Shifts() {
               </div>
 
               {/* Taxa para dias de folga (fora da escala) */}
-              <div className="rounded-lg border px-3 py-2 flex items-center justify-between bg-orange-50/50 dark:bg-orange-900/10">
-                <div>
-                  <p className="text-sm font-medium">Dias fora da escala (folga/folga não programada)</p>
-                  <p className="text-xs text-gray-500">Quando o funcionário trabalha em dia que não está na escala</p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={200}
-                    step={5}
-                    value={formData.overtime_offday_rate}
-                    onChange={(e) => setFormData({ ...formData, overtime_offday_rate: parseInt(e.target.value) })}
-                    className="w-20 h-8 text-sm text-right"
+              <div className="rounded-lg border px-3 py-3 bg-orange-50/50 dark:bg-orange-900/10 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Taxa específica para dias fora da escala</p>
+                    <p className="text-xs text-gray-500">Se desativado, usa a taxa configurada para o dia da semana acima</p>
+                  </div>
+                  <Checkbox
+                    checked={formData.use_custom_offday_rate}
+                    onCheckedChange={(v) => setFormData({ ...formData, use_custom_offday_rate: !!v })}
                   />
-                  <span className="text-sm text-gray-500 w-4">%</span>
                 </div>
+                {formData.use_custom_offday_rate && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-sm text-gray-600 flex-1">Taxa para folgas não programadas:</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={200}
+                      step={5}
+                      value={formData.overtime_offday_rate ?? 100}
+                      onChange={(e) => setFormData({ ...formData, overtime_offday_rate: parseInt(e.target.value) })}
+                      className="w-20 h-8 text-sm text-right"
+                    />
+                    <span className="text-sm text-gray-500">%</span>
+                  </div>
+                )}
               </div>
             </div>
 

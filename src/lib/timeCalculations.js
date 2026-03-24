@@ -104,7 +104,15 @@ export function calcDayResult(dateStr, records, jornadaMin = 480, overtimeConfig
     label = "folga";
     if (workedMin > 0) {
       extraMin = workedMin;
-      const offRate = overtimeConfig?.offDayRate ?? 100;
+      // Se offDayRate for null/undefined, respeita a taxa configurada para o dia da semana
+      let offRate;
+      if (overtimeConfig?.offDayRate != null) {
+        offRate = overtimeConfig.offDayRate;
+      } else if (overtimeConfig?.dayRates?.has(dow)) {
+        offRate = overtimeConfig.dayRates.get(dow);
+      } else {
+        offRate = dow === 0 ? 100 : 50; // fallback padrão
+      }
       applyRate(workedMin, offRate);
     }
     return { dateStr, dow, workedMin, jornadaMin, extraMin, extra50Min, extra100Min, extraRateMap, atrasoMin, faltaMin, label, hasRecords };
