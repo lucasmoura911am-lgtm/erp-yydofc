@@ -233,11 +233,15 @@ export default function MonthlyTimeReport() {
                 ) : (
                   <div className="divide-y divide-gray-100 dark:divide-gray-800">
                     {days.map(day => {
-                      const recs = recordsMap[day.dateStr] || [];
-                      const saldo = day.extraMin > 0 ? day.extraMin : -day.atrasoMin;
-                      const isOff = day.label === "folga";
-                      const style = DAY_TYPE_STYLE[day.label] || DAY_TYPE_STYLE.normal;
-                      const dsrMin = dsrBySunday[day.dateStr];
+                     const recs = recordsMap[day.dateStr] || [];
+                     const saldo = day.extraMin > 0 ? day.extraMin : -day.atrasoMin;
+                     // "folga com trabalho" deve mostrar horários e HE, não esconder
+                     const isOffNoWork = day.label === "folga" && day.workedMin === 0;
+                     const isOff = isOffNoWork;
+                     const style = day.label === "folga" && day.workedMin > 0
+                       ? DAY_TYPE_STYLE.extra
+                       : (DAY_TYPE_STYLE[day.label] || DAY_TYPE_STYLE.normal);
+                     const dsrMin = dsrBySunday[day.dateStr];
 
                       return (
                         <React.Fragment key={day.dateStr}>
@@ -249,13 +253,16 @@ export default function MonthlyTimeReport() {
                             <div>{isOff ? "" : getTime(recs, "retorno")}</div>
                             <div>{isOff ? "" : getTime(recs, "saida")}</div>
                             <div className="font-semibold">
-                              {isOff ? (
+                               {isOff ? (
                                 <span className="font-normal">FOLGA</span>
                               ) : day.label === "falta" ? (
                                 <span className="text-red-600">FALTA</span>
                               ) : (
                                 <span className={saldo >= 0 ? "text-green-600" : "text-orange-600"}>
                                   {formatSaldo(saldo)}
+                                  {day.label === "folga" && day.workedMin > 0 && (
+                                    <span className="ml-1 text-xs font-normal text-emerald-600">(100%)</span>
+                                  )}
                                 </span>
                               )}
                             </div>
