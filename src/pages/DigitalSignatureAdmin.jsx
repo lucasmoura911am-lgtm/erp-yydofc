@@ -23,9 +23,27 @@ export default function DigitalSignatureAdmin() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("Todos");
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    base44.entities.DigitalSignature.list("-created_date", 100).then(d => { setDocs(d); setLoading(false); });
+    const load = async () => {
+      const user = await base44.auth.me();
+      const admin = user.role === 'admin';
+      setIsAdmin(admin);
+      if (admin) {
+        const d = await base44.entities.DigitalSignature.list("-created_date", 100);
+        setDocs(d);
+      } else {
+        // Buscar employee_id pelo email do usuário
+        const emps = await base44.entities.Employee.filter({ user_email: user.email });
+        if (emps.length > 0) {
+          const d = await base44.entities.DigitalSignature.filter({ employee_id: emps[0].id }, "-created_date");
+          setDocs(d);
+        }
+      }
+      setLoading(false);
+    };
+    load();
   }, []);
 
   const filtered = docs.filter(d => {
