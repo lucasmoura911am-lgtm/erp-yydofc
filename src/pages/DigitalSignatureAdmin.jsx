@@ -132,6 +132,96 @@ export default function DigitalSignatureAdmin() {
           )}
         </CardContent>
       </Card>
+      {/* Modal de detalhes da assinatura */}
+      {selectedDoc && (
+        <Dialog open={!!selectedDoc} onOpenChange={() => setSelectedDoc(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-purple-600" />
+                Detalhes da Assinatura — {selectedDoc.protocol_number}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Status + dados básicos */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-gray-500 text-xs mb-1">Colaborador</p>
+                  <p className="font-semibold">{selectedDoc.employee_name}</p>
+                  <p className="text-gray-400 text-xs">{selectedDoc.employee_position}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-gray-500 text-xs mb-1">Documento</p>
+                  <p className="font-semibold">{selectedDoc.document_type}</p>
+                  <p className="text-gray-400 text-xs">Prazo: {selectedDoc.deadline}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-gray-500 text-xs mb-1">Status</p>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[selectedDoc.status]}`}>
+                    {selectedDoc.status}
+                  </span>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-gray-500 text-xs mb-1">Assinado em</p>
+                  <p className="font-semibold text-xs">{selectedDoc.signed_at ? format(new Date(selectedDoc.signed_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }) : "—"}</p>
+                </div>
+              </div>
+
+              {/* Evidências */}
+              {selectedDoc.status === "Assinado" && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-gray-700 flex items-center gap-1"><Shield className="w-4 h-4" /> Evidências Coletadas</p>
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    <div className="flex items-center gap-2 p-2 bg-blue-50 rounded border border-blue-100">
+                      <Monitor className="w-3 h-3 text-blue-500 shrink-0" />
+                      <span><strong>IP:</strong> {selectedDoc.ip_address || "—"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 bg-blue-50 rounded border border-blue-100">
+                      <MapPin className="w-3 h-3 text-blue-500 shrink-0" />
+                      <span><strong>GPS:</strong> {selectedDoc.latitude && selectedDoc.longitude ? `${selectedDoc.latitude?.toFixed(6)}, ${selectedDoc.longitude?.toFixed(6)}` : "—"}</span>
+                    </div>
+                    <div className="flex items-start gap-2 p-2 bg-blue-50 rounded border border-blue-100">
+                      <Monitor className="w-3 h-3 text-blue-500 mt-0.5 shrink-0" />
+                      <span className="break-all"><strong>Dispositivo:</strong> {selectedDoc.user_agent || "—"}</span>
+                    </div>
+                    <div className="flex items-start gap-2 p-2 bg-blue-50 rounded border border-blue-100">
+                      <Hash className="w-3 h-3 text-blue-500 mt-0.5 shrink-0" />
+                      <span className="break-all font-mono text-xs"><strong>Hash SHA-256:</strong> {selectedDoc.hash_sha256 || "—"}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Foto */}
+              {selectedDoc.photo_url && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 flex items-center gap-1 mb-2"><Camera className="w-4 h-4" /> Foto do Colaborador</p>
+                  <img src={selectedDoc.photo_url} alt="Foto assinatura" className="w-40 h-40 object-cover rounded-lg border" style={{ transform: "scaleX(-1)" }} />
+                </div>
+              )}
+
+              {/* Assinatura */}
+              {selectedDoc.signature_image && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Assinatura Digital</p>
+                  <div className="bg-white border rounded-lg p-3 inline-block">
+                    <img src={selectedDoc.signature_image} alt="Assinatura" className="max-h-24 max-w-full" />
+                  </div>
+                </div>
+              )}
+
+              {/* Documento original */}
+              {selectedDoc.file_url && (
+                <a href={selectedDoc.file_url} target="_blank" rel="noreferrer">
+                  <Button variant="outline" className="w-full flex items-center gap-2">
+                    <FileText className="w-4 h-4" /> Ver Documento Original
+                  </Button>
+                </a>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
