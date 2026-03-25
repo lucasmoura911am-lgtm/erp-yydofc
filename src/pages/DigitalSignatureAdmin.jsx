@@ -22,6 +22,7 @@ export default function DigitalSignatureAdmin() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("Todos");
+  const [selectedDoc, setSelectedDoc] = useState(null);
 
   useEffect(() => {
     base44.entities.DigitalSignature.list("-created_date", 100).then(d => { setDocs(d); setLoading(false); });
