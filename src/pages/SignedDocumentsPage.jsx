@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, FileCheck, CheckCircle, MapPin, Monitor, Hash, Camera, FileText, ExternalLink } from "lucide-react";
+import { Search, FileCheck, CheckCircle, MapPin, Monitor, Hash, Camera, FileText, ExternalLink, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -17,6 +17,25 @@ export default function SignedDocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
+  const [mergingId, setMergingId] = useState(null);
+
+  const openMergedDoc = async (doc) => {
+    if (!doc.file_url || !doc.comprovante_url) {
+      window.open(doc.file_url || doc.comprovante_url, "_blank");
+      return;
+    }
+    setMergingId(doc.id);
+    try {
+      const { base44: b } = await import("@/api/base44Client");
+      const res = await b.functions.invoke('mergePdfs', { pdf1_url: doc.file_url, pdf2_url: doc.comprovante_url });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      window.open(URL.createObjectURL(blob), '_blank');
+    } catch (e) {
+      alert("Erro ao mesclar PDFs: " + e.message);
+    } finally {
+      setMergingId(null);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -136,10 +155,16 @@ export default function SignedDocumentsPage() {
                         {doc.signed_at ? format(new Date(doc.signed_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "—"}
                       </td>
                       <td className="p-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Button size="sm" variant="outline" className="text-xs flex items-center gap-1" onClick={() => setSelected(doc)}>
                             <CheckCircle className="w-3 h-3" /> Ver Evidências
                           </Button>
+                          {doc.file_url && doc.comprovante_url && (
+                            <Button size="sm" variant="outline" className="text-xs flex items-center gap-1 text-purple-700 border-purple-300" disabled={mergingId === doc.id} onClick={() => openMergedDoc(doc)}>
+                              {mergingId === doc.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
+                              Doc + Comprovante
+                            </Button>
+                          )}
                           {doc.comprovante_url && (
                             <a href={doc.comprovante_url} target="_blank" rel="noreferrer">
                               <Button size="sm" variant="outline" className="text-xs flex items-center gap-1 text-green-700 border-green-300">
