@@ -121,6 +121,7 @@ import DigitalSignatureAdmin from './pages/DigitalSignatureAdmin';
 import SignedDocumentsPage from './pages/SignedDocumentsPage';
 import DigitalSignatureSend from './pages/DigitalSignatureSend';
 import DigitalSignatureSign from './pages/DigitalSignatureSign';
+import MyDigitalSignatures from './pages/MyDigitalSignatures';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -283,6 +284,7 @@ const AuthenticatedApp = () => {
       <Route path="/DigitalSignatureSend" element={<LayoutWrapper currentPageName="DigitalSignatureSend"><DigitalSignatureSend /></LayoutWrapper>} />
       <Route path="/DigitalSignatureSign" element={<DigitalSignatureSign />} />
       <Route path="/SignedDocumentsPage" element={<LayoutWrapper currentPageName="SignedDocumentsPage"><SignedDocumentsPage /></LayoutWrapper>} />
+      <Route path="/MyDigitalSignatures" element={<LayoutWrapper currentPageName="MyDigitalSignatures"><MyDigitalSignatures /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
