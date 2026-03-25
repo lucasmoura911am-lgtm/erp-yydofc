@@ -26,8 +26,7 @@ export default function SignedDocumentsPage() {
     }
     setMergingId(doc.id);
     try {
-      const { base44: b } = await import("@/api/base44Client");
-      const res = await b.functions.invoke('mergePdfs', { pdf1_url: doc.file_url, pdf2_url: doc.comprovante_url });
+      const res = await base44.functions.invoke('mergePdfs', { pdf1_url: doc.file_url, pdf2_url: doc.comprovante_url });
       const blob = new Blob([res.data], { type: 'application/pdf' });
       window.open(URL.createObjectURL(blob), '_blank');
     } catch (e) {
