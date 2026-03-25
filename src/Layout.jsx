@@ -183,6 +183,7 @@ export default function Layout({ children }) {
           { title: "Funcionários", url: "/Employees", icon: Users },
           { title: "Vida do Funcionário", url: "/EmployeeLifeReport", icon: TrendingUp },
           { title: "Pasta dos Colaboradores", url: "/EmployeeFolder", icon: Folder },
+          { title: "Documentos Assinados", url: "/SignedDocumentsPage", icon: FileCheck },
           { title: "Times", url: "/Teams", icon: Users },
           { title: "Supervisores", url: "/Supervisors", icon: Shield },
           { title: "Justificativas de Falta", url: "/ManageAbsenceJustifications", icon: FileCheck },
