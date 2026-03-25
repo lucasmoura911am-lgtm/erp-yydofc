@@ -228,11 +228,16 @@ export default function DigitalSignatureSign() {
       const file = new File([blob], "foto-assinatura.jpg", { type: "image/jpeg" });
       const { file_url: photoUrl } = await base44.integrations.Core.UploadFile({ file });
 
+      // Upload signature image to avoid field size limit
+      const sigBlob = await fetch(signatureImage).then(r => r.blob());
+      const sigFile = new File([sigBlob], "assinatura.png", { type: "image/png" });
+      const { file_url: signatureUrl } = await base44.integrations.Core.UploadFile({ file: sigFile });
+
       const comprovanteUrl = await buildAndUploadComprovante({ doc, signatureImage, photoUrl, sha256, ipAddress, location, userAgent, now });
 
       await base44.entities.DigitalSignature.update(doc.id, {
         status: "Assinado",
-        signature_image: signatureImage,
+        signature_image: signatureUrl,
         photo_url: photoUrl,
         signed_at: now,
         ip_address: ipAddress,
