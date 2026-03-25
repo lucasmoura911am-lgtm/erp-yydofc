@@ -132,10 +132,19 @@ export default function DigitalSignatureAdmin() {
                           </span>
                         </td>
                         <td className="p-3">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Button size="sm" variant="outline" className="flex items-center gap-1 text-xs" onClick={() => setSelectedDoc(doc)}>
                               <Eye className="w-3 h-3" /> Detalhes
                             </Button>
+                            {doc.status === "Pendente" && (
+                              <Button
+                                size="sm"
+                                className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 text-xs"
+                                onClick={() => window.open(`/DigitalSignatureSign?id=${doc.id}`, "_blank")}
+                              >
+                                ✍️ Assinar
+                              </Button>
+                            )}
                             {doc.status !== "Arquivado" && (
                               <Button size="sm" variant="ghost" className="text-gray-400 hover:text-gray-600 text-xs" onClick={() => archiveDoc(doc.id)}>Arquivar</Button>
                             )}
