@@ -212,11 +212,10 @@ export default function DigitalSignatureSign() {
     pdf.text(`Dispositivo: ${userAgent.substring(0, 90)}`, 14, 140);
     pdf.text(`Hash SHA-256: ${hash}`, 14, 148);
 
-    if (canvasRef.current) {
-      const sigImg = canvasRef.current.toDataURL("image/png");
+    if (signatureImage) {
       pdf.setFontSize(11); pdf.setFont("helvetica", "bold");
       pdf.text("ASSINATURA DIGITAL", 14, 164);
-      pdf.addImage(sigImg, "PNG", 14, 168, 80, 30);
+      pdf.addImage(signatureImage, "PNG", 14, 168, 80, 30);
     }
 
     pdf.setFontSize(8); pdf.setTextColor(100, 100, 100);
@@ -389,10 +388,10 @@ export default function DigitalSignatureSign() {
                 <div className="break-all text-xs text-gray-400"><span className="text-gray-500">Hash SHA-256:</span> {hash}</div>
               </div>
 
-              {canvasRef.current && (
+              {signatureImage && (
                 <div className="bg-white p-3 rounded-lg border">
                   <p className="text-xs text-gray-500 mb-2">Assinatura:</p>
-                  <img src={canvasRef.current.toDataURL()} alt="Assinatura" className="max-h-20 mx-auto" />
+                  <img src={signatureImage} alt="Assinatura" className="max-h-20 mx-auto" />
                 </div>
               )}
 
