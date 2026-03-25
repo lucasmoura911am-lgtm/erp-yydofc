@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileText, Eye, Folder, Loader2 } from "lucide-react";
+import { FileText, Eye, Folder, Loader2, PenLine, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 
 const DOC_TYPES = {
@@ -38,6 +38,12 @@ export default function MyDocuments() {
     enabled: !!employee?.id,
   });
 
+  const { data: pendingSignatures = [] } = useQuery({
+    queryKey: ["my-signatures", employee?.id],
+    queryFn: () => base44.entities.DigitalSignature.filter({ employee_id: employee.id }),
+    enabled: !!employee?.id,
+  });
+
   if (!employee && !isLoading) {
     return (
       <div className="p-6 text-center py-20 text-gray-400">
@@ -59,6 +65,79 @@ export default function MyDocuments() {
           <p className="text-gray-500 text-sm">Documentos arquivados pelo RH</p>
         </div>
       </div>
+
+      {/* Assinaturas Digitais Pendentes */}
+      {pendingSignatures.filter(s => s.status === "Pendente").length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <PenLine className="w-5 h-5 text-orange-500" />
+            Documentos Aguardando sua Assinatura
+          </h2>
+          <div className="space-y-2">
+            {pendingSignatures.filter(s => s.status === "Pendente").map(sig => (
+              <Card key={sig.id} className="border-orange-200 bg-orange-50">
+                <CardContent className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center">
+                      <Clock className="w-4 h-4 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-gray-900">{sig.document_type}</p>
+                      <p className="text-xs text-gray-500">Protocolo: {sig.protocol_number} · Prazo: {sig.deadline}</p>
+                      {sig.message && <p className="text-xs text-orange-700 mt-0.5">{sig.message}</p>}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="bg-orange-500 hover:bg-orange-600 text-white shrink-0"
+                    onClick={() => window.open(`/DigitalSignatureSign?id=${sig.id}`, "_blank")}
+                  >
+                    <PenLine className="w-4 h-4 mr-1" /> Assinar
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Documentos já assinados digitalmente */}
+      {pendingSignatures.filter(s => s.status === "Assinado").length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-500" />
+            Documentos Assinados
+          </h2>
+          <div className="space-y-2">
+            {pendingSignatures.filter(s => s.status === "Assinado").map(sig => (
+              <Card key={sig.id} className="border-green-200 bg-green-50">
+                <CardContent className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-gray-900">{sig.document_type}</p>
+                      <p className="text-xs text-gray-500">Protocolo: {sig.protocol_number}</p>
+                    </div>
+                  </div>
+                  {sig.comprovante_url && (
+                    <Button size="sm" variant="outline" onClick={() => window.open(sig.comprovante_url, "_blank")}>
+                      <Eye className="w-4 h-4 mr-1" /> Comprovante
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Documentos do RH */}
+      <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+        <Folder className="w-5 h-5 text-blue-500" />
+        Documentos do RH
+      </h2>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-16 text-gray-400">
