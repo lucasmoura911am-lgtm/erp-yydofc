@@ -11,17 +11,39 @@ import { ptBR } from "date-fns/locale";
 
 export default function SignedDocumentsPage() {
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [docs, setDocs] = useState([]);
+  const [pendingDocs, setPendingDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
 
   useEffect(() => {
-    base44.auth.me().then(u => {
+    const load = async () => {
+      const u = await base44.auth.me();
       setUser(u);
-      base44.entities.DigitalSignature.filter({ company_id: u.company_id, status: "Assinado" })
-        .then(d => { setDocs(d); setLoading(false); });
-    });
+      const admin = u.role === 'admin';
+      setIsAdmin(admin);
+
+      if (admin) {
+        const d = await base44.entities.DigitalSignature.filter({ company_id: u.company_id, status: "Assinado" });
+        setDocs(d);
+      } else {
+        // Funcionário: buscar employee_id e filtrar apenas seus documentos
+        const emps = await base44.entities.Employee.filter({ user_email: u.email });
+        if (emps.length > 0) {
+          const empId = emps[0].id;
+          const [signed, pending] = await Promise.all([
+            base44.entities.DigitalSignature.filter({ employee_id: empId, status: "Assinado" }),
+            base44.entities.DigitalSignature.filter({ employee_id: empId, status: "Pendente" }),
+          ]);
+          setDocs(signed);
+          setPendingDocs(pending);
+        }
+      }
+      setLoading(false);
+    };
+    load();
   }, []);
 
   const filtered = docs.filter(d =>
