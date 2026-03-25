@@ -82,6 +82,10 @@ export const ALL_MODULES = [
   { id: "generate_document", label: "Gerar Documento", url: "/GenerateDocument", group: "Documentos" },
   { id: "generated_documents", label: "Documentos Gerados", url: "/GeneratedDocuments", group: "Documentos" },
 
+  // ── Assinatura Digital ────────────────────────────────────────
+  { id: "digital_signature_admin", label: "Painel de Assinaturas", url: "/DigitalSignatureAdmin", group: "Assinatura Digital" },
+  { id: "digital_signature_send", label: "Enviar para Assinar", url: "/DigitalSignatureSend", group: "Assinatura Digital" },
+
   // ── Benefícios ───────────────────────────────────────────────
   { id: "benefit_configs", label: "Configurar Benefícios", url: "/BenefitConfigs", group: "Benefícios" },
   { id: "employee_benefits", label: "Gestão de Benefícios", url: "/EmployeeBenefits", group: "Benefícios" },
@@ -128,6 +132,15 @@ export const ALL_MODULES = [
   // ── Relatórios ───────────────────────────────────────────────
   { id: "reports", label: "Relatórios Gerais", url: "/Reports", group: "Relatórios" },
   { id: "mood_report", label: "Relatório de Humor", url: "/MoodReport", group: "Relatórios" },
+
+  // ── Folha de Pagamento CLT ────────────────────────────────────
+  { id: "company_labor_config", label: "Config. Trabalhista", url: "/CompanyLaborConfigPage", group: "Folha de Pagamento CLT" },
+  { id: "labor_rules", label: "Regras CLT", url: "/LaborRulesPage", group: "Folha de Pagamento CLT" },
+  { id: "payroll_events", label: "Eventos da Folha", url: "/PayrollEventsPage", group: "Folha de Pagamento CLT" },
+  { id: "payroll_run", label: "Processamento de Folha", url: "/PayrollRunPage", group: "Folha de Pagamento CLT" },
+  { id: "tax_table", label: "Tabelas INSS/IRRF", url: "/TaxTablePage", group: "Folha de Pagamento CLT" },
+  { id: "commissions", label: "Comissões", url: "/CommissionsPage", group: "Folha de Pagamento CLT" },
+  { id: "discount_records", label: "Descontos", url: "/DiscountRecordsPage", group: "Folha de Pagamento CLT" },
 
   // ── Sistema ──────────────────────────────────────────────────
   { id: "announcements", label: "Avisos", url: "/Announcements", group: "Sistema" },
