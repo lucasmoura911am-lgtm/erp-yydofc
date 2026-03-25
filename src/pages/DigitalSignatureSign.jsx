@@ -19,6 +19,7 @@ export default function DigitalSignatureSign() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [currentEmployee, setCurrentEmployee] = useState(null);
   const [hasSignature, setHasSignature] = useState(false);
 
   const [ipAddress, setIpAddress] = useState("");
@@ -38,12 +39,33 @@ export default function DigitalSignatureSign() {
 
   useEffect(() => {
     if (!signatureId) { setError("ID do documento não informado"); setLoading(false); return; }
-    base44.entities.DigitalSignature.filter({ id: signatureId }).then(res => {
-      if (res.length === 0) { setError("Documento não encontrado"); setLoading(false); return; }
-      setDoc(res[0]);
-      setProtocol(res[0].protocol_number);
-      setLoading(false);
-    });
+    const load = async () => {
+      try {
+        const user = await base44.auth.me();
+        const emps = await base44.entities.Employee.filter({ user_email: user.email });
+        const emp = emps.length > 0 ? emps[0] : null;
+        setCurrentEmployee(emp);
+
+        const res = await base44.entities.DigitalSignature.filter({ id: signatureId });
+        if (res.length === 0) { setError("Documento não encontrado"); setLoading(false); return; }
+        const foundDoc = res[0];
+
+        // Verificar se o funcionário é o dono (admin pode ver qualquer um)
+        if (user.role !== 'admin' && emp && foundDoc.employee_id !== emp.id) {
+          setError("Acesso negado: este documento não pertence a você.");
+          setLoading(false);
+          return;
+        }
+
+        setDoc(foundDoc);
+        setProtocol(foundDoc.protocol_number);
+        setLoading(false);
+      } catch (e) {
+        setError("Erro ao carregar documento.");
+        setLoading(false);
+      }
+    };
+    load();
     fetch("https://api.ipify.org?format=json").then(r => r.json()).then(d => setIpAddress(d.ip)).catch(() => setIpAddress("Não disponível"));
   }, [signatureId]);
 
