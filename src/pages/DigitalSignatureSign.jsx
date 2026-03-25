@@ -155,18 +155,16 @@ export default function DigitalSignatureSign() {
       });
 
       // Salvar na pasta do funcionário
-      try {
-        await base44.entities.EmployeeDocument.create({
-          employee_id: doc.employee_id,
-          company_id: doc.company_id,
-          title: `[Assinado] ${doc.document_type} - ${doc.protocol_number}`,
-          category: "Assinatura Digital",
-          file_url: doc.file_url,
-          notes: `Assinado em ${format(new Date(now), "dd/MM/yyyy HH:mm")} | IP: ${ipAddress} | Protocolo: ${doc.protocol_number} | GPS: ${location?.latitude?.toFixed(6)}, ${location?.longitude?.toFixed(6)}`
-        });
-      } catch (docErr) {
-        console.warn("Não foi possível salvar na pasta do funcionário:", docErr);
-      }
+      await base44.entities.EmployeeDocument.create({
+        employee_id: doc.employee_id,
+        company_id: doc.company_id,
+        document_name: `[Assinado Digitalmente] ${doc.document_type} - ${doc.protocol_number}`,
+        document_type: "contrato",
+        file_url: doc.file_url,
+        upload_date: now.substring(0, 10),
+        uploaded_by: doc.sent_by || "Sistema",
+        notes: `Protocolo: ${doc.protocol_number} | Assinado em ${format(new Date(now), "dd/MM/yyyy HH:mm")} | IP: ${ipAddress} | GPS: ${location?.latitude?.toFixed(6)}, ${location?.longitude?.toFixed(6)} | Hash: ${sha256}`
+      });
 
       setHash(sha256);
       setStep(3);
