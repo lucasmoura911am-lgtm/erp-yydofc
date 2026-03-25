@@ -115,9 +115,9 @@ export default function DigitalSignatureAdmin() {
                         </td>
                         <td className="p-3">
                           <div className="flex items-center gap-2">
-                            <a href={`/DigitalSignatureSign?id=${doc.id}`} target="_blank" rel="noreferrer">
-                              <Button size="sm" variant="outline" className="flex items-center gap-1 text-xs"><Eye className="w-3 h-3" /> Ver</Button>
-                            </a>
+                            <Button size="sm" variant="outline" className="flex items-center gap-1 text-xs" onClick={() => setSelectedDoc(doc)}>
+                              <Eye className="w-3 h-3" /> Detalhes
+                            </Button>
                             {doc.status !== "Arquivado" && (
                               <Button size="sm" variant="ghost" className="text-gray-400 hover:text-gray-600 text-xs" onClick={() => archiveDoc(doc.id)}>Arquivar</Button>
                             )}
