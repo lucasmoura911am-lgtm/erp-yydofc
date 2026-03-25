@@ -56,9 +56,13 @@ export default function DocumentsManager({ employeeId, companyId, currentUserEma
     setMergingId(sig.id);
     try {
       const res = await base44.functions.invoke('mergePdfs', { pdf1_url: sig.file_url, pdf2_url: sig.comprovante_url });
-      const blob = new Blob([res.data], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
+      const b64 = res.data?.base64_pdf;
+      if (!b64) throw new Error("PDF não retornado");
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      window.open(URL.createObjectURL(blob), '_blank');
     } catch (e) {
       toast({ title: "Erro ao mesclar PDFs", description: e.message, variant: "destructive" });
     } finally {
