@@ -117,6 +117,9 @@ import PayrollEventsPage from './pages/PayrollEventsPage';
 import CompanyLaborConfigPage from './pages/CompanyLaborConfigPage';
 import CommissionsPage from './pages/CommissionsPage';
 import DiscountRecordsPage from './pages/DiscountRecordsPage';
+import DigitalSignatureAdmin from './pages/DigitalSignatureAdmin';
+import DigitalSignatureSend from './pages/DigitalSignatureSend';
+import DigitalSignatureSign from './pages/DigitalSignatureSign';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -275,6 +278,9 @@ const AuthenticatedApp = () => {
       <Route path="/CompanyLaborConfigPage" element={<LayoutWrapper currentPageName="CompanyLaborConfigPage"><CompanyLaborConfigPage /></LayoutWrapper>} />
       <Route path="/CommissionsPage" element={<LayoutWrapper currentPageName="CommissionsPage"><CommissionsPage /></LayoutWrapper>} />
       <Route path="/DiscountRecordsPage" element={<LayoutWrapper currentPageName="DiscountRecordsPage"><DiscountRecordsPage /></LayoutWrapper>} />
+      <Route path="/DigitalSignatureAdmin" element={<LayoutWrapper currentPageName="DigitalSignatureAdmin"><DigitalSignatureAdmin /></LayoutWrapper>} />
+      <Route path="/DigitalSignatureSend" element={<LayoutWrapper currentPageName="DigitalSignatureSend"><DigitalSignatureSend /></LayoutWrapper>} />
+      <Route path="/DigitalSignatureSign" element={<DigitalSignatureSign />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
