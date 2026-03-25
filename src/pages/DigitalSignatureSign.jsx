@@ -92,9 +92,10 @@ export default function DigitalSignatureSign() {
   };
 
   const requestGPS = () => {
-    navigator.geolocation?.getCurrentPosition(
+    if (!navigator.geolocation) { alert("Seu navegador não suporta GPS"); return; }
+    navigator.geolocation.getCurrentPosition(
       pos => setLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-      () => alert("Não foi possível obter localização")
+      () => alert("Não foi possível obter localização. Por favor, permita o acesso à localização.")
     );
   };
 
@@ -122,47 +123,58 @@ export default function DigitalSignatureSign() {
   };
 
   const handleFinish = async () => {
+    if (!photo) { alert("Foto obrigatória! Por favor, tire uma foto."); return; }
+    if (!location) { alert("Localização GPS obrigatória! Por favor, capture sua localização."); return; }
     setSaving(true);
-    const signatureImage = canvasRef.current.toDataURL("image/png");
-    const now = new Date().toISOString();
+    try {
+      const signatureImage = canvasRef.current.toDataURL("image/png");
+      const now = new Date().toISOString();
 
-    const hashInput = `${doc.protocol_number}|${doc.employee_id}|${signatureImage}|${now}|${ipAddress}`;
-    const sha256 = await computeHash(hashInput);
+      const hashInput = `${doc.protocol_number}|${doc.employee_id}|${signatureImage}|${now}|${ipAddress}`;
+      const sha256 = await computeHash(hashInput);
 
-    let photoUrl = "";
-    if (photo) {
-      const blob = await fetch(photo).then(r => r.blob());
-      const file = new File([blob], "foto-assinatura.jpg", { type: "image/jpeg" });
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      photoUrl = file_url;
+      let photoUrl = "";
+      if (photo) {
+        const blob = await fetch(photo).then(r => r.blob());
+        const file = new File([blob], "foto-assinatura.jpg", { type: "image/jpeg" });
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        photoUrl = file_url;
+      }
+
+      await base44.entities.DigitalSignature.update(doc.id, {
+        status: "Assinado",
+        signature_image: signatureImage,
+        photo_url: photoUrl,
+        signed_at: now,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+        hash_sha256: sha256
+      });
+
+      // Salvar na pasta do funcionário
+      try {
+        await base44.entities.EmployeeDocument.create({
+          employee_id: doc.employee_id,
+          company_id: doc.company_id,
+          title: `[Assinado] ${doc.document_type} - ${doc.protocol_number}`,
+          category: "Assinatura Digital",
+          file_url: doc.file_url,
+          notes: `Assinado em ${format(new Date(now), "dd/MM/yyyy HH:mm")} | IP: ${ipAddress} | Protocolo: ${doc.protocol_number} | GPS: ${location?.latitude?.toFixed(6)}, ${location?.longitude?.toFixed(6)}`
+        });
+      } catch (docErr) {
+        console.warn("Não foi possível salvar na pasta do funcionário:", docErr);
+      }
+
+      setHash(sha256);
+      setStep(3);
+    } catch (err) {
+      console.error("Erro ao finalizar assinatura:", err);
+      alert("Erro ao salvar assinatura: " + (err.message || "Tente novamente."));
+    } finally {
+      setSaving(false);
     }
-
-    await base44.entities.DigitalSignature.update(doc.id, {
-      status: "Assinado",
-      signature_image: signatureImage,
-      photo_url: photoUrl,
-      signed_at: now,
-      ip_address: ipAddress,
-      user_agent: userAgent,
-      latitude: location?.latitude,
-      longitude: location?.longitude,
-      hash_sha256: sha256
-    });
-
-    // Salvar também como documento na pasta do funcionário
-    await base44.entities.EmployeeDocument.create({
-      employee_id: doc.employee_id,
-      company_id: doc.company_id,
-      title: `[Assinado] ${doc.document_type} - ${protocol}`,
-      type: "assinatura_digital",
-      file_url: doc.file_url,
-      notes: `Assinado em ${format(new Date(now), "dd/MM/yyyy HH:mm")} | IP: ${ipAddress} | Protocolo: ${protocol}`,
-      uploaded_at: now
-    });
-
-    setHash(sha256);
-    setSaving(false);
-    setStep(3);
   };
 
   const downloadPDF = () => {
@@ -309,14 +321,22 @@ export default function DigitalSignatureSign() {
                 </div>
               </div>
 
-              <Button variant="outline" className="w-full flex items-center gap-2" onClick={requestGPS}>
+              <Button
+                variant="outline"
+                className={`w-full flex items-center gap-2 ${location ? "border-green-500 text-green-700" : "border-red-400 text-red-600"}`}
+                onClick={requestGPS}
+              >
                 <MapPin className="w-4 h-4" />
-                {location ? `✓ GPS: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}` : "Capturar Localização GPS"}
+                {location ? `✓ GPS: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}` : "⚠ Capturar Localização GPS (Obrigatório)"}
               </Button>
 
               {!showCamera && !photo && (
-                <Button variant="outline" className="w-full flex items-center gap-2" onClick={openCamera}>
-                  <Camera className="w-4 h-4" /> Tirar Foto (opcional)
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center gap-2 border-red-400 text-red-600"
+                  onClick={openCamera}
+                >
+                  <Camera className="w-4 h-4" /> ⚠ Tirar Foto (Obrigatório)
                 </Button>
               )}
               {showCamera && (
@@ -334,9 +354,16 @@ export default function DigitalSignatureSign() {
                 </div>
               )}
 
-              <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleFinish} disabled={saving}>
+              <Button
+                className="w-full bg-green-600 hover:bg-green-700"
+                onClick={handleFinish}
+                disabled={saving || !photo || !location}
+              >
                 {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Finalizando...</> : "Concluir Assinatura"}
               </Button>
+              {(!photo || !location) && (
+                <p className="text-xs text-red-500 text-center">Foto e GPS são obrigatórios para concluir</p>
+              )}
             </CardContent>
           </Card>
         )}
