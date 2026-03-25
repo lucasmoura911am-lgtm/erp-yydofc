@@ -118,6 +118,7 @@ import CompanyLaborConfigPage from './pages/CompanyLaborConfigPage';
 import CommissionsPage from './pages/CommissionsPage';
 import DiscountRecordsPage from './pages/DiscountRecordsPage';
 import DigitalSignatureAdmin from './pages/DigitalSignatureAdmin';
+import SignedDocumentsPage from './pages/SignedDocumentsPage';
 import DigitalSignatureSend from './pages/DigitalSignatureSend';
 import DigitalSignatureSign from './pages/DigitalSignatureSign';
 
@@ -281,6 +282,7 @@ const AuthenticatedApp = () => {
       <Route path="/DigitalSignatureAdmin" element={<LayoutWrapper currentPageName="DigitalSignatureAdmin"><DigitalSignatureAdmin /></LayoutWrapper>} />
       <Route path="/DigitalSignatureSend" element={<LayoutWrapper currentPageName="DigitalSignatureSend"><DigitalSignatureSend /></LayoutWrapper>} />
       <Route path="/DigitalSignatureSign" element={<DigitalSignatureSign />} />
+      <Route path="/SignedDocumentsPage" element={<LayoutWrapper currentPageName="SignedDocumentsPage"><SignedDocumentsPage /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
