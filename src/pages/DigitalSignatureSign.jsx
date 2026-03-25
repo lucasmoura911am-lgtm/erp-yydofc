@@ -121,11 +121,16 @@ export default function DigitalSignatureSign() {
 
   const openCamera = async () => {
     setShowCamera(true); setCameraReady(false);
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-    streamRef.current = stream;
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.onloadedmetadata = () => { videoRef.current.play(); setCameraReady(true); };
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => { videoRef.current.play(); setCameraReady(true); };
+      }
+    } catch (err) {
+      setShowCamera(false);
+      alert("Não foi possível acessar a câmera. Verifique as permissões do navegador e tente novamente.\nErro: " + (err.message || err.name));
     }
   };
 
