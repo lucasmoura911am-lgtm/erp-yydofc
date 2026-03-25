@@ -524,7 +524,7 @@ export default function Layout({ children }) {
         {sidebarOpen && (
           <div className="overflow-hidden">
             <p className="font-bold text-sm text-gray-900 dark:text-gray-100 truncate">
-              {company?.name || "PontoFlex"}
+              {company?.name || "YYD FACILITIES SERVICE"}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
               {isSuperAdmin ? "Super Admin" : isAdmin ? "Administrador" : "Funcionário"}
