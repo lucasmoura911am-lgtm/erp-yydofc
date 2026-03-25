@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, Trash2, Eye, Plus, FileText, Loader2 } from "lucide-react";
+import { Upload, Trash2, Eye, Plus, FileText, Loader2, FileCheck, Clock, CheckCircle, ExternalLink, Merge } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 
@@ -32,6 +32,7 @@ export default function DocumentsManager({ employeeId, companyId, currentUserEma
   const [form, setForm] = useState(EMPTY_FORM);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [mergingId, setMergingId] = useState(null);
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -40,6 +41,30 @@ export default function DocumentsManager({ employeeId, companyId, currentUserEma
     queryFn: () => base44.entities.EmployeeDocument.filter({ employee_id: employeeId }),
     enabled: !!employeeId,
   });
+
+  const { data: digitalSigs = [] } = useQuery({
+    queryKey: ["digital-sigs-employee", employeeId],
+    queryFn: () => base44.entities.DigitalSignature.filter({ employee_id: employeeId }),
+    enabled: !!employeeId,
+  });
+
+  const openMergedDoc = async (sig) => {
+    if (!sig.file_url || !sig.comprovante_url) {
+      window.open(sig.file_url || sig.comprovante_url, "_blank");
+      return;
+    }
+    setMergingId(sig.id);
+    try {
+      const res = await base44.functions.invoke('mergePdfs', { pdf1_url: sig.file_url, pdf2_url: sig.comprovante_url });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (e) {
+      toast({ title: "Erro ao mesclar PDFs", description: e.message, variant: "destructive" });
+    } finally {
+      setMergingId(null);
+    }
+  };
 
   const createMut = useMutation({
     mutationFn: async (payload) => base44.entities.EmployeeDocument.create(payload),
@@ -97,6 +122,9 @@ export default function DocumentsManager({ employeeId, companyId, currentUserEma
       </div>
     );
   }
+
+  const signedDigs = digitalSigs.filter(s => s.status === "Assinado");
+  const pendingDigs = digitalSigs.filter(s => s.status === "Pendente");
 
   return (
     <div className="space-y-4">
@@ -182,6 +210,52 @@ export default function DocumentsManager({ employeeId, companyId, currentUserEma
             ))}
           </TableBody>
         </Table>
+      )}
+
+      {/* Assinaturas Digitais */}
+      {digitalSigs.length > 0 && (
+        <div className="space-y-3 mt-4">
+          <div className="flex items-center gap-2 border-t pt-4">
+            <FileCheck className="w-5 h-5 text-purple-600" />
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Assinaturas Digitais</span>
+            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{digitalSigs.length}</span>
+          </div>
+          <div className="space-y-2">
+            {digitalSigs.map(sig => (
+              <div key={sig.id} className="flex items-center justify-between gap-3 bg-gray-50 border rounded-lg p-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm text-gray-800 truncate">{sig.document_type}</p>
+                  <p className="text-xs text-gray-500 font-mono">{sig.protocol_number}</p>
+                  <p className="text-xs text-gray-400">Prazo: {sig.deadline}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {sig.status === "Pendente" ? (
+                    <>
+                      <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Pendente
+                      </span>
+                      <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white text-xs"
+                        onClick={() => window.open(`/DigitalSignatureSign?id=${sig.id}`, "_blank")}>
+                        ✍️ Assinar
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> Assinado
+                      </span>
+                      <Button size="sm" variant="outline" className="text-xs" disabled={mergingId === sig.id}
+                        onClick={() => openMergedDoc(sig)}>
+                        {mergingId === sig.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3 mr-1" />}
+                        Doc + Comprovante
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Upload Dialog */}
