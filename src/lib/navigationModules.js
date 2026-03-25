@@ -85,6 +85,7 @@ export const ALL_MODULES = [
   // ── Assinatura Digital ────────────────────────────────────────
   { id: "digital_signature_admin", label: "Painel de Assinaturas", url: "/DigitalSignatureAdmin", group: "Assinatura Digital" },
   { id: "digital_signature_send", label: "Enviar para Assinar", url: "/DigitalSignatureSend", group: "Assinatura Digital" },
+  { id: "signed_documents_page", label: "Documentos Assinados", url: "/SignedDocumentsPage", group: "Assinatura Digital" },
 
   // ── Benefícios ───────────────────────────────────────────────
   { id: "benefit_configs", label: "Configurar Benefícios", url: "/BenefitConfigs", group: "Benefícios" },
@@ -156,6 +157,7 @@ export const ALL_MODULES = [
   { id: "epi_daily_logs_emp", label: "Registrar EPI Diário", url: "/EPIDailyLogs", group: "Painel do Funcionário" },
   { id: "occurrences_emp", label: "Ocorrências", url: "/OccurrencesPage", group: "Painel do Funcionário" },
   { id: "my_documents", label: "Meus Documentos", url: "/MyDocuments", group: "Painel do Funcionário" },
+  { id: "my_digital_signatures", label: "Minhas Assinaturas Digitais", url: "/MyDigitalSignatures", group: "Painel do Funcionário" },
   { id: "my_vacations", label: "Minhas Férias", url: "/MyVacations", group: "Painel do Funcionário" },
   { id: "my_payslips", label: "Meus Holerites", url: "/MyPayslips", group: "Painel do Funcionário" },
   { id: "my_smart_payslips", label: "Meus Holerites (IA)", url: "/MySmartPayslips", group: "Painel do Funcionário" },
