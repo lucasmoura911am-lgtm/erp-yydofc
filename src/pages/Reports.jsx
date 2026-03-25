@@ -773,7 +773,7 @@ export default function Reports() {
     </div>
 
     <div style="margin-top: 30px; text-align: center; font-size: 8pt; color: #666; border-top: 1px solid #ccc; padding-top: 10px;">
-      Documento gerado automaticamente pelo sistema PontoFlex em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+      Documento gerado automaticamente pelo sistema ERP YYD em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
     </div>
   </div>
 
@@ -1165,7 +1165,7 @@ export default function Reports() {
   </table>
 
   <div style="margin-top: 30px; text-align: center; font-size: 8pt; color: #666; border-top: 1px solid #ccc; padding-top: 10px;">
-    Documento gerado automaticamente pelo sistema PontoFlex em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+    Documento gerado automaticamente pelo sistema YYD em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
   </div>
 
   <div class="no-print" style="position: fixed; bottom: 20px; right: 20px;">
