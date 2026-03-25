@@ -123,58 +123,78 @@ export default function DigitalSignatureSign() {
     return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
   };
 
+  const buildAndUploadComprovante = async ({ doc, signatureImage, photoUrl, sha256, ipAddress, location, userAgent, now }) => {
+    const pdf = new jsPDF();
+    const signedAt = format(new Date(now), "dd/MM/yyyy HH:mm:ss", { locale: ptBR });
+
+    // Cabeçalho
+    pdf.setFillColor(88, 28, 135);
+    pdf.rect(0, 0, 210, 30, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(14); pdf.setFont("helvetica", "bold");
+    pdf.text("COMPROVANTE DE ASSINATURA DIGITAL", 105, 13, { align: "center" });
+    pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
+    pdf.text(`Protocolo: ${doc.protocol_number}`, 105, 22, { align: "center" });
+
+    pdf.setTextColor(0, 0, 0);
+    let y = 38;
+
+    // Dados do documento
+    pdf.setFontSize(10); pdf.setFont("helvetica", "bold");
+    pdf.text("DADOS DO DOCUMENTO", 14, y); y += 8;
+    pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+    pdf.text(`Tipo: ${doc.document_type}`, 14, y); y += 6;
+    pdf.text(`Arquivo: ${doc.file_name || "-"}`, 14, y); y += 6;
+    pdf.text(`Assinado em: ${signedAt}`, 14, y); y += 10;
+
+    // Dados do signatário
+    pdf.setFontSize(10); pdf.setFont("helvetica", "bold");
+    pdf.text("SIGNATÁRIO", 14, y); y += 8;
+    pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+    pdf.text(`Nome: ${doc.employee_name}`, 14, y); y += 6;
+    pdf.text(`Cargo: ${doc.employee_position || "-"}`, 14, y); y += 10;
+
+    // Evidências
+    pdf.setFontSize(10); pdf.setFont("helvetica", "bold");
+    pdf.text("EVIDÊNCIAS COLETADAS", 14, y); y += 8;
+    pdf.setFont("helvetica", "normal"); pdf.setFontSize(8);
+    pdf.text(`IP: ${ipAddress}`, 14, y); y += 6;
+    pdf.text(`GPS: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`, 14, y); y += 6;
+    pdf.text(`Dispositivo: ${userAgent.substring(0, 95)}`, 14, y); y += 6;
+    pdf.text(`Hash SHA-256: ${sha256}`, 14, y); y += 10;
+
+    // Assinatura
+    if (signatureImage) {
+      pdf.setFontSize(10); pdf.setFont("helvetica", "bold");
+      pdf.text("ASSINATURA DIGITAL", 14, y); y += 6;
+      pdf.addImage(signatureImage, "PNG", 14, y, 80, 28); y += 32;
+    }
+
+    // Foto
+    if (photoUrl) {
+      try {
+        const imgData = await fetch(photoUrl).then(r => r.blob()).then(b => new Promise(res => { const fr = new FileReader(); fr.onload = e => res(e.target.result); fr.readAsDataURL(b); }));
+        pdf.setFontSize(10); pdf.setFont("helvetica", "bold");
+        pdf.text("FOTO DO COLABORADOR", 14, y); y += 6;
+        pdf.addImage(imgData, "JPEG", 14, y, 50, 50); y += 56;
+      } catch {}
+    }
+
+    pdf.setFontSize(7); pdf.setTextColor(120, 120, 120);
+    pdf.text("Documento com validade jurídica — MP 2.200-2/2001 (ICP-Brasil) e LGPD (Lei 13.709/2018)", 105, 285, { align: "center" });
+
+    const pdfBlob = pdf.output("blob");
+    const pdfFile = new File([pdfBlob], `comprovante-${doc.protocol_number}.pdf`, { type: "application/pdf" });
+    const { file_url } = await base44.integrations.Core.UploadFile({ file: pdfFile });
+    return file_url;
+  };
+
   const handleFinish = async () => {
     if (!photo) { alert("Foto obrigatória! Por favor, tire uma foto."); return; }
     if (!location) { alert("Localização GPS obrigatória! Por favor, capture sua localização."); return; }
     setSaving(true);
     try {
       if (!signatureImage) { alert("Assinatura não encontrada. Volte e assine novamente."); setSaving(false); return; }
-      const now = new Date().toISOString();
-
-      const hashInput = `${doc.protocol_number}|${doc.employee_id}|${signatureImage}|${now}|${ipAddress}`;
-      const sha256 = await computeHash(hashInput);
-
-      let photoUrl = "";
-      if (photo) {
-        const blob = await fetch(photo).then(r => r.blob());
-        const file = new File([blob], "foto-assinatura.jpg", { type: "image/jpeg" });
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
-        photoUrl = file_url;
-      }
-
-      await base44.entities.DigitalSignature.update(doc.id, {
-        status: "Assinado",
-        signature_image: signatureImage,
-        photo_url: photoUrl,
-        signed_at: now,
-        ip_address: ipAddress,
-        user_agent: userAgent,
-        latitude: location?.latitude,
-        longitude: location?.longitude,
-        hash_sha256: sha256
-      });
-
-      // Salvar na pasta do funcionário
-      await base44.entities.EmployeeDocument.create({
-        employee_id: doc.employee_id,
-        company_id: doc.company_id,
-        document_name: `[Assinado Digitalmente] ${doc.document_type} - ${doc.protocol_number}`,
-        document_type: "contrato",
-        file_url: doc.file_url,
-        upload_date: now.substring(0, 10),
-        uploaded_by: doc.sent_by || "Sistema",
-        notes: `Protocolo: ${doc.protocol_number} | Assinado em ${format(new Date(now), "dd/MM/yyyy HH:mm")} | IP: ${ipAddress} | GPS: ${location?.latitude?.toFixed(6)}, ${location?.longitude?.toFixed(6)} | Hash: ${sha256}`
-      });
-
-      setHash(sha256);
-      setStep(3);
-    } catch (err) {
-      console.error("Erro ao finalizar assinatura:", err);
-      alert("Erro ao salvar assinatura: " + (err.message || "Tente novamente."));
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const downloadPDF = () => {
     const pdf = new jsPDF();
