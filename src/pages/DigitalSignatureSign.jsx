@@ -30,6 +30,7 @@ export default function DigitalSignatureSign() {
   const [cameraReady, setCameraReady] = useState(false);
   const [protocol, setProtocol] = useState("");
   const [hash, setHash] = useState("");
+  const [signatureImage, setSignatureImage] = useState(null);
 
   const canvasRef = useRef(null);
   const isDrawing = useRef(false);
@@ -127,7 +128,7 @@ export default function DigitalSignatureSign() {
     if (!location) { alert("Localização GPS obrigatória! Por favor, capture sua localização."); return; }
     setSaving(true);
     try {
-      const signatureImage = canvasRef.current.toDataURL("image/png");
+      if (!signatureImage) { alert("Assinatura não encontrada. Volte e assine novamente."); setSaving(false); return; }
       const now = new Date().toISOString();
 
       const hashInput = `${doc.protocol_number}|${doc.employee_id}|${signatureImage}|${now}|${ipAddress}`;
@@ -295,7 +296,7 @@ export default function DigitalSignatureSign() {
               <canvas ref={canvasRef} width={560} height={200} className="w-full border-2 border-dashed border-gray-300 rounded-lg bg-white touch-none cursor-crosshair" />
               <div className="flex gap-3">
                 <Button variant="outline" onClick={clearCanvas} className="flex gap-2"><RefreshCw className="w-4 h-4" /> Limpar</Button>
-                <Button className="flex-1 bg-purple-600 hover:bg-purple-700" disabled={!hasSignature} onClick={() => setStep(2)}>Confirmar Assinatura →</Button>
+                <Button className="flex-1 bg-purple-600 hover:bg-purple-700" disabled={!hasSignature} onClick={() => { setSignatureImage(canvasRef.current.toDataURL("image/png")); setStep(2); }}>Confirmar Assinatura →</Button>
               </div>
             </CardContent>
           </Card>
