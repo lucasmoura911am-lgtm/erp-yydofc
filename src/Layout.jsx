@@ -458,6 +458,7 @@ export default function Layout({ children }) {
         icon: Folder,
         items: [
           { title: "Meus Documentos", url: "/MyDocuments", icon: Folder },
+          { title: "Minhas Assinaturas Digitais", url: "/MyDigitalSignatures", icon: FileCheck },
           { title: "Minhas Férias", url: "/MyVacations", icon: Calendar },
           { title: "Meus Holerites", url: "/MyPayslips", icon: FileText },
           { title: "Meus Holerites (IA)", url: "/MySmartPayslips", icon: Zap },
