@@ -27,13 +27,10 @@ Deno.serve(async (req) => {
 
     const mergedBytes = await merged.save();
 
-    return new Response(mergedBytes, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'inline; filename="documento_completo.pdf"',
-      },
-    });
+    // Encode as base64 so axios doesn't corrupt binary data
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(mergedBytes)));
+
+    return Response.json({ base64_pdf: base64 });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
