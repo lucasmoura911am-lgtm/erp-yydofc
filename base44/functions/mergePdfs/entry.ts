@@ -27,8 +27,14 @@ Deno.serve(async (req) => {
 
     const mergedBytes = await merged.save();
 
-    // Encode as base64 so axios doesn't corrupt binary data
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(mergedBytes)));
+    // Encode as base64 safely (btoa fails for large PDFs)
+    const uint8 = new Uint8Array(mergedBytes);
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < uint8.length; i += chunkSize) {
+      binary += String.fromCharCode(...uint8.subarray(i, i + chunkSize));
+    }
+    const base64 = btoa(binary);
 
     return Response.json({ base64_pdf: base64 });
   } catch (error) {
