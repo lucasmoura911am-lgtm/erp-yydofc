@@ -167,7 +167,7 @@ export default function PublicLanding() {
 
       {/* Rodapé */}
       <div className="relative z-10 text-center py-4 text-white/20 text-xs">
-        PontoFlex · Sistema de Gestão
+        YYD FACILITIES SERVICE CONSULTING · Sistema de Gestão ERP YYD - 2026
       </div>
 
       {/* Modal de todos os avisos */}
