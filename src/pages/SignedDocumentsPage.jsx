@@ -65,6 +65,38 @@ export default function SignedDocumentsPage() {
         </div>
       </div>
 
+      {/* Pendentes — só para funcionário */}
+      {!isAdmin && pendingDocs.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-base font-semibold text-yellow-700 flex items-center gap-2">
+            ⚠️ Documentos Pendentes de Assinatura
+          </h2>
+          {pendingDocs.map(doc => (
+            <div key={doc.id} className="flex items-center justify-between gap-4 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+              <div>
+                <p className="font-semibold text-gray-900">{doc.document_type}</p>
+                <p className="text-xs text-gray-500 font-mono">Protocolo: {doc.protocol_number}</p>
+                <p className="text-xs text-gray-400">Prazo: {doc.deadline}</p>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                {doc.file_url && (
+                  <Button size="sm" variant="outline" onClick={() => window.open(doc.file_url, "_blank")}>
+                    <FileText className="w-3 h-3 mr-1" /> Ver Doc.
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  onClick={() => window.open(`/DigitalSignatureSign?id=${doc.id}`, "_blank")}
+                >
+                  ✍️ Assinar
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
         <Input placeholder="Buscar por colaborador, tipo ou protocolo..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
