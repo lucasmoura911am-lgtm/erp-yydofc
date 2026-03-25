@@ -278,6 +278,15 @@ export default function Layout({ children }) {
         ]
       },
       {
+        id: "digital_signatures",
+        title: "Assinatura Digital",
+        icon: FileCheck,
+        items: [
+          { title: "Painel de Assinaturas", url: "/DigitalSignatureAdmin", icon: FileText },
+          { title: "Enviar para Assinar", url: "/DigitalSignatureSend", icon: Edit3 },
+        ]
+      },
+      {
         id: "documents",
         title: "Documentos",
         icon: FileText,
